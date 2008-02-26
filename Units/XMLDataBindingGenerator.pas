@@ -32,6 +32,7 @@ type
   protected
     function LoadSchema(const AStream: TStream; const ASchemaName: String): IXMLSchemaDef;
     function FindSchema(const ALocation: String): TStream;
+    function SchemaLoaded(const ALocation: String): Boolean;
 
     procedure GenerateDataBinding(); virtual; abstract;
 
@@ -124,11 +125,35 @@ end;
 
 
 function TXMLDataBindingGenerator.LoadSchema(const AStream: TStream; const ASchemaName: String): IXMLSchemaDef;
+
+  procedure HandleDocRefs(const ADocRefs: IXMLSchemaDocRefs);
+  var
+    location:       String;
+    refIndex:       Integer;
+    refStream:      TStream;
+
+  begin
+    for refIndex := 0 to Pred(ADocRefs.Count) do
+    begin
+      location      := ADocRefs[refIndex].SchemaLocation;
+
+      if not SchemaLoaded(ChangeFileExt(location, '')) then
+      begin
+        refStream     := FindSchema(location);
+
+        if Assigned(refStream) then
+        try
+          location    := ChangeFileExt(ExtractFileName(location), '');
+          LoadSchema(refStream, location);
+        finally
+          FreeAndNil(refStream);
+        end;
+      end;
+    end;
+  end;
+
+
 var
-  includeIndex:   Integer;
-  includes:       IXMLSchemaIncludes;
-  includeStream:  TStream;
-  location:       String;
   schema:         TXMLDataBindingSchema;
   schemaDoc:      IXMLSchemaDoc;
 
@@ -142,21 +167,9 @@ begin
   schema.SchemaName := ASchemaName;
   FSchemas.Add(schema);
 
-  { Handle includes }
-  includes  := Result.SchemaIncludes;
-  for includeIndex := 0 to Pred(includes.Count) do
-  begin
-    location      := includes[includeIndex].SchemaLocation;
-    includeStream := FindSchema(location);
-
-    if Assigned(includeStream) then
-    try
-      location    := ChangeFileExt(ExtractFileName(location), '');
-      LoadSchema(includeStream, location);
-    finally
-      FreeAndNil(includeStream);
-    end;
-  end;
+  { Handle imports / includes }
+  HandleDocRefs(Result.SchemaImports);
+  HandleDocRefs(Result.SchemaIncludes);
 end;
 
 
@@ -180,6 +193,22 @@ begin
       break;
     end;
   end;
+end;
+
+
+function TXMLDataBindingGenerator.SchemaLoaded(const ALocation: String): Boolean;
+var
+  schemaIndex: Integer;
+
+begin
+  Result  := False;
+  
+  for schemaIndex := 0 to Pred(SchemaCount) do
+    if Schema[schemaIndex].SchemaName = ALocation then
+    begin
+      Result  := True;
+      break;
+    end;
 end;
 
 
