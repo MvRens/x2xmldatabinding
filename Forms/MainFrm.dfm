@@ -35,7 +35,7 @@ object MainForm: TMainForm
     AddQuotes = False
     Anchors = [akLeft, akTop, akRight]
     TabOrder = 0
-    Text = 'F:\XTxXSD\TelefoonGegevens.xsd'
+    Text = 'F:\XTxXSD\Dealer.xsd'
   end
   object gbOutput: TGroupBox
     Left = 8

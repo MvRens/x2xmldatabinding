@@ -21,6 +21,9 @@ type
     procedure Write(const ASource: String);
     procedure WriteLn(const ASource: String = '');
 
+    procedure WriteFmt(const ASource: String; const AParams: array of const);
+    procedure WriteLnFmt(const ASource: String; const AParams: array of const);
+
     procedure WriteString(const ASource: String);
     procedure WriteInteger(const ASource: Integer);
     procedure WriteDateTime(const ASource: TDateTime);
@@ -97,6 +100,18 @@ begin
 end;
 
 
+procedure TStreamHelper.WriteFmt(const ASource: String; const AParams: array of const);
+begin
+  Write(Format(ASource, AParams));
+end;
+
+
+procedure TStreamHelper.WriteLnFmt(const ASource: String; const AParams: array of const);
+begin
+  WriteLn(Format(ASource, AParams));
+end;
+
+
 procedure TStreamHelper.WriteString(const ASource: String);
 var
   iSize:      Integer;
@@ -126,3 +141,5 @@ begin
 end;
 
 end.
+
+
