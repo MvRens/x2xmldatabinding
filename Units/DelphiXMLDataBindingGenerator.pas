@@ -382,7 +382,7 @@ begin
                         '  doc := NewXMLDocument;'#13#10 +
                         '  doc.LoadFromStream(AStream);'#13#10 +
                         '  Result  := GetOfferte(doc);',
-                        '  doc: IXMLDocument');
+                        '  doc: IXMLDocument;');
 
           WriteFunction(interfaceItem.TranslatedName,
                         'New%0:s',
