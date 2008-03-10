@@ -58,7 +58,7 @@ type
 
 implementation
 uses
-  SysUtils;
+  SysUtils, Dialogs;
 
 
 const
@@ -122,12 +122,70 @@ const
                   );
 
 
-  SimpleTypeMapping:  array[0..3, 0..1] of String =
+type
+  // #ToDo1 (MvR) 10-3-2008: check handling for floats and booleans maybe?
+  TTypeHandling = (thNone, thDateTime);
+
+  TTypeMapping  = record
+    SchemaName:   String;
+    DelphiName:   String;
+    Handling:     TTypeHandling;
+  end;
+
+
+const
+  SimpleTypeMapping:  array[0..9] of TTypeMapping =
                       (
-                        ('int', 'Integer'),
-                        ('float', 'Double'),
-                        ('boolean', 'Boolean'),
-                        ('string', 'WideString')
+                        (
+                          SchemaName:  'int';
+                          DelphiName:  'Integer';
+                          Handling:    thNone
+                        ),
+                        (
+                          SchemaName:  'integer';
+                          DelphiName:  'Integer';
+                          Handling:    thNone
+                        ),
+                        (
+                          SchemaName:  'short';
+                          DelphiName:  'Smallint';
+                          Handling:    thNone
+                        ),
+                        (
+                          SchemaName:  'date';
+                          DelphiName:  'TDateTime';
+                          Handling:    thDateTime
+                        ),
+                        (
+                          SchemaName:  'time';
+                          DelphiName:  'TDateTime';
+                          Handling:    thDateTime
+                        ),
+                        (
+                          SchemaName:  'dateTime';
+                          DelphiName:  'TDateTime';
+                          Handling:    thDateTime
+                        ),
+                        (
+                          SchemaName:  'float';
+                          DelphiName:  'Double';
+                          Handling:    thNone
+                        ),
+                        (
+                          SchemaName:  'double';
+                          DelphiName:  'Extended';
+                          Handling:    thNone
+                        ),
+                        (
+                          SchemaName:  'boolean';
+                          DelphiName:  'Boolean';
+                          Handling:    thNone
+                        ),
+                        (
+                          SchemaName:  'string';
+                          DelphiName:  'WideString';
+                          Handling:    thNone
+                        )
                       );
 
 
@@ -202,12 +260,15 @@ begin
     dataTypeName  := ADataType.Name;
 
     for mappingIndex := Low(SimpleTypeMapping) to High(SimpleTypeMapping) do
-      if SimpleTypeMapping[mappingIndex][0] = dataTypeName then
+      if SimpleTypeMapping[mappingIndex].SchemaName = dataTypeName then
       begin
-        Result := SimpleTypeMapping[mappingIndex][1];
+        Result := SimpleTypeMapping[mappingIndex].DelphiName;
         Break;
       end;
   end;
+
+//  if Result = 'Variant' then
+//    ShowMessage('Unknown type: ' + ADataType.Name);
 end;
 
 

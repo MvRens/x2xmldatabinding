@@ -1,11 +1,6 @@
 program X2XMLDataBindingCmdLine;
 
 uses
-  madExcept,
-  madLinkDisAsm,
-  madListHardware,
-  madListProcesses,
-  madListModules,
   ActiveX,
   SysUtils,
   DelphiXMLDataBindingGenerator in 'Units\DelphiXMLDataBindingGenerator.pas',
