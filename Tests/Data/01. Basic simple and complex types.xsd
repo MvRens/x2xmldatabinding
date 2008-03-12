@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2007 sp1 (http://www.altova.com) by M. van Renswoude (X²Software) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="TestElement">
+		<xs:annotation>
+			<xs:documentation>Simple test element</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="SimpleType" type="xs:integer"/>
+				<xs:element name="ComplexType" type="TestComplexType"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="TestComplexType">
+		<xs:sequence>
+			<xs:element name="AnotherSimpleType" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

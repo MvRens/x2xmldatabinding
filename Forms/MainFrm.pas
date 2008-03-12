@@ -58,8 +58,6 @@ uses
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   plOutput.ActivePageIndex := 0;
-  btnGenerate.Click;
-  ModalResult := mrCancel;
 end;
 
 

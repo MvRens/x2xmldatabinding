@@ -3,11 +3,6 @@ program X2XMLDataBinding;
 {$WARN SYMBOL_PLATFORM OFF}
 
 uses
-  madExcept,
-  madLinkDisAsm,
-  madListHardware,
-  madListProcesses,
-  madListModules,
   Forms,
   MainFrm in 'Forms\MainFrm.pas' {MainForm},
   XMLDataBindingGenerator in 'Units\XMLDataBindingGenerator.pas',

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DataBindingResult xsi:noNamespaceSchemaLocation="F:\Archive\2007\XMLDataBinding\Tests\XSD\DataBindingResult.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<Schemas>
+		<Schema>
+			<Name>01. Basic simple and complex types</Name>
+			<Items>
+				<Item>
+					<ItemType>Interface</ItemType>
+					<Name>TestElement</Name>
+					<Interface>
+						<InterfaceType>Interface</InterfaceType>
+					</Interface>
+				</Item>
+				<Item>
+					<ItemType>Interface</ItemType>
+					<Name>TestComplexType</Name>
+					<Interface>
+						<InterfaceType>ComplexType</InterfaceType>
+					</Interface>
+				</Item>
+			</Items>
+		</Schema>
+	</Schemas>
+</DataBindingResult>

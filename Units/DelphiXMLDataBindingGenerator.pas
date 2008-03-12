@@ -442,7 +442,7 @@ begin
                         'Load%0:sFromStream(AStream: TStream)',
                         '  doc := NewXMLDocument;'#13#10 +
                         '  doc.LoadFromStream(AStream);'#13#10 +
-                        '  Result  := GetOfferte(doc);',
+                        '  Result  := Get%0:s(doc);',
                         '  doc: IXMLDocument;');
 
           WriteFunction(interfaceItem.TranslatedName,
@@ -687,6 +687,7 @@ begin
       itemProperty  := AItem.Properties[propertyIndex];
       dataTypeName  := '';
       writeTextProp := False;
+      writeOptional := True;
 
       { Get data type }
       case itemProperty.PropertyType of
@@ -704,6 +705,10 @@ begin
               end else
                 dataTypeName  := PrefixInterface;
 
+              { Collections have a Count property, no need to write a
+                HasX property as well. } 
+              writeOptional := (propertyItem.ItemType <> itCollection);
+
               dataTypeName  := dataTypeName + propertyItem.TranslatedName;
             end;
           end;
@@ -712,8 +717,9 @@ begin
 
       if Length(dataTypeName) > 0 then
       begin
-        writeOptional := itemProperty.IsOptional and
-                         (member in [dxmPropertyGet, dxmPropertyDeclaration]);
+        if writeOptional then
+          writeOptional := itemProperty.IsOptional and
+                           (member in [dxmPropertyGet, dxmPropertyDeclaration]);
 
         case ASection of
           dxsInterface,

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2007 sp1 (http://www.altova.com) by M. van Renswoude (X²Software) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="DataBindingResult">
+		<xs:annotation>
+			<xs:documentation>Defines the expected intermediate result of a Data Binding</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Schemas">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="Schema" type="Schema" minOccurs="0" maxOccurs="unbounded"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="Schema">
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string"/>
+			<xs:element name="Items">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="Item" type="Item" minOccurs="0" maxOccurs="unbounded"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Item">
+		<xs:sequence>
+			<xs:element ref="ItemType"/>
+			<xs:element name="Name" type="xs:string"/>
+			<xs:choice>
+				<xs:element name="Interface">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element ref="InterfaceType"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="Collection">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="ItemName" type="xs:string"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="Enumeration">
+					<xs:complexType>
+						<xs:sequence/>
+					</xs:complexType>
+				</xs:element>
+			</xs:choice>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="ItemType">
+		<xs:simpleType>
+			<xs:restriction base="xs:NMTOKENS">
+				<xs:enumeration value="Interface"/>
+				<xs:enumeration value="Collection"/>
+				<xs:enumeration value="Enumeration"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="InterfaceType">
+		<xs:simpleType>
+			<xs:restriction base="xs:NMTOKEN">
+				<xs:enumeration value="Interface"/>
+				<xs:enumeration value="ComplexType"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+</xs:schema>

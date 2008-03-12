@@ -35,7 +35,6 @@ object MainForm: TMainForm
     AddQuotes = False
     Anchors = [akLeft, akTop, akRight]
     TabOrder = 0
-    Text = 'F:\XTxXSD\Dealer.xsd'
   end
   object gbOutput: TGroupBox
     Left = 8
@@ -94,8 +93,9 @@ object MainForm: TMainForm
           Width = 321
           Height = 21
           AddQuotes = False
+          DialogKind = dkSave
+          DialogOptions = [ofOverwritePrompt, ofHideReadOnly]
           TabOrder = 0
-          Text = 'F:\XTxXSD\Output\xml_Offerte.pas'
         end
       end
       object spFolder: TJvStandardPage
