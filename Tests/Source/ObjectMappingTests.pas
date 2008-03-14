@@ -23,6 +23,7 @@ type
 
     procedure CompareSchemas(ATestResult: TTestResult; AGenerator: TTestXMLDataBindingGenerator; AResult: IXMLDataBindingResult);
     procedure CompareItems(ATestResult: TTestResult; AGeneratorSchema: TXMLDataBindingSchema; AResultSchema: IXMLSchema);
+    procedure CompareCollection(ATestResult: TTestResult; AGeneratorSchema: TXMLDataBindingSchema; AGeneratorItem: TXMLDataBindingCollection; AResultItem: IXMLItem);
 
     property FileName:  String  read FFileName;
   public
@@ -134,20 +135,32 @@ end;
 
 procedure TObjectMappingTests.CompareItems(ATestResult: TTestResult; AGeneratorSchema: TXMLDataBindingSchema; AResultSchema: IXMLSchema);
 
-  function FindItem(const AName: String): TXMLDataBindingItem;
+  function FindItem(const AResultItem: IXMLItem): TXMLDataBindingItem;
   var
-    itemIndex: Integer;
+    itemType:   TXMLDataBindingItemType;
+    itemIndex:  Integer;
+    item:       TXMLDataBindingItem;
 
   begin
-    Result  := nil;
+    Result    := nil;
+    itemType  := itInterface;
+
+    if AResultItem.ItemType = 'Collection' then
+      itemType := itCollection
+    else if AResultItem.ItemType = 'Enumeration' then
+      itemType := itEnumeration;
 
     for itemIndex := 0 to Pred(AGeneratorSchema.ItemCount) do
-      if (AGeneratorSchema.Items[itemIndex].Name = AName) and
-         (AGeneratorSchema.Items[itemIndex].ItemType <> itForward) then
+    begin
+      item  := AGeneratorSchema.Items[itemIndex];
+
+      if (item.ItemType = itemType) and
+         (item.Name = AResultItem.Name) then
       begin
-        Result  := AGeneratorSchema.Items[itemIndex];
+        Result  := item;
         break;
       end;
+    end;
   end;
 
 
@@ -160,22 +173,26 @@ var
 begin
   handled := TObjectList.Create(False);
   try
-    { Iterate expected schemas }
+    { Iterate expected items }
     for itemIndex := 0 to Pred(AResultSchema.Items.Count) do
     begin
       resultItem  := AResultSchema.Items[itemIndex];
-      bindingItem := FindItem(resultItem.Name);
+      bindingItem := FindItem(resultItem);
 
       if Assigned(bindingItem) then
       begin
         handled.Add(bindingItem);
-//        CompareItems(ATestResult, bindingSchema, resultSchema);
+
+        case bindingItem.ItemType of
+//          itInterface:  CompareProperties;
+          itCollection: CompareCollection(ATestResult, AGeneratorSchema, TXMLDataBindingCollection(bindingItem), resultItem);
+        end;
       end else
-        ATestResult.AddFailure(Self, nil, Format('Schema "%s": item "%s" expected',
+        ATestResult.AddFailure(Self, nil, Format('Item "%s.%s" expected',
                                [AGeneratorSchema.SchemaName, resultItem.Name]));
     end;
 
-    { Find unexpected schemas }
+    { Find unexpected items }
     for itemIndex := 0 to Pred(AGeneratorSchema.ItemCount) do
     begin
       bindingItem := AGeneratorSchema.Items[itemIndex];
@@ -184,7 +201,7 @@ begin
       begin
         if handled.IndexOf(bindingItem) = -1 then
         begin
-          ATestResult.AddFailure(Self, nil, Format('Schema "%s": item "%s" not expected',
+          ATestResult.AddFailure(Self, nil, Format('Item "%s.%s" not expected',
                                                    [AGeneratorSchema.SchemaName,
                                                     AGeneratorSchema.Items[itemIndex].Name]));
         end;
@@ -193,6 +210,23 @@ begin
   finally
     FreeAndNil(handled);
   end;
+end;
+
+
+procedure TObjectMappingTests.CompareCollection(ATestResult: TTestResult; AGeneratorSchema: TXMLDataBindingSchema; AGeneratorItem: TXMLDataBindingCollection; AResultItem: IXMLItem);
+begin
+  if Assigned(AGeneratorItem.CollectionItem) then
+  begin
+    if AGeneratorItem.CollectionItem.Name <> AResultItem.Collection.ItemName then
+      ATestResult.AddFailure(Self, nil, Format('Item "%s.%s": collection item "%s" expected but "%s" found',
+                                               [AGeneratorSchema.SchemaName,
+                                                AGeneratorItem.Name,
+                                                AResultItem.Collection.ItemName,
+                                                AGeneratorItem.CollectionItem.Name]));
+  end else
+    ATestResult.AddFailure(Self, nil, Format('Item "%s.%s": collection item not Assigned',
+                                             [AGeneratorSchema.SchemaName,
+                                              AGeneratorItem.Name]));
 end;
 
 

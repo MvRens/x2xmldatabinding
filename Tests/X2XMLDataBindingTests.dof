@@ -140,9 +140,5 @@ C:\Program Files\Borland\Indy\D7\dclIndy70.bpl=Internet Direct (Indy) for D7 Pro
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlUnitOutputDirectory]
-Count=2
-Item0=..\Lib
-Item1=Lib
-[HistoryLists\hlOutputDirectorry]
 Count=1
-Item0=..\
+Item0=Lib

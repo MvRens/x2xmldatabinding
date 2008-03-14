@@ -295,9 +295,6 @@ begin
   Result := DelphiSafeName(inherited TranslateItemName(AItem));
 
   case AItem.ItemType of
-    itCollection:
-      Result := Result + 'List';
-      
     itEnumerationMember:
       Result := TXMLDataBindingEnumerationMember(AItem).Enumeration.TranslatedName + '_' + Result;
   end;
@@ -945,11 +942,14 @@ end;
 
 
 procedure TDelphiXMLDataBindingGenerator.WriteSchemaCollectionProperties(AStream: TStreamHelper; AItem: TXMLDataBindingCollection; ASection: TDelphiXMLSection);
+var
+  dataTypeName: string;
+  
 
   procedure WriteMethodInterface(const AFunction: String);
   begin
     AStream.WriteLnFmt('    function ' + AFunction + ': %1:s%0:s;',
-                       [AItem.CollectionItem.TranslatedName,
+                       [dataTypeName,
                         PrefixInterface]);
   end;
 
@@ -958,13 +958,13 @@ procedure TDelphiXMLDataBindingGenerator.WriteSchemaCollectionProperties(AStream
   begin
     AStream.WriteLnFmt('function %3:s%0:s.' + AFunction + ': %2:s%1:s;',
                        [AItem.TranslatedName,
-                        AItem.CollectionItem.TranslatedName,
+                        dataTypeName,
                         PrefixInterface,
                         PrefixClass]);
     AStream.WriteLn('begin');
 
     AStream.WriteLnFmt(AImplementation,
-                       [AItem.CollectionItem.TranslatedName,
+                       [dataTypeName,
                         PrefixInterface]);
 
     AStream.WriteLn('end;');
@@ -994,7 +994,7 @@ begin
 
         AStream.WriteLnFmt('  RegisterChildNode(''%0:s'', %2:s%1:s);',
                            [AItem.CollectionItem.Name,
-                            AItem.CollectionItem.TranslatedName,
+                            dataTypeName,
                             PrefixClass]);
 
         AStream.WriteLn();
@@ -1002,7 +1002,7 @@ begin
                            [AItem.CollectionItem.Name]);
                            
         AStream.WriteLnFmt('  ItemInterface := %1:s%0:s;',
-                           [AItem.CollectionItem.TranslatedName,
+                           [dataTypeName,
                             PrefixInterface]);
 
         AStream.WriteLn();
@@ -1026,7 +1026,7 @@ begin
       begin
         AStream.WriteLn;
         AStream.WriteLnFmt('    property %0:s[Index: Integer]: %1:s%0:s read Get_%0:s; default;',
-                               [AItem.CollectionItem.TranslatedName,
+                               [dataTypeName,
                                 PrefixInterface]);
       end;
 

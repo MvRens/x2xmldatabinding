@@ -5,15 +5,15 @@
 			<Name>01. Basic simple and complex types</Name>
 			<Items>
 				<Item>
-					<ItemType>Interface</ItemType>
 					<Name>TestElement</Name>
+					<ItemType>Interface</ItemType>
 					<Interface>
 						<InterfaceType>Interface</InterfaceType>
 					</Interface>
 				</Item>
 				<Item>
-					<ItemType>Interface</ItemType>
 					<Name>TestComplexType</Name>
+					<ItemType>Interface</ItemType>
 					<Interface>
 						<InterfaceType>ComplexType</InterfaceType>
 					</Interface>

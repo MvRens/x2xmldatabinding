@@ -44,7 +44,7 @@ type
     function LoadSchema(const AStream: TStream; const ASchemaName: String): TXMLDataBindingSchema;
     function GetSchemaData(const ALocation: String): TStream;
     function FindSchema(const ALocation: String): TXMLDataBindingSchema;
-    
+
     procedure GenerateSchemaObjects(ASchema: TXMLDataBindingSchema; ARootDocument: Boolean);
     procedure GenerateElementObjects(ASchema: TXMLDataBindingSchema; ARootDocument: Boolean);
     procedure GenerateComplexTypeObjects(ASchema: TXMLDataBindingSchema);
@@ -64,6 +64,7 @@ type
     function FindEnumeration(ASchema: TXMLDataBindingSchema; const AName: String): TXMLDataBindingEnumeration;
 
     procedure ResolveSchema(ASchema: TXMLDataBindingSchema);
+    procedure ResolveItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem);
     procedure ResolveNameConflicts();
 
     procedure TranslateSchema(ASchema: TXMLDataBindingSchema);
@@ -176,13 +177,13 @@ type
 
   TXMLDataBindingCollection = class(TXMLDataBindingItem)
   private
-    FCollectionItem:  TXMLDataBindingInterface;
+    FCollectionItem:  TXMLDataBindingProperty;
+
+    procedure SetCollectionItem(const Value: TXMLDataBindingProperty);
   protected
     function GetItemType(): TXMLDataBindingItemType; override;
   public
-    constructor Create(ASchemaItem: IXMLSchemaItem; ACollectionItem: TXMLDataBindingInterface; const AName: String);
-
-    property CollectionItem:  TXMLDataBindingInterface  read FCollectionItem;
+    property CollectionItem:  TXMLDataBindingProperty read FCollectionItem;
   end;
 
 
@@ -286,6 +287,7 @@ uses
 
 const
   MaxOccursUnbounded  = 'unbounded';
+  CollectionPostfix   = 'List';
 
 
 
@@ -594,9 +596,10 @@ begin
         Result := interfaceObject;
       end;
 
-      
-      for elementIndex := 0 to Pred(AElement.ChildElements.Count) do
-        ProcessChildElement(ASchema, AElement.ChildElements[elementIndex], interfaceObject);
+
+      if Assigned(interfaceObject) then
+        for elementIndex := 0 to Pred(AElement.ChildElements.Count) do
+          ProcessChildElement(ASchema, AElement.ChildElements[elementIndex], interfaceObject);
     end;
   end;
 end;
@@ -619,10 +622,10 @@ begin
     begin
       { Collection }
       collectionObject  := FindCollection(ASchema, AElement.Name);
-      
+
       if not Assigned(collectionObject) then
       begin
-        collectionObject  := TXMLDataBindingCollection.Create(AELement, AInterface, AElement.Name);
+        collectionObject  := TXMLDataBindingCollection.Create(AElement, AElement.Name + CollectionPostfix);
         ASchema.AddItem(collectionObject);
       end;
     end;
@@ -630,8 +633,23 @@ begin
 
 
   propertyType := ProcessElement(ASchema, AElement);
+
   if Assigned(collectionObject) then
+  begin
+    { Create intermediate object for collections }
+    if Assigned(propertyType) then
+      propertyItem  := TXMLDataBindingItemProperty.Create(AElement,
+                                                          AElement.Name,
+                                                          propertyType)
+    else
+      propertyItem  := TXMLDataBindingSimpleProperty.Create(AElement,
+                                                            AElement.Name,
+                                                            AElement.DataType);
+
+
+    collectionObject.SetCollectionItem(propertyItem);
     propertyType := collectionObject;
+  end;
 
 
   if Assigned(AInterface) then
@@ -732,9 +750,16 @@ end;
 
 
 procedure TXMLDataBindingGenerator.FindCollectionProc(AItem: TXMLDataBindingItem; AData: Pointer; var AAbort: Boolean);
+var
+  collection: TXMLDataBindingCollection;
+
 begin
-  AAbort  := (AItem.ItemType = itCollection) and
-             (AItem.Name = PChar(AData));
+  if AItem.ItemType = itCollection then
+  begin
+    collection  := TXMLDataBindingCollection(AItem);
+    AAbort      := Assigned(collection.CollectionItem) and
+                   (collection.CollectionItem.Name = PChar(AData));
+  end;
 end;
 
 
@@ -749,8 +774,6 @@ procedure TXMLDataBindingGenerator.ResolveSchema(ASchema: TXMLDataBindingSchema)
 var
   itemIndex:      Integer;
   item:           TXMLDataBindingItem;
-  forwardItem:    TXMLDataBindingForwardItem;
-  referenceItem:  TXMLDataBindingItem;
   interfaceItem:  TXMLDataBindingInterface;
 
 begin
@@ -769,20 +792,31 @@ begin
         end;
 
       itForward:
-        begin
-          { Resolve forwarded item }
-          forwardItem   := TXMLDataBindingForwardItem(item);
-          referenceItem := FindInterface(ASchema, item.Name, forwardItem.InterfaceType);
-
-          if (not Assigned(referenceItem)) and
-             (forwardItem.InterfaceType = ifElement) then
-            referenceItem := FindEnumeration(ASchema, item.Name);
-
-          if Assigned(referenceItem) then
-            TXMLDataBindingForwardItem(item).Item := referenceItem;
-        end;
+        ResolveItem(ASchema, item);
     end;
   end;
+end;
+
+
+procedure TXMLDataBindingGenerator.ResolveItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem);
+var
+  forwardItem:    TXMLDataBindingForwardItem;
+  referenceItem:  TXMLDataBindingItem;
+
+begin
+  if (not Assigned(AItem)) or (AItem.ItemType <> itForward) then
+    Exit;
+
+  { Resolve forwarded item }
+  forwardItem   := TXMLDataBindingForwardItem(AItem);
+  referenceItem := FindInterface(ASchema, AItem.Name, forwardItem.InterfaceType);
+
+  if (not Assigned(referenceItem)) and
+     (forwardItem.InterfaceType = ifElement) then
+    referenceItem := FindEnumeration(ASchema, AItem.Name);
+
+  if Assigned(referenceItem) then
+    forwardItem.Item  := referenceItem;
 end;
 
 
@@ -1120,17 +1154,15 @@ end;
 
 
 { TXMLDataBindingCollection }
-constructor TXMLDataBindingCollection.Create(ASchemaItem: IXMLSchemaItem; ACollectionItem: TXMLDataBindingInterface; const AName: String);
-begin
-  inherited Create(ASchemaItem, AName);
-
-  FCollectionItem := ACollectionItem;
-end;
-
-
 function TXMLDataBindingCollection.GetItemType(): TXMLDataBindingItemType;
 begin
   Result  := itCollection;
+end;
+
+
+procedure TXMLDataBindingCollection.SetCollectionItem(const Value: TXMLDataBindingProperty);
+begin
+  FCollectionItem := Value;
 end;
 
 

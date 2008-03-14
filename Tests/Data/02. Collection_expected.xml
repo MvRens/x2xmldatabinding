@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DataBindingResult xsi:noNamespaceSchemaLocation="F:\Archive\2007\XMLDataBinding\Tests\XSD\DataBindingResult.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<Schemas>
+		<Schema>
+			<Name>02. Collection</Name>
+			<Items>
+				<Item>
+					<Name>Root</Name>
+					<ItemType>Interface</ItemType>
+					<Interface>
+						<InterfaceType>Interface</InterfaceType>
+					</Interface>
+				</Item>
+
+        <!-- TODO: Parts moet worden gecollapsed naar een ItemType Collection -->
+				<Item>
+					<Name>ComplexParts</Name>
+					<ItemType>Interface</ItemType>
+					<Interface>
+						<InterfaceType>Interface</InterfaceType>
+					</Interface>
+				</Item>
+
+				<Item>
+					<ItemType>Collection</ItemType>
+					<Name>ComplexPartList</Name>
+          <Collection>
+            <ItemName>ComplexPart</ItemName>
+          </Collection>
+				</Item>
+
+				<Item>
+					<Name>ComplexPart</Name>
+					<ItemType>Interface</ItemType>
+					<Interface>
+						<InterfaceType>Interface</InterfaceType>
+					</Interface>
+				</Item>
+
+
+        <Item>
+          <Name>SimpleParts</Name>
+          <ItemType>Interface</ItemType>
+          <Interface>
+            <InterfaceType>Interface</InterfaceType>
+          </Interface>
+        </Item>
+
+				<Item>
+					<ItemType>Collection</ItemType>
+					<Name>SimpleValueList</Name>
+          <Collection>
+            <ItemName>SimpleValue</ItemName>
+          </Collection>
+				</Item>
+      </Items>
+		</Schema>
+	</Schemas>
+</DataBindingResult>

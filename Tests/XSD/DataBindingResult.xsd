@@ -31,8 +31,8 @@
 	</xs:complexType>
 	<xs:complexType name="Item">
 		<xs:sequence>
-			<xs:element ref="ItemType"/>
 			<xs:element name="Name" type="xs:string"/>
+			<xs:element ref="ItemType"/>
 			<xs:choice>
 				<xs:element name="Interface">
 					<xs:complexType>
