@@ -125,7 +125,7 @@
 			<Directories Name="PackageDCPOutputDir"></Directories>
 			<Directories Name="SearchPath"></Directories>
 			<Directories Name="Packages">vcl;rtl;vclx;inet;xmlrtl;vclie;inetdbbde;inetdbxpress;dbrtl;dsnap;vcldb;dsnapcon;soaprtl;VclSmp;dbexpress;dbxcds;inetdb;bdertl;vcldbx;webdsnap;websnap;adortl;CLXIB;ibxpress;VCLIB;teeui;teedb;tee;dss;vclactnband;vclshlctrls;dclOfficeXP;Indy70;cxLibraryVCLD7;dxBarD7;dxComnD7;dxBarDBNavD7;dxBarExtDBItemsD7;dxBarExtItemsD7;dxDockingD7;dxsbD7;cxEditorsVCLD7;dxThemeD7;cxDataD7;cxExtEditorsVCLD7;cxPageControlVCLD7;cxGridVCLD7;cxSchedulerVCLD7;cxTreeListVCLD7;cxVerticalGridVCLD7;cxSpreadSheetVCLD7;dxNavBarD7;cxWebD7;cxWebPascalScriptD7;cxWebSnapD7;cxWebTeeChartD7;dxMasterViewD7;dxmdsD7;dxdbtrD7;dxtrmdD7;dxorgcD7;dxdborD7;dxFlowChartD7;dxLayoutControlD7;dxLayoutControlcxEditAdaptersD7;dxPSCoreD7;dxPSTeeChartD7;dxPsPrVwAdvD7;dxPSLnksD7;dxPSdxOCLnkD7;dxPSdxMVLnkD7;dxPSdxLCLnkD7;dxPSdxFCLnkD7;dxPSdxDBTVLnkD7;dxPSdxDBOCLnkD7;dxPSDBTeeChartD7;dxPScxCommonD7;dxPScxTLLnkD7;dxPScxSSLnkD7;dxPScxPCProdD7;dxPScxGridLnkD7;dxPScxExtCommonD7;dxPScxVGridLnkD7;fo_d7;xtx_d7;Rave50CLX;Rave50VCL;pngimaged7;dxGDIPlusD7;UnRegDxPNG</Directories>
-			<Directories Name="Conditionals">madExcept</Directories>
+			<Directories Name="Conditionals"></Directories>
 			<Directories Name="DebugSourceDirs"></Directories>
 			<Directories Name="UsePackages">False</Directories>
 		</Directories>

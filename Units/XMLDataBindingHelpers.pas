@@ -24,6 +24,9 @@ type
     procedure WriteFmt(const ASource: String; const AParams: array of const);
     procedure WriteLnFmt(const ASource: String; const AParams: array of const);
 
+    procedure WriteNamedFmt(const ASource: String; const AParams: array of const);
+    procedure WriteLnNamedFmt(const ASource: String; const AParams: array of const);
+
     procedure WriteString(const ASource: String);
     procedure WriteInteger(const ASource: Integer);
     procedure WriteDateTime(const ASource: TDateTime);
@@ -33,7 +36,9 @@ type
 
 implementation
 uses
-  SysUtils;
+  SysUtils,
+
+  X2UtNamedFormat;
 
 
 { TStreamHelper }
@@ -109,6 +114,18 @@ end;
 procedure TStreamHelper.WriteLnFmt(const ASource: String; const AParams: array of const);
 begin
   WriteLn(Format(ASource, AParams));
+end;
+
+
+procedure TStreamHelper.WriteNamedFmt(const ASource: String; const AParams: array of const);
+begin
+  Write(NamedFormat(ASource, AParams));
+end;
+
+
+procedure TStreamHelper.WriteLnNamedFmt(const ASource: String; const AParams: array of const);
+begin
+  WriteLn(NamedFormat(ASource, AParams));
 end;
 
 

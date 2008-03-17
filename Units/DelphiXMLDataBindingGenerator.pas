@@ -58,28 +58,30 @@ type
 
 implementation
 uses
-  SysUtils, Dialogs;
+  SysUtils,
+
+  X2UtNamedFormat;
 
 
 const
   SectionComments:  array[TDelphiXMLSection] of String =
                     (
-                      '  { Forward declarations for %s }',
-                      '  { Interfaces for %s }',
-                      '  { Classes for %s }',
-                      '{ Implementation for %s }'
+                      '  { Forward declarations for %SchemaName:s }',
+                      '  { Interfaces for %SchemaName:s }',
+                      '  { Classes for %SchemaName:s }',
+                      '{ Implementation for %SchemaName:s }'
                     );
 
 
-  PrefixInterface         = 'IXML';
-  PrefixClass             = 'TXML';
-  PrefixOptional          = 'Has';
-  PostfixText             = 'Text';
+  PrefixInterface2        = 'IXML';
+  PrefixClass2            = 'TXML';
+  PrefixOptional2         = 'Has';
+  PostfixText2            = 'Text';
 
 
-  InterfaceItemForward    = '  ' + PrefixInterface + '%0:s = interface;';
-  InterfaceItemInterface  = '  ' + PrefixInterface + '%0:s = interface(%1:s)';
-  InterfaceItemClass      = '  ' + PrefixClass + '%0:s = class(%1:s, ' + PrefixInterface + '%0:s)';
+  InterfaceItemForward    = '  IXML%Name:s = interface;';
+  InterfaceItemInterface  = '  IXML%Name:s = interface(%ParentName:s)';
+  InterfaceItemClass      = '  TXML%Name:s = class(%ParentName:s, IXML%Name:s)';
 
 
   CollectionInterface     = 'IXMLNodeCollection';
@@ -89,10 +91,10 @@ const
   ItemClass               = 'TXMLNode';
   
 
-  MemberPropertyGet       = '    function Get%0:s: %1:s;';
-  MemberPropertySet       = '    procedure Set%0:s(const Value: %1:s);';
-  MemberProperty          = '    property %0:s: %1:s read Get%0:s write Set%0:s;';
-  MemberPropertyReadOnly  = '    property %0:s: %1:s read Get%0:s;';
+  MemberPropertyGet       = '    function Get%Name:s: %DataType:s;';
+  MemberPropertySet       = '    procedure Set%Name:s(const Value: %DataType:s);';
+  MemberProperty          = '    property %Name:s: %DataType:s read Get%Name:s write Set%Name:s;';
+  MemberPropertyReadOnly  = '    property %Name:s: %DataType:s read Get%Name:s;';
 
 
   // #ToDo1 (MvR) 9-3-2008: document / node / etc
@@ -136,56 +138,16 @@ type
 const
   SimpleTypeMapping:  array[0..9] of TTypeMapping =
                       (
-                        (
-                          SchemaName:  'int';
-                          DelphiName:  'Integer';
-                          Handling:    thNone
-                        ),
-                        (
-                          SchemaName:  'integer';
-                          DelphiName:  'Integer';
-                          Handling:    thNone
-                        ),
-                        (
-                          SchemaName:  'short';
-                          DelphiName:  'Smallint';
-                          Handling:    thNone
-                        ),
-                        (
-                          SchemaName:  'date';
-                          DelphiName:  'TDateTime';
-                          Handling:    thDateTime
-                        ),
-                        (
-                          SchemaName:  'time';
-                          DelphiName:  'TDateTime';
-                          Handling:    thDateTime
-                        ),
-                        (
-                          SchemaName:  'dateTime';
-                          DelphiName:  'TDateTime';
-                          Handling:    thDateTime
-                        ),
-                        (
-                          SchemaName:  'float';
-                          DelphiName:  'Double';
-                          Handling:    thNone
-                        ),
-                        (
-                          SchemaName:  'double';
-                          DelphiName:  'Extended';
-                          Handling:    thNone
-                        ),
-                        (
-                          SchemaName:  'boolean';
-                          DelphiName:  'Boolean';
-                          Handling:    thNone
-                        ),
-                        (
-                          SchemaName:  'string';
-                          DelphiName:  'WideString';
-                          Handling:    thNone
-                        )
+                        (SchemaName:  'int';        DelphiName:  'Integer';     Handling:    thNone),
+                        (SchemaName:  'integer';    DelphiName:  'Integer';     Handling:    thNone),
+                        (SchemaName:  'short';      DelphiName:  'Smallint';    Handling:    thNone),
+                        (SchemaName:  'date';       DelphiName:  'TDateTime';   Handling:    thDateTime),
+                        (SchemaName:  'time';       DelphiName:  'TDateTime';   Handling:    thDateTime),
+                        (SchemaName:  'dateTime';   DelphiName:  'TDateTime';   Handling:    thDateTime),
+                        (SchemaName:  'float';      DelphiName:  'Double';      Handling:    thNone),
+                        (SchemaName:  'double';     DelphiName:  'Extended';    Handling:    thNone),
+                        (SchemaName:  'boolean';    DelphiName:  'Boolean';     Handling:    thNone),
+                        (SchemaName:  'string';     DelphiName:  'WideString';  Handling:    thNone)
                       );
 
 
@@ -350,7 +312,8 @@ begin
   for schemaIndex := 0 to Pred(SchemaCount) do
   begin
     schema := Schemas[schemaIndex];
-    AStream.WriteLnFmt(SectionComments[ASection], [schema.SchemaName]);
+    AStream.WriteLnNamedFmt(SectionComments[ASection],
+                            ['SchemaName',  schema.SchemaName]);
 
     for itemIndex := 0 to Pred(schema.ItemCount) do
       WriteSchemaItem(AStream, schema.Items[itemIndex], ASection);
@@ -367,8 +330,8 @@ procedure TDelphiXMLDataBindingGenerator.WriteDocumentFunctions(AStream: TStream
     if ASection = dxsInterface then
       AStream.Write('  ');
 
-    AStream.WriteLnFmt('function ' + AFunction + ': %1:s%0:s;',
-                       [AItemName, PrefixInterface]);
+    AStream.WriteLnNamedFmt('function ' + AFunction + ': IXML%Name:s;',
+                            ['Name', AItemName]);
 
     if ASection = dxsImplementation then
     begin
@@ -422,28 +385,26 @@ begin
             hasItem := True;
           end;
 
-          docBinding  := Format('GetDocBinding(''%0:s'', %1:s%0:s, TargetNamespace) as %2:s%0:s',
-                                [interfaceItem.TranslatedName,
-                                 PrefixClass,
-                                 PrefixInterface]);
+          docBinding  := NamedFormat('GetDocBinding(''%Name:s'', TXML%Name:s, TargetNamespace) as IXML%Name:s',
+                                     ['Name',  interfaceItem.TranslatedName]);
 
           WriteFunction(interfaceItem.TranslatedName,
-                        'Get%0:s(ADocument: IXMLDocument)',
+                        'Get%Name:s(ADocument: IXMLDocument)',
                         '  Result := ADocument.' + docBinding);
 
           WriteFunction(interfaceItem.TranslatedName,
-                        'Load%0:s(const AFileName: String)',
+                        'Load%Name:s(const AFileName: String)',
                         '  Result := LoadXMLDocument(AFileName).' + docBinding);
 
           WriteFunction(interfaceItem.TranslatedName,
-                        'Load%0:sFromStream(AStream: TStream)',
+                        'Load%Name:sFromStream(AStream: TStream)',
                         '  doc := NewXMLDocument;'#13#10 +
                         '  doc.LoadFromStream(AStream);'#13#10 +
-                        '  Result  := Get%0:s(doc);',
+                        '  Result  := Get%Name:s(doc);',
                         '  doc: IXMLDocument;');
 
           WriteFunction(interfaceItem.TranslatedName,
-                        'New%0:s',
+                        'New%Name:s',
                         '  Result := NewXMLDocument.' + docBinding);
 
           AStream.WriteLn();
@@ -551,18 +512,20 @@ begin
 
   case ASection of
     dxsForward:
-      AStream.WriteLnFmt(InterfaceItemForward, [AItem.TranslatedName]);
+      AStream.WriteLnNamedFmt(InterfaceItemForward,
+                              ['Name',  AItem.TranslatedName]);
     dxsInterface:
       begin
         if Assigned(AItem.BaseItem) then
-          parent  := PrefixInterface + AItem.BaseItem.TranslatedName
+          parent  := PrefixInterface2 + AItem.BaseItem.TranslatedName
         else
           parent  := ItemInterface;
 
         WriteDocumentation(AStream, AItem);
-        AStream.WriteLnFmt(InterfaceItemInterface, [AItem.TranslatedName,
-                                                    parent]);
-        AStream.WriteLnFmt('    %s', [CreateNewGUID()]);
+        AStream.WriteLnNamedFmt(InterfaceItemInterface,
+                                ['Name',        AItem.TranslatedName,
+                                 'ParentName',  parent]);                                 
+        AStream.WriteLn('    ' + CreateNewGUID());
 
         WriteSchemaInterfaceProperties(AStream, AItem, ASection);
 
@@ -572,12 +535,13 @@ begin
     dxsClass:
       begin
         if Assigned(AItem.BaseItem) then
-          parent  := PrefixClass + AItem.BaseItem.TranslatedName
+          parent  := PrefixClass2 + AItem.BaseItem.TranslatedName
         else
           parent  := ItemClass;
 
-        AStream.WriteLnFmt(InterfaceItemClass, [AItem.TranslatedName,
-                                                parent]);
+        AStream.WriteLnNamedFmt(InterfaceItemClass,
+                                ['Name',        AItem.TranslatedName,
+                                 'ParentName',  parent]);
 
         WriteSchemaInterfaceProperties(AStream, AItem, ASection);
 
@@ -626,17 +590,14 @@ procedure TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceProperties(AStream:
               begin
                 if not hasInterface then
                 begin
-                  AStream.WriteLnFmt('procedure %1:s%0:s.AfterConstruction;',
-                                     [AItem.TranslatedName,
-                                      PrefixClass]);
+                  AStream.WriteLnFmt('procedure TXML%s.AfterConstruction;', [AItem.TranslatedName]);
                   AStream.WriteLn('begin');
                   hasInterface  := True;
                 end;
 
-                AStream.WriteLnFmt('  RegisterChildNode(''%0:s'', %2:s%1:s);',
-                                   [itemProperty.Item.Name,
-                                    itemProperty.Item.TranslatedName,
-                                    PrefixClass]);
+                AStream.WriteLnNamedFmt('  RegisterChildNode(''%SourceName:s'', TXML%Name:s);',
+                                        ['SourceName', itemProperty.Item.Name,
+                                         'Name',       itemProperty.Item.TranslatedName]);
               end;
           end;
         end;
@@ -697,10 +658,10 @@ begin
             begin
               if propertyItem.ItemType = itEnumeration then
               begin
-                dataTypeName  := PrefixClass;
+                dataTypeName  := PrefixClass2;
                 writeTextProp := True;
               end else
-                dataTypeName  := PrefixInterface;
+                dataTypeName  := PrefixInterface2;
 
               { Collections have a Count property, no need to write a
                 HasX property as well. } 
@@ -762,15 +723,18 @@ begin
                   AStream.WriteLn();
 
                 if writeOptional then
-                  AStream.WriteLnFmt(optionalFormat, [PrefixOptional + itemProperty.TranslatedName,
-                                                      'Boolean']);
+                  AStream.WriteLnNamedFmt(optionalFormat,
+                                          ['Name',      PrefixOptional2 + itemProperty.TranslatedName,
+                                           'DataType',  'Boolean']);
 
                 if writeTextProp then
-                  AStream.WriteLnFmt(propertyFormat, [itemProperty.TranslatedName + PostfixText,
-                                                      'WideString']);
+                  AStream.WriteLnNamedFmt(propertyFormat,
+                                          ['Name',      itemProperty.TranslatedName + PostfixText2,
+                                           'DataType',  'WideString']);
 
-                AStream.WriteLnFmt(propertyFormat, [itemProperty.TranslatedName,
-                                                    dataTypeName]);
+                AStream.WriteLnNamedFmt(propertyFormat,
+                                        ['Name',      itemProperty.TranslatedName,
+                                         'DataType',  dataTypeName]);
                 hasMembers      := True;
                 localHasMembers := True;
               end;
@@ -784,13 +748,11 @@ begin
                     // #ToDo3 (MvR) 7-3-2008: extract strings
                     if writeOptional then
                     begin
-                      AStream.WriteLnFmt('function %0:s%1s.Get%2:s%3:s: Boolean;',
-                                             [PrefixClass,
-                                              AItem.TranslatedName,
-                                              PrefixOptional,
-                                              itemProperty.TranslatedName]);
+                      AStream.WriteLnNamedFmt('function TXML%Name:s.GetHas%PropertyName:s: Boolean;',
+                                              ['Name',         AItem.TranslatedName,
+                                               'PropertyName', itemProperty.TranslatedName]);
                       AStream.WriteLn('begin');
-                      AStream.WriteLnFmt('  Result := Assigned(ChildNodes.FindNode(''%0:s''));', [itemProperty.Name]);
+                      AStream.WriteLnFmt('  Result := Assigned(ChildNodes.FindNode(''%s''));', [itemProperty.Name]);
                       AStream.WriteLn('end;');
                       AStream.WriteLn();
                     end;
@@ -798,30 +760,26 @@ begin
 
                     if writeTextProp then
                     begin
-                      AStream.WriteLnFmt('function %0:s%1s.Get%3:s%2:s: WideString;',
-                                             [PrefixClass,
-                                              AItem.TranslatedName,
-                                              PostfixText,
-                                              itemProperty.TranslatedName]);
+                      AStream.WriteLnNamedFmt('function TXML%Name:s.Get%PropertyName:sText: WideString;',
+                                              ['Name',          AItem.TranslatedName,
+                                               'PropertyName',  itemProperty.TranslatedName]);
                       AStream.WriteLn('begin');
-                      AStream.WriteLnFmt('  Result := ChildNodes[''%0:s''].NodeValue;', [itemProperty.Name]);
+                      AStream.WriteLnFmt('  Result := ChildNodes[''%s''].NodeValue;', [itemProperty.Name]);
                       AStream.WriteLn('end;');
                       AStream.WriteLn();
                     end;
 
 
-                    AStream.WriteLnFmt('function %0:s%1:s.Get%2:s: %3:s;',
-                                           [PrefixClass,
-                                            AItem.TranslatedName,
-                                            itemProperty.TranslatedName,
-                                            dataTypeName]);
+                    AStream.WriteLnNamedFmt('function TXML%Name:s.Get%PropertyName:s: %DataType:s;',
+                                            ['Name',         AItem.TranslatedName,
+                                             'PropertyName', itemProperty.TranslatedName,
+                                             'DataType',     dataTypeName]);
 
                     case itemProperty.PropertyType of
                       ptSimple:
                         begin
                           AStream.WriteLn('begin');
-                          AStream.WriteLnFmt('  Result := ChildNodes[''%0:s''].NodeValue;',
-                                                 [itemProperty.Name]);
+                          AStream.WriteLnFmt('  Result := ChildNodes[''%s''].NodeValue;', [itemProperty.Name]);
                         end;
 
                       ptItem:
@@ -833,23 +791,22 @@ begin
                             itCollection:
                               begin
                                 AStream.WriteLn('begin');
-                                AStream.WriteLnFmt('  Result := (ChildNodes[''%0:s''] as %1:s%2:s);',
-                                                       [itemProperty.Name,
-                                                        PrefixInterface,
-                                                        propertyItem.TranslatedName]);
+                                AStream.WriteLnNamedFmt('  Result := (ChildNodes[''%Name:s''] as IXML%DataType:s);',
+                                                        ['Name',      itemProperty.Name,
+                                                         'DataType',  propertyItem.TranslatedName]);
                               end;
 
                             itEnumeration:
                               begin
                                 AStream.WriteLn(   'var');
                                 AStream.WriteLn(   '  nodeValue: WideString;');
-                                AStream.WriteLnFmt('  enumValue: %0:s;', [dataTypeName]);
+                                AStream.WriteLnFmt('  enumValue: %s;', [dataTypeName]);
                                 AStream.WriteLn();
                                 AStream.WriteLn(   'begin');
-                                AStream.WriteLnFmt('  Result := %0:s(-1);', [dataTypeName]);
-                                AStream.WriteLnFmt('  nodeValue := Get%0:sText;', [itemProperty.TranslatedName]);
+                                AStream.WriteLnFmt('  Result := %s(-1);', [dataTypeName]);
+                                AStream.WriteLnFmt('  nodeValue := Get%sText;', [itemProperty.TranslatedName]);
                                 AStream.WriteLnFmt('  for enumValue := Low(%0:s) to High(%0:s) do', [dataTypeName]);
-                                AStream.WriteLnFmt('    if %0:sValues[enumValue] = nodeValue then', [propertyItem.TranslatedName]);
+                                AStream.WriteLnFmt('    if %sValues[enumValue] = nodeValue then', [propertyItem.TranslatedName]);
                                 AStream.WriteLn(   '    begin');
                                 AStream.WriteLn(   '      Result := enumValue;');
                                 AStream.WriteLn(   '      break;');
@@ -867,6 +824,7 @@ begin
                   begin
                     if writeTextProp then
                     begin
+                      // #ToDo1 (MvR) 15-3-2008: hier was ik
                       AStream.WriteLnFmt('procedure %0:s%1:s.Set%2:s%3:s(const Value: WideString);',
                                              [PrefixClass,
                                               AItem.TranslatedName,
@@ -880,8 +838,8 @@ begin
 
                     if (itemProperty.PropertyType = ptItem) and
                        (TXMLDataBindingItemProperty(itemProperty).Item.ItemType = itEnumeration) then
-                      value := Format('%0:sValues[Value]',
-                                      [TXMLDataBindingItemProperty(itemProperty).Item.TranslatedName])
+                      value := NamedFormat('%Name:sValues[Value]',
+                                           ['Name',  TXMLDataBindingItemProperty(itemProperty).Item.TranslatedName])
                     else
                       value := 'Value';
 
@@ -915,7 +873,7 @@ begin
     dxsInterface:
       begin
         AStream.WriteLnFmt(InterfaceItemInterface, [AItem.TranslatedName,
-                                                        CollectionInterface]);
+                                                    CollectionInterface]);
         AStream.WriteLnFmt('    %s', [CreateNewGUID()]);
 
         WriteSchemaCollectionProperties(AStream, AItem, ASection);
@@ -926,7 +884,7 @@ begin
     dxsClass:
       begin
         AStream.WriteLnFmt(InterfaceItemClass, [AItem.TranslatedName,
-                                                    CollectionClass]);
+                                                CollectionClass]);
 
         WriteSchemaCollectionProperties(AStream, AItem, ASection);
 
@@ -1049,7 +1007,8 @@ begin
   if (ASection <> dxsForward) or (AItem.MemberCount = 0) then
     exit;
 
-  enumStart := Format('  %0:s%1:s = (', [PrefixClass, AItem.TranslatedName]);
+  enumStart := NamedFormat('  TXML%Name:s = (',
+                           ['Name', AItem.TranslatedName]);
   AStream.Write(enumStart);
   lineIndent := StringOfChar(' ', Length(enumStart));
 
@@ -1078,16 +1037,19 @@ begin
   if (AItem.MemberCount = 0) then
     exit;
 
-  enumStart := Format('  %0:sValues: ', [AItem.TranslatedName]);
-  AStream.WriteLn(enumStart + Format('array[%0:s%1:s] of WideString =',
-                                     [PrefixClass, AItem.TranslatedName]));
+  enumStart := NamedFormat('  %Name:sValues: ', ['Name', AItem.TranslatedName]);
+  AStream.WriteLn(enumStart + NamedFormat('array[TXML%Name:s] of WideString =',
+                                          ['Name',  AItem.TranslatedName]));
+
   lineIndent := StringOfChar(' ', Length(enumStart));
 
   AStream.WriteLn(lineIndent + '(');
 
   for memberIndex := 0 to Pred(AItem.MemberCount) do
   begin
-    AStream.Write(Format('%s  ''%s''', [lineIndent, AItem.Members[memberIndex].Name]));
+    AStream.Write(NamedFormat('%Indent:s  ''%Name:s''',
+                             ['Indent', lineIndent,
+                              'Name',   AItem.Members[memberIndex].Name]));
 
     if memberIndex < Pred(AItem.MemberCount) then
       AStream.WriteLn(',')
