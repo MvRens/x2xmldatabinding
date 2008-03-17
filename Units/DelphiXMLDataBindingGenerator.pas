@@ -66,10 +66,10 @@ uses
 const
   SectionComments:  array[TDelphiXMLSection] of String =
                     (
-                      '  { Forward declarations for %SchemaName:s }',
-                      '  { Interfaces for %SchemaName:s }',
-                      '  { Classes for %SchemaName:s }',
-                      '{ Implementation for %SchemaName:s }'
+                      '  { Forward declarations for %<SchemaName>:s }',
+                      '  { Interfaces for %<SchemaName>:s }',
+                      '  { Classes for %<SchemaName>:s }',
+                      '{ Implementation for %<SchemaName>:s }'
                     );
 
 
@@ -77,9 +77,9 @@ const
   PrefixClass             = 'TXML';
 
 
-  InterfaceItemForward    = '  IXML%Name:s = interface;';
-  InterfaceItemInterface  = '  IXML%Name:s = interface(%ParentName:s)';
-  InterfaceItemClass      = '  TXML%Name:s = class(%ParentName:s, IXML%Name:s)';
+  InterfaceItemForward    = '  IXML%<Name>:s = interface;';
+  InterfaceItemInterface  = '  IXML%<Name>:s = interface(%<ParentName>:s)';
+  InterfaceItemClass      = '  TXML%<Name>:s = class(%<ParentName>:s, IXML%<Name>:s)';
 
 
   CollectionInterface     = 'IXMLNodeCollection';
@@ -352,7 +352,7 @@ begin
             hasItem := True;
           end;
 
-          docBinding  := NamedFormat('GetDocBinding(''%SourceName:s'', TXML%Name:s, TargetNamespace) as IXML%Name:s',
+          docBinding  := NamedFormat('GetDocBinding(''%<SourceName>:s'', TXML%<Name>:s, TargetNamespace) as IXML%<Name>:s',
                                      ['SourceName', interfaceItem.Name,
                                       'Name',       interfaceItem.TranslatedName]);
 
@@ -362,37 +362,37 @@ begin
             case ASection of
               dxsInterface:
                 begin
-                  Add('  function Get%Name:s(ADocument: IXMLDocument): IXML%Name:s;');
-                  Add('  function Load%Name:s(const AFileName: String): IXML%Name:s;');
-                  Add('  function Load%Name:sFromStream(AStream: TStream): IXML%Name:s;');
-                  Add('  function New%Name:s: IXML%Name:s;');
+                  Add('  function Get%<Name>:s(ADocument: IXMLDocument): IXML%<Name>:s;');
+                  Add('  function Load%<Name>:s(const AFileName: String): IXML%<Name>:s;');
+                  Add('  function Load%<Name>:sFromStream(AStream: TStream): IXML%<Name>:s;');
+                  Add('  function New%<Name>:s: IXML%<Name>:s;');
                 end;
               dxsImplementation:
                 begin
-                  Add('function Get%Name:s(ADocument: IXMLDocument): IXML%Name:s;');
+                  Add('function Get%<Name>:s(ADocument: IXMLDocument): IXML%<Name>:s;');
                   Add('begin');
                   Add('  Result := ADocument.' + docBinding);
                   Add('end;');
                   AddLn;
 
-                  Add('function Load%Name:s(const AFileName: String): IXML%Name:s;');
+                  Add('function Load%<Name>:s(const AFileName: String): IXML%<Name>:s;');
                   Add('begin');
                   Add('  Result := LoadXMLDocument(AFileName).' + docBinding);
                   Add('end;');
                   AddLn;
 
-                  Add('function Load%Name:sFromStream(AStream: TStream): IXML%Name:s;');
+                  Add('function Load%<Name>:sFromStream(AStream: TStream): IXML%<Name>:s;');
                   Add('var');
                   Add('  doc: IXMLDocument;');
                   AddLn;
                   Add('begin');
                   Add('  doc := NewXMLDocument;');
                   Add('  doc.LoadFromStream(AStream);');
-                  Add('  Result  := Get%Name:s(doc);');
+                  Add('  Result  := Get%<Name>:s(doc);');
                   Add('end;');
                   AddLn;
 
-                  Add('function New%Name:s: IXML%Name:s;');
+                  Add('function New%<Name>:s: IXML%<Name>:s;');
                   Add('begin');
                   Add('  Result := NewXMLDocument.' + docBinding);
                   Add('end;');
@@ -593,7 +593,7 @@ procedure TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceProperties(AStream:
                   hasInterface  := True;
                 end;
 
-                AStream.WriteLnNamedFmt('  RegisterChildNode(''%SourceName:s'', TXML%Name:s);',
+                AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s);',
                                         ['SourceName', itemProperty.Item.Name,
                                          'Name',       itemProperty.Item.TranslatedName]);
               end;
@@ -699,35 +699,35 @@ begin
                   dxmPropertyGet:
                     begin
                       if writeOptional then
-                        sourceCode.Add('    function GetHas%Name:s: Boolean;');
+                        sourceCode.Add('    function GetHas%<PropertyName>:s: Boolean;');
 
                       if writeTextProp then
-                        sourceCode.Add('    function Get%Name:sText: WideString;');
+                        sourceCode.Add('    function Get%<PropertyName>:sText: WideString;');
 
-                      sourceCode.Add('    function Get%Name:s: %DataType:s;');
+                      sourceCode.Add('    function Get%<PropertyName>:s: %<DataType>:s;');
                     end;
 
                   dxmPropertySet:
                     if not itemProperty.IsReadOnly then
                     begin
                       if writeTextProp then
-                        sourceCode.Add('    procedure Set%Name:sText(const Value: WideString);');
+                        sourceCode.Add('    procedure Set%<PropertyName>:sText(const Value: WideString);');
 
-                      sourceCode.Add('    procedure Set%Name:s(const Value: %DataType:s);');
+                      sourceCode.Add('    procedure Set%<PropertyName>:s(const Value: %<DataType>:s);');
                     end;
 
                   dxmPropertyDeclaration:
                     begin
                       if writeOptional then
-                        sourceCode.Add('    property Has%Name:s: Boolean read GetHas%Name:s;');
+                        sourceCode.Add('    property Has%<PropertyName>:s: Boolean read GetHas%<PropertyName>:s;');
 
                       if writeTextProp then
-                        sourceCode.Add('    property %Name:sText: WideString read Get%Name:sText;');
+                        sourceCode.Add('    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText;');
 
                       if itemProperty.IsReadOnly then
-                        sourceCode.Add('    property %Name:s: %DataType:s read Get%Name:s;')
+                        sourceCode.Add('    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s;')
                       else
-                        sourceCode.Add('    property %Name:s: %DataType:s read Get%Name:s write Set%Name:s;');
+                        sourceCode.Add('    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s write Set%<PropertyName>:s;');
                     end;
                 end;
 
@@ -743,9 +743,9 @@ begin
                     begin
                       if writeOptional then
                       begin
-                        sourceCode.Add('function TXML%Name:s.GetHas%PropertyName:s: Boolean;');
+                        sourceCode.Add('function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;');
                         sourceCode.Add('begin');
-                        sourceCode.Add('  Result := Assigned(ChildNodes.FindNode(''%PropertySourceName:s''));');
+                        sourceCode.Add('  Result := Assigned(ChildNodes.FindNode(''%<PropertySourceName>:s''));');
                         sourceCode.Add('end;');
                         sourceCode.AddLn;
                       end;
@@ -753,21 +753,21 @@ begin
 
                       if writeTextProp then
                       begin
-                        sourceCode.Add('function TXML%Name:s.Get%PropertyName:sText: WideString;');
+                        sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;');
                         sourceCode.Add('begin');
-                        sourceCode.Add('  Result := ChildNodes[''%PropertySourceName:s''].NodeValue;');
+                        sourceCode.Add('  Result := ChildNodes[''%<PropertySourceName>:s''].NodeValue;');
                         sourceCode.Add('end;');
                         sourceCode.AddLn;
                       end;
 
 
-                      sourceCode.Add('function TXML%Name:s.Get%PropertyName:s: %DataType:s;');
+                      sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:s: %<DataType>:s;');
 
                       case itemProperty.PropertyType of
                         ptSimple:
                           begin
                             sourceCode.Add('begin');
-                            sourceCode.Add('  Result := ChildNodes[''%PropertySourceName:s''].NodeValue;');
+                            sourceCode.Add('  Result := ChildNodes[''%<PropertySourceName>:s''].NodeValue;');
                             sourceCode.Add('end;');
                           end;
 
@@ -780,7 +780,7 @@ begin
                                 itCollection:
                                   begin
                                     sourceCode.Add('begin');
-                                    sourceCode.Add('  Result := (ChildNodes[''%Name:s''] as IXML%PropertyItemName:s);');
+                                    sourceCode.Add('  Result := (ChildNodes[''%<Name>:s''] as IXML%<PropertyItemName>:s);');
                                     sourceCode.Add('end;');
                                   end;
 
@@ -788,13 +788,13 @@ begin
                                   begin
                                     sourceCode.Add('var');
                                     sourceCode.Add('  nodeValue: WideString;');
-                                    sourceCode.Add('  enumValue: %DataType:s;');
+                                    sourceCode.Add('  enumValue: %<DataType>:s;');
                                     sourceCode.AddLn;
                                     sourceCode.Add('begin');
-                                    sourceCode.Add('  Result := %DataType:s(-1);');
-                                    sourceCode.Add('  nodeValue := Get%PropertyName:sText;');
-                                    sourceCode.Add('  for enumValue := Low(%DataType:s) to High(%DataType:s) do');
-                                    sourceCode.Add('    if %PropertyName:sValues[enumValue] = nodeValue then');
+                                    sourceCode.Add('  Result := %<DataType>:s(-1);');
+                                    sourceCode.Add('  nodeValue := Get%<PropertyName>:sText;');
+                                    sourceCode.Add('  for enumValue := Low(%<DataType>:s) to High(%<DataType>:s) do');
+                                    sourceCode.Add('    if %<PropertyName>:sValues[enumValue] = nodeValue then');
                                     sourceCode.Add('    begin');
                                     sourceCode.Add('      Result := enumValue;');
                                     sourceCode.Add('      break;');
@@ -812,21 +812,21 @@ begin
                     begin
                       if writeTextProp then
                       begin
-                        sourceCode.Add('procedure TXML%Name:s.Set%PropertyName:sText(const Value: WideString);');
+                        sourceCode.Add('procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);');
                         sourceCode.Add('begin');
-                        sourceCode.Add('  ChildNodes[''%PropertySourceName:s''].NodeValue := Value;');
+                        sourceCode.Add('  ChildNodes[''%<PropertySourceName>:s''].NodeValue := Value;');
                         sourceCode.Add('end;');
                         sourceCode.AddLn;
                       end;
 
                       if Assigned(propertyItem) and (propertyItem.ItemType = itEnumeration) then
-                        value := '%PropertyItemName:sValues[Value]'
+                        value := '%<PropertyItemName>:sValues[Value]'
                       else
                         value := 'Value';
 
-                      sourceCode.Add('procedure TXML%Name:s.Set%PropertyName:s(const Value: %DataType:s);');
+                      sourceCode.Add('procedure TXML%<Name>:s.Set%<PropertyName>:s(const Value: %<DataType>:s);');
                       sourceCode.Add('begin');
-                      sourceCode.Add('  ChildNodes[''%PropertySourceName:s''].NodeValue := ' + value + ';');
+                      sourceCode.Add('  ChildNodes[''%<PropertySourceName>:s''].NodeValue := ' + value + ';');
                       sourceCode.Add('end;');
                       sourceCode.AddLn;
                     end;
@@ -898,8 +898,8 @@ end;
 
 procedure TDelphiXMLDataBindingGenerator.WriteSchemaCollectionProperties(AStream: TStreamHelper; AItem: TXMLDataBindingCollection; ASection: TDelphiXMLSection);
 var
-  dataTypeName: string;
   dataIntfName: string;
+  dataTypeName: string;
   sourceCode: TNamedFormatStringList;
 
 begin
@@ -907,8 +907,18 @@ begin
     AStream.WriteLn('  protected');
 
   // #ToDo1 (MvR) 17-3-2008: DataType for enumerations etc.
-  dataTypeName  := PrefixInterface + AItem.CollectionItem.TranslatedName;
-  dataIntfName  := dataTypeName;
+  case AItem.CollectionItem.PropertyType of
+    ptSimple:
+      begin
+        dataTypeName  := AItem.CollectionItem.TranslatedName;
+        dataIntfName  := 'IXMLNode';
+      end;
+    ptItem:
+      begin
+        dataTypeName  := PrefixInterface + AItem.CollectionItem.TranslatedName;
+        dataIntfName  := dataTypeName;
+      end;
+  end;
 
   sourceCode    := TNamedFormatStringList.Create();
   try
@@ -916,41 +926,41 @@ begin
       dxsInterface,
       dxsClass:
         begin
-          sourceCode.Add('    function Get_%ItemName:s(Index: Integer): %DataType:s;');
-          sourceCode.Add('    function Add: %DataType:s;');
-          sourceCode.Add('    function Insert(Index: Integer): %DataType:s;');
+          sourceCode.Add('    function Get_%<ItemName>:s(Index: Integer): %<DataType>:s;');
+          sourceCode.Add('    function Add: %<DataType>:s;');
+          sourceCode.Add('    function Insert(Index: Integer): %<DataType>:s;');
         end;
       dxsImplementation:
         begin
-          sourceCode.Add('procedure TXML%Name:s.AfterConstruction;');
+          sourceCode.Add('procedure TXML%<Name>:s.AfterConstruction;');
           sourceCode.Add('begin');
 
           // #ToDo1 (MvR) 17-3-2008: DataType class / interface!!
-          sourceCode.Add('  RegisterChildNode(''%ItemSourceName:s'', %DataType:s);');
+          sourceCode.Add('  RegisterChildNode(''%<ItemSourceName>:s'', %<DataType>:s);');
 
           sourceCode.AddLn;
-          sourceCode.Add('  ItemTag := ''%ItemSourceName:s'';');
-          sourceCode.Add('  ItemInterface := %DataInterface:s;');
+          sourceCode.Add('  ItemTag := ''%<ItemSourceName>:s'';');
+          sourceCode.Add('  ItemInterface := %<DataInterface>:s;');
           sourceCode.AddLn;
           sourceCode.Add('  inherited;');
           sourceCode.Add('end;');
           sourceCode.AddLn;
 
-          sourceCode.Add('function TXML%Name:s.Get_%ItemName:s(Index: Integer): %DataType:s;');
+          sourceCode.Add('function TXML%<Name>:s.Get_%<ItemName>:s(Index: Integer): %<DataType>:s;');
           sourceCode.Add('begin');
-          sourceCode.Add('  Result := (List[Index] as %DataType:s;');
+          sourceCode.Add('  Result := (List[Index] as %<DataType>:s;');
           sourceCode.Add('end;');
           sourceCode.AddLn;
 
-          sourceCode.Add('function TXML%Name:s.Add(Index: Integer): %DataType:s;');
+          sourceCode.Add('function TXML%<Name>:s.Add(Index: Integer): %<DataType>:s;');
           sourceCode.Add('begin');
-          sourceCode.Add('  Result := (AddItem(-1) as %DataType:s;');
+          sourceCode.Add('  Result := (AddItem(-1) as %<DataType>:s;');
           sourceCode.Add('end;');
           sourceCode.AddLn;
 
-          sourceCode.Add('function TXML%Name:s.Insert(Index: Integer): %DataType:s;');
+          sourceCode.Add('function TXML%<Name>:s.Insert(Index: Integer): %<DataType>:s;');
           sourceCode.Add('begin');
-          sourceCode.Add('  Result := (AddItem(Index) as %DataType:s;');
+          sourceCode.Add('  Result := (AddItem(Index) as %<DataType>:s;');
           sourceCode.Add('end;');
           sourceCode.AddLn;
         end;
@@ -960,7 +970,7 @@ begin
       dxsInterface:
         begin
           sourceCode.AddLn;
-          sourceCode.Add('    property %ItemName:s[Index: Integer]: %DataType:s read Get_%ItemName:s; default;');
+          sourceCode.Add('    property %<ItemName>:s[Index: Integer]: %<DataType>:s read Get_%<ItemName>:s; default;');
         end;
 
       dxsClass:
@@ -991,7 +1001,7 @@ begin
   if (ASection <> dxsForward) or (AItem.MemberCount = 0) then
     exit;
 
-  enumStart := NamedFormat('  TXML%Name:s = (',
+  enumStart := NamedFormat('  TXML%<Name>:s = (',
                            ['Name', AItem.TranslatedName]);
   AStream.Write(enumStart);
   lineIndent := StringOfChar(' ', Length(enumStart));
@@ -1021,8 +1031,8 @@ begin
   if (AItem.MemberCount = 0) then
     exit;
 
-  enumStart := NamedFormat('  %Name:sValues: ', ['Name', AItem.TranslatedName]);
-  AStream.WriteLn(enumStart + NamedFormat('array[TXML%Name:s] of WideString =',
+  enumStart := NamedFormat('  %<Name>:sValues: ', ['Name', AItem.TranslatedName]);
+  AStream.WriteLn(enumStart + NamedFormat('array[TXML%<Name>:s] of WideString =',
                                           ['Name',  AItem.TranslatedName]));
 
   lineIndent := StringOfChar(' ', Length(enumStart));
@@ -1031,7 +1041,7 @@ begin
 
   for memberIndex := 0 to Pred(AItem.MemberCount) do
   begin
-    AStream.Write(NamedFormat('%Indent:s  ''%Name:s''',
+    AStream.Write(NamedFormat('%<Indent>:s  ''%<Name>:s''',
                              ['Indent', lineIndent,
                               'Name',   AItem.Members[memberIndex].Name]));
 
@@ -1070,4 +1080,5 @@ begin
 end;
 
 end.
+
 
