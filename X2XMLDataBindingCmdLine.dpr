@@ -5,7 +5,8 @@ uses
   SysUtils,
   DelphiXMLDataBindingGenerator in 'Units\DelphiXMLDataBindingGenerator.pas',
   XMLDataBindingGenerator in 'Units\XMLDataBindingGenerator.pas',
-  XMLDataBindingHelpers in 'Units\XMLDataBindingHelpers.pas';
+  XMLDataBindingHelpers in 'Units\XMLDataBindingHelpers.pas',
+  DelphiXMLDataBindingResources in 'Units\DelphiXMLDataBindingResources.pas';
 
 begin
   CoInitialize(nil);

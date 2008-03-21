@@ -2,7 +2,7 @@ unit XMLDataBindingGenerator;
 
 // #ToDo1 (MvR) 7-3-2008: check if List items can be collapsed if an item is
 //                        already a list parent
-// #ToDo3 (MvR) 7-3-2008: enum collections?
+// #ToDo1 (MvR) 19-3-2008: attributes
 interface
 uses
   Classes,
@@ -344,6 +344,11 @@ begin
     for schemaIndex := 0 to Pred(SchemaCount) do
       ResolveSchema(Schemas[schemaIndex]);
 
+
+    { Collapse collections }
+
+
+    { Resolve naming conflicts }
     ResolveNameConflicts();
 
 
@@ -592,7 +597,6 @@ begin
           interfaceObject.BaseName := AElement.DataType.BaseTypeName;
 
         ASchema.AddItem(interfaceObject);
-
         Result := interfaceObject;
       end;
 
