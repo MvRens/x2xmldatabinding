@@ -21,7 +21,8 @@ type
 
   TXMLDataBindingOutputType = (otSingle, otMultiple);
   TXMLDataBindingItemType = (itInterface, itCollection, itEnumeration,
-                             itEnumerationMember, itProperty, itForward);
+                             itEnumerationMember, itProperty, itForward,
+                             itComplexTypeElement);
   TXMLDataBindingInterfaceType = (ifElement, ifComplexType);
   TXMLDataBindingPropertyType = (ptSimple, ptItem);
 
@@ -37,6 +38,7 @@ type
     FSourceFileName:    String;
 
     FSchemas:           TObjectList;
+    FMustResolve: Boolean;
 
     function GetSchemaCount(): Integer;
     function GetSchemas(Index: Integer): TXMLDataBindingSchema;
@@ -179,11 +181,16 @@ type
   private
     FCollectionItem:  TXMLDataBindingProperty;
 
+    function GetActualCollectionItem(): TXMLDataBindingItem;
+    function GetCollectionItemName(): String;
+    function GetCollectionItemTranslatedName(): String;
     procedure SetCollectionItem(const Value: TXMLDataBindingProperty);
   protected
     function GetItemType(): TXMLDataBindingItemType; override;
   public
-    property CollectionItem:  TXMLDataBindingProperty read FCollectionItem;
+    property CollectionItem:                TXMLDataBindingProperty read FCollectionItem;
+    property CollectionItemName:            String                  read GetCollectionItemName;
+    property CollectionItemTranslatedName:  String                  read GetCollectionItemTranslatedName;
   end;
 
 
@@ -275,12 +282,23 @@ type
   end;
 
 
+  TXMLDataBindingComplexTypeElementItem = class(TXMLDataBindingItem)
+  private
+    FItem: TXMLDataBindingItem;
+  protected
+    function GetItemType(): TXMLDataBindingItemType; override;
+  public
+    property Item:  TXMLDataBindingItem read FItem  write FItem;
+  end;
+
+
 implementation
 uses
   SysUtils,
   Windows,
   XMLDoc,
   XMLIntf,
+  XMLSchemaTags,
 
   X2UtHashes;
 
@@ -297,6 +315,25 @@ begin
     Result  := ifComplexType
   else
     Result  := ifElement;
+end;
+
+
+function GetActualItem(AItem: TXMLDataBindingItem): TXMLDataBindingItem;
+begin
+  Result  := AItem;
+
+  while Assigned(Result) do
+  begin
+    case Result.ItemType of
+      itForward:
+        Result  := TXMLDataBindingForwardItem(Result).Item;
+
+      itComplexTypeElement:
+        Result  := TXMLDataBindingComplexTypeElementItem(Result).Item;
+    else
+      break;
+    end;
+  end;
 end;
 
 
@@ -340,11 +377,16 @@ begin
       GenerateSchemaObjects(Schemas[schemaIndex], (schemaIndex = 0));
 
 
-    { Process unresolved references }
+    { Process unresolved references
+      - some references can't be resolved the first time (especially
+        ComplexTypeElement references). Fix this workaround some time. }
     for schemaIndex := 0 to Pred(SchemaCount) do
       ResolveSchema(Schemas[schemaIndex]);
 
+    for schemaIndex := 0 to Pred(SchemaCount) do
+      ResolveSchema(Schemas[schemaIndex]);
 
+      
     { Collapse collections }
 
 
@@ -551,6 +593,7 @@ var
   elementIndex:         Integer;
   enumerationObject:    TXMLDataBindingEnumeration;
   interfaceObject:      TXMLDataBindingInterface;
+  complexTypeElement:   TXMLDataBindingComplexTypeElementItem;
 
 begin
   Result := nil;
@@ -569,15 +612,24 @@ begin
   end else
   begin
     if (not AElement.DataType.IsAnonymous) and
-       (AElement.DataType.IsComplex) then
+       AElement.DataType.IsComplex then
     begin
       { Find data type. If not found, mark as "resolve later". }
-      Result := FindInterface(ASchema, AElement.DataTypeName, ifComplexType);
+      Result        := FindInterface(ASchema, AElement.DataTypeName, ifComplexType);
 
       if not Assigned(Result) then
       begin
         Result  := TXMLDataBindingForwardItem.Create(AElement, AElement.DataTypeName, ifComplexType);
         ASchema.AddItem(Result);
+      end;
+
+      if AElement.IsGlobal then
+      begin
+        { The element is global, but only references a complex type. Keep track
+          to properly resolve references to the element. }
+        complexTypeElement      := TXMLDataBindingComplexTypeElementItem.Create(AElement, AElement.Name);
+        complexTypeElement.Item := Result;
+        ASchema.AddItem(complexTypeElement);
       end;
     end;
 
@@ -643,7 +695,7 @@ begin
     { Create intermediate object for collections }
     if Assigned(propertyType) then
       propertyItem  := TXMLDataBindingItemProperty.Create(AElement,
-                                                          AElement.Name,
+                                                          propertyType.Name,
                                                           propertyType)
     else
       propertyItem  := TXMLDataBindingSimpleProperty.Create(AElement,
@@ -719,13 +771,23 @@ type
 
 procedure TXMLDataBindingGenerator.FindInterfaceProc(AItem: TXMLDataBindingItem; AData: Pointer; var AAbort: Boolean);
 var
-  findInfo:   PFindInterfaceInfo;
+  findInfo:       PFindInterfaceInfo;
 
 begin
+  AAbort    := False;
   findInfo  := PFindInterfaceInfo(AData);
-  AAbort    := (AItem.ItemType = itInterface) and
-               (TXMLDataBindingInterface(AItem).InterfaceType = findInfo^.InterfaceType) and
-               (AItem.Name = findInfo^.Name);
+
+
+  if AItem.Name = findInfo^.Name then
+  begin
+    case AItem.ItemType of
+      itInterface:
+        AAbort  := (TXMLDataBindingInterface(AItem).InterfaceType = findInfo^.InterfaceType);
+
+      itComplexTypeElement:
+        AAbort  := (findInfo^.InterfaceType = ifElement);
+    end;
+  end;
 end;
 
 
@@ -736,7 +798,7 @@ var
 begin
   findInfo.InterfaceType  := AType;
   findInfo.Name           := AName;
-  Result                  := TXMLDataBindingInterface(IterateSchemaItems(ASchema, FindInterfaceProc, @findInfo));
+  Result                  := TXMLDataBindingInterface(GetActualItem(IterateSchemaItems(ASchema, FindInterfaceProc, @findInfo)));
 end;
 
 
@@ -791,7 +853,8 @@ begin
           { Resolve base interface }
           interfaceItem := TXMLDataBindingInterface(item);
 
-          if Length(interfaceItem.BaseName) > 0 then
+          if (not Assigned(interfaceItem.BaseItem)) and
+             (Length(interfaceItem.BaseName) > 0) then
             interfaceItem.BaseItem  := FindInterface(ASchema, interfaceItem.BaseName, ifComplexType);
         end;
 
@@ -813,14 +876,17 @@ begin
 
   { Resolve forwarded item }
   forwardItem   := TXMLDataBindingForwardItem(AItem);
-  referenceItem := FindInterface(ASchema, AItem.Name, forwardItem.InterfaceType);
+  if not Assigned(forwardItem.Item) then
+  begin
+    referenceItem := FindInterface(ASchema, AItem.Name, forwardItem.InterfaceType);
 
-  if (not Assigned(referenceItem)) and
-     (forwardItem.InterfaceType = ifElement) then
-    referenceItem := FindEnumeration(ASchema, AItem.Name);
+    if (not Assigned(referenceItem)) and
+       (forwardItem.InterfaceType = ifElement) then
+      referenceItem := FindEnumeration(ASchema, AItem.Name);
 
-  if Assigned(referenceItem) then
-    forwardItem.Item  := referenceItem;
+    if Assigned(referenceItem) then
+      forwardItem.Item  := referenceItem;
+  end;
 end;
 
 
@@ -1164,6 +1230,43 @@ begin
 end;
 
 
+function TXMLDataBindingCollection.GetActualCollectionItem(): TXMLDataBindingItem;
+begin
+  Result  := nil;
+
+  if Assigned(CollectionItem) then
+  begin
+    case CollectionItem.PropertyType of
+      ptSimple: Result  := CollectionItem;
+      ptItem:   Result  := TXMLDataBindingItemProperty(CollectionItem).Item;
+    end;
+  end;
+end;
+
+function TXMLDataBindingCollection.GetCollectionItemName(): String;
+var
+  item:   TXMLDataBindingItem;
+
+begin
+  Result  := '';
+  item    := GetActualCollectionItem();
+  if Assigned(item) then
+    Result  := item.Name;
+end;
+
+
+function TXMLDataBindingCollection.GetCollectionItemTranslatedName(): String;
+var
+  item:   TXMLDataBindingItem;
+
+begin
+  Result  := '';
+  item    := GetActualCollectionItem();
+  if Assigned(item) then
+    Result  := item.Name;
+end;
+
+
 procedure TXMLDataBindingCollection.SetCollectionItem(const Value: TXMLDataBindingProperty);
 begin
   FCollectionItem := Value;
@@ -1278,10 +1381,7 @@ end;
 
 function TXMLDataBindingItemProperty.GetItem(): TXMLDataBindingItem;
 begin
-  Result := FItem;
-
-  while Assigned(Result) and (Result.ItemType = itForward) do
-    Result := TXMLDataBindingForwardItem(Result).Item;
+  Result := GetActualItem(FItem);
 end;
 
 
@@ -1297,6 +1397,13 @@ end;
 function TXMLDataBindingForwardItem.GetItemType(): TXMLDataBindingItemType;
 begin
   Result  := itForward;
+end;
+
+
+{ TXMLDataBindingComplexTypeElementItem }
+function TXMLDataBindingComplexTypeElementItem.GetItemType(): TXMLDataBindingItemType;
+begin
+  Result  := itComplexTypeElement;
 end;
 
 end.

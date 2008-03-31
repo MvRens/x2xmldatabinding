@@ -130,7 +130,7 @@
 			<Directories Name="UsePackages">False</Directories>
 		</Directories>
 		<Parameters>
-			<Parameters Name="RunParams">"F:\XTxXSD\Offerte.xsd" "F:\XTxXSD\Output\xml_Offerte.pas"</Parameters>
+			<Parameters Name="RunParams">"F:\XTxXSD\Ombouw.xsd" "F:\XTxXSD\Output\xml_Offerte.pas"</Parameters>
 			<Parameters Name="HostApplication"></Parameters>
 			<Parameters Name="Launcher"></Parameters>
 			<Parameters Name="UseLauncher">False</Parameters>

@@ -783,8 +783,8 @@ begin
       end;
     ptItem:
       begin
-        dataTypeName  := PrefixInterface + AItem.CollectionItem.TranslatedName;
-        dataClassName := PrefixClass + AItem.CollectionItem.TranslatedName;
+        dataTypeName  := PrefixInterface + AItem.CollectionItemTranslatedName;
+        dataClassName := PrefixClass + AItem.CollectionItemTranslatedName;
         dataIntfName  := dataTypeName;
       end;
   end;
@@ -886,7 +886,7 @@ begin
     end;
 
     AStream.Write(sourceCode.Format(['Name',            AItem.TranslatedName,
-                                     'ItemName',        AItem.CollectionItem.TranslatedName,
+                                     'ItemName',        AItem.CollectionItemTranslatedName,
                                      'ItemSourceName',  AItem.CollectionItem.Name,
                                      'DataType',        dataTypeName,
                                      'DataClass',       dataClassName,
