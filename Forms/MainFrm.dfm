@@ -3,7 +3,7 @@ object MainForm: TMainForm
   Top = 81
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsDialog
-  Caption = 'X'#178'Software XML Data Binding Wizard for Delphi'
+  Caption = 'X'#178'Software XML Data Binding for Delphi'
   ClientHeight = 244
   ClientWidth = 438
   Color = clBtnFace
@@ -56,6 +56,7 @@ object MainForm: TMainForm
       Checked = True
       TabOrder = 0
       TabStop = True
+      OnClick = OutputTypeClick
     end
     object rbFolder: TRadioButton
       Left = 8
@@ -63,15 +64,15 @@ object MainForm: TMainForm
       Width = 149
       Height = 17
       Caption = 'Output to separate &files'
-      Enabled = False
       TabOrder = 1
+      OnClick = OutputTypeClick
     end
     object plOutput: TJvPageList
       Left = 3
       Top = 72
       Width = 416
       Height = 87
-      ActivePage = spFile
+      ActivePage = spFolder
       PropagateEnable = False
       ShowDesignCaption = sdcBottomRight
       Anchors = [akLeft, akTop, akRight, akBottom]
@@ -135,7 +136,6 @@ object MainForm: TMainForm
           DialogKind = dkWin32
           Anchors = [akLeft, akTop, akRight]
           TabOrder = 0
-          Text = 'F:\XTxXSD\Output\'
         end
         object edtFolderPrefix: TEdit
           Left = 88
@@ -151,6 +151,7 @@ object MainForm: TMainForm
           Width = 121
           Height = 21
           TabOrder = 2
+          Text = '.pas'
         end
       end
     end

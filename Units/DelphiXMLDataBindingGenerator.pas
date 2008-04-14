@@ -13,7 +13,7 @@ uses
 
   
 type
-  TGetFileNameEvent = procedure(Sender: TObject; const SchemaName: String; var Result: String) of object;
+  TGetFileNameEvent = procedure(Sender: TObject; const SchemaName: String; var Path, FileName: String) of object;
 
   
   TDelphiXMLDataBindingGenerator = class(TXMLDataBindingGenerator)
@@ -1023,14 +1023,21 @@ end;
 
 
 function TDelphiXMLDataBindingGenerator.DoGetFileName(const ASchemaName: String): String;
+var
+  path:       String;
+  fileName:   String;
 begin
   Result  := OutputPath;
 
   if OutputType = otMultiple then
   begin
-    Result := IncludeTrailingPathDelimiter(Result) + ASchemaName + '.pas';
+    path      := IncludeTrailingPathDelimiter(Result);
+    fileName  := ASchemaName + '.pas';
+
     if Assigned(FOnGetFileName) then
-      FOnGetFileName(Self, ASchemaName, Result);
+      FOnGetFileName(Self, ASchemaName, path, fileName);
+
+    Result  := IncludeTrailingPathDelimiter(path) + fileName;
   end;
 end;
 

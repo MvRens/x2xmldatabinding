@@ -7,7 +7,8 @@ uses
   MainFrm in 'Forms\MainFrm.pas' {MainForm},
   XMLDataBindingGenerator in 'Units\XMLDataBindingGenerator.pas',
   DelphiXMLDataBindingGenerator in 'Units\DelphiXMLDataBindingGenerator.pas',
-  XMLDataBindingHelpers in 'Units\XMLDataBindingHelpers.pas';
+  XMLDataBindingHelpers in 'Units\XMLDataBindingHelpers.pas',
+  DelphiXMLDataBindingResources in 'Units\DelphiXMLDataBindingResources.pas';
 
 {$R *.res}
 
@@ -20,7 +21,7 @@ begin
   {$ENDIF}
 
   Application.Initialize;
-  Application.Title := 'X²Software XML Data Binding Wizard for Delphi';
+  Application.Title := 'X²Software XML Data Binding for Delphi';
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.
