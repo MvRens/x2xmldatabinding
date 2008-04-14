@@ -3,6 +3,7 @@ unit DelphiXMLDataBindingGenerator;
 interface
 uses
   Classes,
+  Contnrs,
   XMLSchema,
 
   X2UtHashes,
@@ -11,19 +12,32 @@ uses
   XMLDataBindingGenerator,
   XMLDataBindingHelpers;
 
-  
+
 type
   TGetFileNameEvent = procedure(Sender: TObject; const SchemaName: String; var Path, FileName: String) of object;
 
-  
+
+  TXMLSchemaList  = class(TObjectList)
+  private
+    function GetItem(Index: Integer): TXMLDataBindingSchema;
+    procedure SetItem(Index: Integer; const Value: TXMLDataBindingSchema);
+  public
+    constructor Create();
+
+    property Items[Index: Integer]: TXMLDataBindingSchema read GetItem  write SetItem; default;
+  end;
+
+
   TDelphiXMLDataBindingGenerator = class(TXMLDataBindingGenerator)
   private
-    FOnGetFileName: TGetFileNameEvent;
-    FProcessedItems: TX2OIHash;
+    FProcessedItems:  TX2OIHash;
+    FUnitNames:       TX2OSHash;
+
+    FOnGetFileName:   TGetFileNameEvent;
   protected
     procedure GenerateDataBinding(); override;
-    procedure GenerateSingleDataBinding();
-    procedure GenerateMultipleDataBinding();
+    procedure GenerateOutputFile(ASchemaList: TXMLSchemaList; const ASourceFileName, AUnitName: String);
+    function GenerateUsesClause(ASchemaList: TXMLSchemaList): String;
 
     function DelphiSafeName(const AName: String): String;
     function TranslateItemName(AItem: TXMLDataBindingItem): String; override;
@@ -32,37 +46,41 @@ type
 
 
     function GetDataTypeMapping(ADataType: IXMLTypeDef; out ATypeMapping: TTypeMapping): Boolean;
+    function GetDataTypeName(AProperty: TXMLDataBindingProperty; AInterfaceName: Boolean): String;
     function TranslateDataType(ADataType: IXMLTypeDef): String;
     function CreateNewGUID(): String;
 
-    procedure WriteUnitHeader(AStream: TStreamHelper; const AFileName: String);
-    procedure WriteSection(AStream: TStreamHelper; ASection: TDelphiXMLSection);
-    procedure WriteDocumentFunctions(AStream: TStreamHelper; ASection: TDelphiXMLSection);
-    procedure WriteEnumerationConstants(AStream: TStreamHelper);
-    procedure WriteEnumerationConversions(AStream: TStreamHelper);
+    procedure WriteUnitHeader(AStream: TStreamHelper; const ASourceFileName, AFileName: String);
+    procedure WriteSection(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
+    procedure WriteDocumentFunctions(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
+    procedure WriteEnumerationConversions(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
+    procedure WriteConversionHelpers(AStream: TStreamHelper; ASchemaList: TXMLSchemaList);
     procedure WriteDocumentation(AStream: TStreamHelper; AItem: TXMLDataBindingItem);
+    procedure WriteAfterConstruction(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+    function WriteInlineCollectionFields(AStream: TStreamHelper; AItem: TXMLDataBindingInterface): Boolean;
 
     procedure WriteSchemaItem(AStream: TStreamHelper; AItem: TXMLDataBindingItem; ASection: TDelphiXMLSection);
     procedure WriteSchemaInterface(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
     procedure WriteSchemaInterfaceProperties(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
-    procedure WriteSchemaCollection(AStream: TStreamHelper; AItem: TXMLDataBindingCollection; ASection: TDelphiXMLSection);
-    procedure WriteSchemaCollectionProperties(AStream: TStreamHelper; AItem: TXMLDataBindingCollection; ASection: TDelphiXMLSection);
+    function WriteSchemaInterfaceCollectionProperties(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection): Boolean;
+    function WriteSchemaInterfaceProperty(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; AProperty: TXMLDataBindingProperty; ASection: TDelphiXMLSection; AMember: TDelphiXMLMember; ANewLine: Boolean): Boolean;
     procedure WriteSchemaEnumeration(AStream: TStreamHelper; AItem: TXMLDataBindingEnumeration; ASection: TDelphiXMLSection);
     procedure WriteSchemaEnumerationArray(AStream: TStreamHelper; AItem: TXMLDataBindingEnumeration);
 
-    function DataTypeConversion(const ADestination, ASource: string; ADataType: IXMLTypeDef; AToNative: Boolean; const ALinesBefore: string = ''): string;
-    function XMLToNativeDataType(const ADestination, ASource: string; ADataType: IXMLTypeDef; const ALinesBefore: string = ''): string;
-    function NativeDataTypeToXML(const ADestination, ASource: string; ADataType: IXMLTypeDef; const ALinesBefore: string = ''): string;
+    function GetDelphiNodeType(AProperty: TXMLDataBindingProperty): TDelphiNodeType;
+    function DataTypeConversion(const ADestination, ASource: String; ADataType: IXMLTypeDef; AAccessor: TDelphiAccessor; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
+    function XMLToNativeDataType(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
+    function NativeDataTypeToXML(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
 
     property ProcessedItems:  TX2OIHash read FProcessedItems;
+    property UnitNames:       TX2OSHash read FUnitNames;
   public
     property OnGetFileName:   TGetFileNameEvent read FOnGetFileName write FOnGetFileName;
   end;
 
-  
+
 implementation
 uses
-  Contnrs,
   SysUtils,
 
   X2UtNamedFormat;
@@ -71,49 +89,95 @@ uses
 
 { TDelphiXMLDataBindingGenerator }
 procedure TDelphiXMLDataBindingGenerator.GenerateDataBinding();
+var
+  schemaList:   TXMLSchemaList;
+  schemaIndex:  Integer;
+  schema:       TXMLDataBindingSchema;
+  unitName:     String;
+  
 begin
-  case OutputType of
-    otSingle:     GenerateSingleDataBinding();
-    otMultiple:   GenerateMultipleDataBinding();
+  schemaList  := TXMLSchemaList.Create();
+  try
+    case OutputType of
+      otSingle:
+        begin
+          for schemaIndex := 0 to Pred(SchemaCount) do
+            schemaList.Add(Schemas[schemaIndex]);
+
+          unitName  := DoGetFileName(Schemas[0].SchemaName);
+          GenerateOutputFile(schemaList, SourceFileName, unitName);
+        end;
+
+      otMultiple:
+        begin
+          FUnitNames  := TX2OSHash.Create();
+          try
+            for schemaIndex := 0 to Pred(SchemaCount) do
+            begin
+              schema              := Schemas[schemaIndex];
+              FUnitNames[schema]  := DoGetFileName(schema.SchemaName);
+            end;
+
+            for schemaIndex := 0 to Pred(SchemaCount) do
+            begin
+              schema  := Schemas[schemaIndex];
+
+              schemaList.Clear();
+              schemaList.Add(schema);
+
+              unitName  := FUnitNames[schema];
+              GenerateOutputFile(schemaList, schema.SourceFileName, unitName);
+            end;
+          finally
+            FreeAndNil(FUnitNames);
+          end;
+        end;
+    end;
+  finally
+    FreeAndNil(schemaList);
   end;
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.GenerateSingleDataBinding();
+procedure TDelphiXMLDataBindingGenerator.GenerateOutputFile(ASchemaList: TXMLSchemaList; const ASourceFileName, AUnitName: String);
 var
-  unitName:     String;
-  unitStream:   TStreamHelper;
+  unitStream:         TStreamHelper;
+  usesClause:         String;
 
 begin
-  unitName    := DoGetFileName(Schemas[0].SchemaName);
-  unitStream  := TStreamHelper.Create(TFileStream.Create(unitName, fmCreate), soOwned);
-  try
-    WriteUnitHeader(unitStream, unitName);
+  usesClause  := '';
 
-    unitStream.Write(UnitInterface);
-    WriteSection(unitStream, dxsForward);
+  if OutputType = otMultiple then
+    usesClause  := GenerateUsesClause(ASchemaList);
+
+  unitStream  := TStreamHelper.Create(TFileStream.Create(AUnitName, fmCreate), soOwned);
+  try
+    WriteUnitHeader(unitStream, ASourceFileName, AUnitName);
+
+    unitStream.WriteNamedFmt(UnitInterface,
+                             ['UsesClause', usesClause]);
+    WriteSection(unitStream, dxsForward, ASchemaList);
 
     FProcessedItems := TX2OIHash.Create();
     try
       FProcessedItems.Clear();
-      WriteSection(unitStream, dxsInterface);
+      WriteSection(unitStream, dxsInterface, ASchemaList);
 
       FProcessedItems.Clear();
-      WriteSection(unitStream, dxsClass);
+      WriteSection(unitStream, dxsClass, ASchemaList);
     finally
       FreeAndNil(FProcessedItems);
     end;
 
-    WriteDocumentFunctions(unitStream, dxsInterface);
-    WriteEnumerationConstants(unitStream);
+    WriteDocumentFunctions(unitStream, dxsInterface, ASchemaList);
+    WriteEnumerationConversions(unitStream, dxsInterface, ASchemaList);
 
     unitStream.Write(UnitImplementation);
-    WriteDocumentFunctions(unitStream, dxsImplementation);
-    WriteEnumerationConversions(unitStream);
+    WriteDocumentFunctions(unitStream, dxsImplementation, ASchemaList);
+    WriteEnumerationConversions(unitStream, dxsImplementation, ASchemaList);
+    WriteConversionHelpers(unitStream, ASchemaList);
 
-    // #ToDo1 (MvR) 20-3-2008: write conversion methods
-
-    WriteSection(unitStream, dxsImplementation);
+    WriteSection(unitStream, dxsImplementation, ASchemaList);
 
     unitStream.Write(unitFooter);
   finally
@@ -122,15 +186,79 @@ begin
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.GenerateMultipleDataBinding();
+function TDelphiXMLDataBindingGenerator.GenerateUsesClause(ASchemaList: TXMLSchemaList): String;
+var
+  includedSchemas:    TObjectList;
+
+  procedure AddSchema(ASchema: TXMLDataBindingSchema);
+  begin
+    if Assigned(ASchema) and
+       (includedSchemas.IndexOf(ASchema) = -1) and
+       (ASchemaList.IndexOf(ASchema) = -1) then
+      includedSchemas.Add(ASchema);
+  end;
+  
+
+var
+  schemaIndex:        Integer;
+  schema:             TXMLDataBindingSchema;
+  itemIndex:          Integer;
+  interfaceItem:      TXMLDataBindingInterface;
+  propertyIndex:      Integer;
+  propertyItem:       TXMLDataBindingProperty;
+  includeIndex:       Integer;
+
 begin
+  Result := '';
+
+  includedSchemas := TObjectList.Create(False);
+  try
+    { Determine which items are used }
+    for schemaIndex := 0 to Pred(ASchemaList.Count) do
+    begin
+      schema  := ASchemaList[schemaIndex];
+
+      for itemIndex := 0 to Pred(schema.ItemCount) do
+      begin
+        if schema.Items[itemIndex].ItemType = itInterface then
+        begin
+          interfaceItem := TXMLDataBindingInterface(schema.Items[itemIndex]);
+
+          if Assigned(interfaceItem.CollectionItem) then
+            AddSchema(interfaceItem.CollectionItem.Schema);
+
+          for propertyIndex := 0 to Pred(interfaceItem.PropertyCount) do
+          begin
+            propertyItem  := interfaceItem.Properties[propertyIndex];
+
+            if propertyItem.PropertyType = ptItem then
+              AddSchema(TXMLDataBindingItemProperty(propertyItem).Item.Schema);
+          end;
+        end;
+      end;
+    end;
+
+    { Build uses clause }
+    if includedSchemas.Count > 0 then
+    begin
+      for includeIndex := 0 to Pred(includedSchemas.Count) do
+      begin
+        schema  := TXMLDataBindingSchema(includedSchemas[includeIndex]);
+        Result  := Result + '  ' + ChangeFileExt(ExtractFileName(FUnitNames[schema]), '') + ',' + CrLf;
+      end;
+
+      Result  := Result + CrLf;
+    end;
+  finally
+    FreeAndNil(includedSchemas);
+  end;
 end;
 
 
 function TDelphiXMLDataBindingGenerator.GetDataTypeMapping(ADataType: IXMLTypeDef; out ATypeMapping: TTypeMapping): Boolean;
 var
   mappingIndex: Integer;
-  dataTypeName: string;
+  dataTypeName: String;
 
 begin
   Assert(not ADataType.IsComplex, 'Complex DataTypes not supported');
@@ -154,10 +282,33 @@ begin
 end;
 
 
+function TDelphiXMLDataBindingGenerator.GetDataTypeName(AProperty: TXMLDataBindingProperty; AInterfaceName: Boolean): String;
+var
+  item:   TXMLDataBindingItem;
+
+begin
+  case AProperty.PropertyType of
+    ptSimple:
+      Result := TranslateDataType(TXMLDataBindingSimpleProperty(AProperty).DataType);
+    ptItem:
+      begin
+        item  := TXMLDataBindingItemProperty(AProperty).Item;
+
+        if (item.ItemType = itEnumeration) or (not AInterfaceName) then
+          Result := PrefixClass
+        else
+          Result := PrefixInterface;
+
+        Result := Result + item.TranslatedName;
+      end;
+  end;
+end;
+
+
 function TDelphiXMLDataBindingGenerator.TranslateDataType(ADataType: IXMLTypeDef): String;
 var
   typeMapping:  TTypeMapping;
-  
+
 begin
   Result  := 'Variant';
   if GetDataTypeMapping(ADataType, typeMapping) then
@@ -194,25 +345,24 @@ begin
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.WriteUnitHeader(AStream: TStreamHelper; const AFileName: String);
+procedure TDelphiXMLDataBindingGenerator.WriteUnitHeader(AStream: TStreamHelper; const ASourceFileName, AFileName: String);
 begin
-  // #ToDo3 (MvR) 14-4-2007: if outputtype = multiple, use include files
   AStream.WriteNamedFmt(UnitHeader,
-                        ['SourceFileName',  SourceFileName,
+                        ['SourceFileName',  ASourceFileName,
                          'UnitName',        ChangeFileExt(ExtractFileName(AFileName), '')]);
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.WriteSection(AStream: TStreamHelper; ASection: TDelphiXMLSection);
+procedure TDelphiXMLDataBindingGenerator.WriteSection(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
 var
   schemaIndex:  Integer;
   schema:       TXMLDataBindingSchema;
   itemIndex:    Integer;
 
 begin
-  for schemaIndex := 0 to Pred(SchemaCount) do
+  for schemaIndex := 0 to Pred(ASchemaList.Count) do
   begin
-    schema := Schemas[schemaIndex];
+    schema := ASchemaList[schemaIndex];
     AStream.WriteLnNamedFmt(SectionComments[ASection],
                             ['SchemaName',  schema.SchemaName]);
 
@@ -224,7 +374,7 @@ begin
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.WriteDocumentFunctions(AStream: TStreamHelper; ASection: TDelphiXMLSection);
+procedure TDelphiXMLDataBindingGenerator.WriteDocumentFunctions(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
 var
   schemaIndex:      Integer;
   schema:           TXMLDataBindingSchema;
@@ -236,9 +386,9 @@ var
 begin
   hasItem := False;
 
-  for schemaIndex := 0 to Pred(SchemaCount) do
+  for schemaIndex := 0 to Pred(ASchemaList.Count) do
   begin
-    schema := Schemas[schemaIndex];
+    schema := ASchemaList[schemaIndex];
 
     for itemIndex := 0 to Pred(schema.ItemCount) do
     begin
@@ -284,25 +434,32 @@ begin
     AStream.WriteLn('const');
     AStream.WriteLn('  TargetNamespace = '''';');
     AStream.WriteLn();
+    AStream.WriteLn();
   end;
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.WriteEnumerationConstants(AStream: TStreamHelper);
+procedure TDelphiXMLDataBindingGenerator.WriteEnumerationConversions(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
 var
-  item:           TXMLDataBindingItem;
-  itemIndex:      Integer;
-  schema:         TXMLDataBindingSchema;
-  schemaIndex:    Integer;
-  enumerations:   TObjectList;
+  enumerations:     TObjectList;
+  schemaIndex:      Integer;
+  schema:           TXMLDataBindingSchema;
+  itemIndex:        Integer;
+  item:             TXMLDataBindingItem;
+  enumerationItem:  TXMLDataBindingEnumeration;
+  sourceCode:       TNamedFormatStringList;
+  indent:           String;
 
 begin
-  { Write array constants for enumerations }
+  if not (ASection in [dxsInterface, dxsImplementation]) then
+    Exit;
+
+
   enumerations  := TObjectList.Create(False);
   try
-    for schemaIndex := 0 to Pred(SchemaCount) do
+    for schemaIndex := 0 to Pred(ASchemaList.Count) do
     begin
-      schema := Schemas[schemaIndex];
+      schema := ASchemaList[schemaIndex];
 
       for itemIndex := 0 to Pred(schema.ItemCount) do
       begin
@@ -313,12 +470,63 @@ begin
       end;
     end;
 
+
     if enumerations.Count > 0 then
     begin
-      AStream.WriteLn('const');
+      if ASection = dxsInterface then
+      begin
+        { Enumeration value arrays }
+        AStream.WriteLn('const');
 
-      for itemIndex := 0 to Pred(enumerations.Count) do
-        WriteSchemaEnumerationArray(AStream, TXMLDataBindingEnumeration(enumerations[itemIndex]));
+        for itemIndex := 0 to Pred(enumerations.Count) do
+          WriteSchemaEnumerationArray(AStream, TXMLDataBindingEnumeration(enumerations[itemIndex]));
+      end;
+
+
+      { Conversion helpers }
+      if ASection = dxsInterface then
+        AStream.Write('  ');
+        
+      AStream.WriteLn('{ Enumeration conversion helpers }');
+      
+
+      for itemIndex := Pred(enumerations.Count) downto 0 do
+      begin
+        enumerationItem := TXMLDataBindingEnumeration(enumerations[itemIndex]);
+
+        indent  := '';
+        if ASection = dxsInterface then
+          indent  := '  ';
+
+        sourceCode  := TNamedFormatStringList.Create();
+        try
+          sourceCode.Add(indent + 'function StringTo%<ItemName>:s(const AValue: WideString): %<DataType>:s;');
+
+          if ASection = dxsImplementation then
+          begin
+            sourceCode.Add('var');
+            sourceCode.Add('  enumValue: %<DataType>:s;');
+            sourceCode.AddLn;
+            sourceCode.Add('begin');
+            sourceCode.Add('  Result := %<DataType>:s(-1);');
+            sourceCode.Add('  for enumValue := Low(%<DataType>:s) to High(%<DataType>:s) do');
+            sourceCode.Add('    if %<ItemName>:sValues[enumValue] = AValue then');
+            sourceCode.Add('    begin');
+            sourceCode.Add('      Result := enumValue;');
+            sourceCode.Add('      break;');
+            sourceCode.Add('    end;');
+            sourceCode.Add('end;');
+            sourceCode.AddLn;
+          end;
+
+          AStream.Write(sourceCode.Format(['ItemName',  enumerationItem.TranslatedName,
+                                           'DataType',  PrefixClass + enumerationItem.TranslatedName]));
+        finally
+          FreeAndNil(sourceCode);
+        end;
+      end;
+
+      AStream.WriteLn;
     end;
   finally
     FreeAndNil(enumerations);
@@ -326,25 +534,85 @@ begin
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.WriteEnumerationConversions(AStream: TStreamHelper);
+procedure TDelphiXMLDataBindingGenerator.WriteConversionHelpers(AStream: TStreamHelper; ASchemaList: TXMLSchemaList);
+var
+  usedConversions:  TTypeConversions;
+  schemaIndex:      Integer;
+  schema:           TXMLDataBindingSchema;
+  itemIndex:        Integer;
+  interfaceItem:    TXMLDataBindingInterface;
+  propertyIndex:    Integer;
+  propertyItem:     TXMLDataBindingSimpleProperty;
+  typeMapping:      TTypeMapping;
+  conversion:       TTypeConversion;
+  hasHelpers:       Boolean;
+
 begin
-  //
+  usedConversions := [];
+
+  { Determine which conversions are used }
+  for schemaIndex := Pred(ASchemaList.Count) downto 0 do
+  begin
+    schema  := ASchemaList[schemaIndex];
+
+    for itemIndex := Pred(schema.ItemCount) downto 0 do
+    begin
+      if schema.Items[itemIndex].ItemType = itInterface then
+      begin
+        interfaceItem := TXMLDataBindingInterface(schema.Items[itemIndex]);
+
+        for propertyIndex := Pred(interfaceItem.PropertyCount) downto 0 do
+        begin
+          if interfaceItem.Properties[propertyIndex].PropertyType = ptSimple then
+          begin
+            propertyItem  := TXMLDataBindingSimpleProperty(interfaceItem.Properties[propertyIndex]);
+            if GetDataTypeMapping(propertyItem.DataType, typeMapping) then
+              Include(usedConversions, typeMapping.Conversion);
+          end;
+        end;
+      end;
+    end;
+  end;
+
+
+  hasHelpers  := False;
+  for conversion := Low(TTypeConversion) to High(TTypeConversion) do
+    if conversion in usedConversions then
+    begin
+      if Length(TypeConversionHelpers[conversion]) > 0 then
+      begin
+        if not hasHelpers then
+          AStream.WriteLn('{ Data type conversion helpers }');
+
+        AStream.Write(TypeConversionHelpers[conversion]);
+        hasHelpers  := True;
+      end;
+    end;
+
+  if hasHelpers then
+    AStream.WriteLn();
 end;
 
 
 procedure TDelphiXMLDataBindingGenerator.WriteDocumentation(AStream: TStreamHelper; AItem: TXMLDataBindingItem);
 var
-  lines:      TStringList;
-  lineIndex:  Integer;
+  documentation:    String;
+  lineIndex:        Integer;
+  lines:            TStringList;
 
 begin
-  // #ToDo2 (MvR) 9-3-2008: check for Delphi comment-ending sequences
   if not AItem.HasDocumentation then
     exit;
 
   lines := TStringList.Create();
   try
-    lines.Text  := WrapText(AItem.Documentation, 76);
+    documentation := AItem.Documentation;
+
+    { Replace dangerous characters }
+    documentation := StringReplace(documentation, '{', '(', [rfReplaceAll]);
+    documentation := StringReplace(documentation, '}', ')', [rfReplaceAll]);
+
+    lines.Text    := WrapText(documentation, 76);
 
     AStream.WriteLn('  {');
     for lineIndex := 0 to Pred(lines.Count) do
@@ -361,7 +629,6 @@ procedure TDelphiXMLDataBindingGenerator.WriteSchemaItem(AStream: TStreamHelper;
 begin
   case AItem.ItemType of
     itInterface:    WriteSchemaInterface(AStream, TXMLDataBindingInterface(AItem), ASection);
-    itCollection:   WriteSchemaCollection(AStream, TXMLDataBindingCollection(AItem), ASection);
     itEnumeration:  WriteSchemaEnumeration(AStream, TXMLDataBindingEnumeration(AItem), ASection);
   end;
 end;
@@ -390,12 +657,16 @@ begin
     dxsForward:
       AStream.WriteLnNamedFmt(InterfaceItemForward,
                               ['Name',  AItem.TranslatedName]);
+
     dxsInterface:
       begin
         if Assigned(AItem.BaseItem) then
           parent  := PrefixInterface + AItem.BaseItem.TranslatedName
+        else if AItem.IsCollection then
+          parent  := CollectionInterface
         else
           parent  := ItemInterface;
+
 
         WriteDocumentation(AStream, AItem);
         AStream.WriteLnNamedFmt(InterfaceItemInterface,
@@ -408,12 +679,16 @@ begin
         AStream.WriteLn('  end;');
         AStream.WriteLn();
       end;
+
     dxsClass:
       begin
         if Assigned(AItem.BaseItem) then
           parent  := PrefixClass + AItem.BaseItem.TranslatedName
+        else if AItem.IsCollection then
+          parent  := CollectionClass
         else
           parent  := ItemClass;
+
 
         AStream.WriteLnNamedFmt(InterfaceItemClass,
                                 ['Name',        AItem.TranslatedName,
@@ -424,6 +699,7 @@ begin
         AStream.WriteLn('  end;');
         AStream.WriteLn();
       end;
+
     dxsImplementation:
       begin
         WriteSchemaInterfaceProperties(AStream, AItem, ASection);
@@ -432,348 +708,207 @@ begin
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceProperties(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+procedure TDelphiXMLDataBindingGenerator.WriteAfterConstruction(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+var
+  hasPrototype:       Boolean;
 
-  procedure WriteAfterConstruction;
-  var
-    propertyIndex:  Integer;
-    propertyItem:   TXMLDataBindingProperty;
-    itemProperty:   TXMLDataBindingItemProperty;
-    hasInterface:   Boolean;
 
+  procedure WritePrototype();
   begin
-    hasInterface  := False;
-
-    for propertyIndex := 0 to Pred(AItem.PropertyCount) do
+    if not hasPrototype then
     begin
-      propertyItem  := AItem.Properties[propertyIndex];
-
-      if propertyItem.PropertyType = ptItem then
-      begin
-        itemProperty  := TXMLDataBindingItemProperty(propertyItem);
-
-        if Assigned(itemProperty.Item) and
-           (itemProperty.Item.ItemType <> itEnumeration) then
-        begin
-          case ASection of
-            dxsClass:
-              begin
-                AStream.WriteLn('  public');
-                AStream.WriteLn('    procedure AfterConstruction; override;');
-                break;
-              end;
-            dxsImplementation:
-              begin
-                if not hasInterface then
-                begin
-                  AStream.WriteLnFmt('procedure TXML%s.AfterConstruction;', [AItem.TranslatedName]);
-                  AStream.WriteLn('begin');
-                  hasInterface  := True;
-                end;
-
-                AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s);',
-                                        ['SourceName', itemProperty.Item.Name,
-                                         'Name',       itemProperty.Item.TranslatedName]);
-              end;
+      case ASection of
+        dxsClass:
+          begin
+            AStream.WriteLn('  public');
+            AStream.WriteLn('    procedure AfterConstruction; override;');
           end;
-        end;
-      end;
-    end;
 
-    if (ASection = dxsImplementation) and hasInterface then
-    begin
-      AStream.WriteLn('end;');
-      AStream.WriteLn();
+        dxsImplementation:
+          begin
+            AStream.WriteLnFmt('procedure TXML%s.AfterConstruction;', [AItem.TranslatedName]);
+            AStream.WriteLn('begin');
+          end;
+      end;
+
+      hasPrototype  := True;
     end;
   end;
 
 
 var
-  propertyIndex:    Integer;
-  itemProperty:     TXMLDataBindingProperty;
-  propertyItem:     TXMLDataBindingItem;
-  dataTypeName:     String;
-  writeOptional:    Boolean;
-  writeTextProp:    Boolean;
-  hasMembers:       Boolean;
-  member:           TDelphiXMLMember;
-  value:            String;
-  sourceCode:       TNamedFormatStringList;
-  propertyItemName: String;
+  itemProperty:         TXMLDataBindingItemProperty;
+  propertyIndex:        Integer;
+  propertyItem:         TXMLDataBindingProperty;
 
 begin
-  // #ToDo1 (MvR) 9-3-2008: refactor WriteSchemaInterfaceProperties
+  if not (ASection in [dxsClass, dxsImplementation]) then
+    Exit;
+
+  if (ASection = dxsClass) and
+     (not AItem.IsCollection) then
+    WriteInlineCollectionFields(AStream, AItem);
+
+
+  hasPrototype  := False;
+    
+  for propertyIndex := 0 to Pred(AItem.PropertyCount) do
+  begin
+    propertyItem  := AItem.Properties[propertyIndex];
+
+    if (not AItem.IsCollection) and Assigned(propertyItem.Collection) then
+    begin
+      WritePrototype;
+
+      { Inline collection }
+      if ASection = dxsImplementation then
+      begin
+        AStream.WriteLnNamedFmt('  RegisterChildNode(''%<ItemSourceName>:s'', %<ItemClass>:s);',
+                                ['ItemSourceName',      propertyItem.Name,
+                                 'ItemClass',           PrefixClass + propertyItem.TranslatedName]);
+
+        AStream.WriteLnNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'') as %<CollectionInterface>:s;',
+                                ['FieldName',           PrefixField + propertyItem.TranslatedName,
+                                 'CollectionClass',     PrefixClass + propertyItem.Collection.TranslatedName,
+                                 'CollectionInterface', PrefixInterface + propertyItem.Collection.TranslatedName,
+                                 'ItemInterface',       PrefixInterface + propertyItem.TranslatedName,
+                                 'ItemSourceName',      propertyItem.Name]);
+      end;
+    end else if (propertyItem.PropertyType = ptItem) and
+                ((not AItem.IsCollection) or
+                 (propertyItem <> AItem.CollectionItem)) then
+    begin
+      { Item property }
+      itemProperty  := TXMLDataBindingItemProperty(propertyItem);
+
+      if Assigned(itemProperty.Item) and
+         (itemProperty.Item.ItemType = itInterface) then
+      begin
+        case ASection of
+          dxsClass:
+            WritePrototype;
+              
+          dxsImplementation:
+            begin
+              WritePrototype;
+              AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s);',
+                                      ['SourceName', itemProperty.Item.Name,
+                                       'Name',       itemProperty.Item.TranslatedName]);
+            end;
+        end;
+      end;
+    end;
+  end;
+
+  if AItem.IsCollection then
+  begin
+    WritePrototype;
+
+    if ASection = dxsImplementation then
+    begin
+      WritePrototype;
+      AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', %<DataClass>:s);',
+                              ['SourceName',  AItem.CollectionItem.Name,
+                               'DataClass',  GetDataTypeName(AItem.CollectionItem, False)]);
+      AStream.WriteLn;
+      AStream.WriteLnFmt('  ItemTag := ''%s'';', [AItem.CollectionItem.Name]);
+      AStream.WriteLnFmt('  ItemInterface := %s;', [GetDataTypeName(AItem.CollectionItem, True)]);
+      AStream.WriteLn;
+    end;
+  end;
+
+  if hasPrototype and (ASection = dxsImplementation) then
+  begin
+    AStream.WriteLn('  inherited;');
+    AStream.WriteLn('end;');
+    AStream.WriteLn;
+  end;
+end;
+
+
+function TDelphiXMLDataBindingGenerator.WriteInlineCollectionFields(AStream: TStreamHelper; AItem: TXMLDataBindingInterface): Boolean;
+var
+  propertyIndex:      Integer;
+  collectionProperty: TXMLDataBindingProperty;
+
+begin
+  Result  := False;
+
+  for propertyIndex := 0 to Pred(AItem.PropertyCount) do
+    if AItem.Properties[propertyIndex].IsRepeating then
+    begin
+      collectionProperty  := AItem.Properties[propertyIndex];
+
+      if Assigned(collectionProperty.Collection) then
+      begin
+        if not Result then
+        begin
+          AStream.WriteLn('  private');
+          Result  := True;
+        end;
+
+        AStream.WriteLnNamedFmt('    %<PropertyName>:s: %<DataInterface>:s;',
+                                ['PropertyName',  PrefixField + collectionProperty.TranslatedName,
+                                 'DataInterface', PrefixInterface + collectionProperty.Collection.TranslatedName]);
+      end;
+    end;
+end;
+
+
+procedure TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceProperties(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+var
+  propertyIndex:    Integer;
+  itemProperty:     TXMLDataBindingProperty;
+  hasMembers:       Boolean;
+  firstMember:      Boolean;
+  member:           TDelphiXMLMember;
+
+begin
   if ASection = dxsForward then
     Exit;
 
-  if ASection = dxsImplementation then
-    WriteAfterConstruction();
+  if ASection in [dxsClass, dxsImplementation] then
+    WriteAfterConstruction(AStream, AItem, ASection);
 
   if ASection = dxsClass then
     AStream.WriteLn('  protected');
 
-  hasMembers  := False;
+  hasMembers  := WriteSchemaInterfaceCollectionProperties(AStream, AItem, ASection);
+
   for member := Low(TDelphiXMLMember) to High(TDelphiXMLMember) do
   begin
-    if hasMembers then
-      AStream.WriteLn;
-
-    hasMembers  := False;
+    firstMember   := True;
 
     for propertyIndex := 0 to Pred(AItem.PropertyCount) do
     begin
       itemProperty  := AItem.Properties[propertyIndex];
-      propertyItem  := nil;
-      dataTypeName  := '';
-      writeTextProp := False;
-      writeOptional := True;
 
-      { Get data type }
-      case itemProperty.PropertyType of
-        ptSimple:
-          dataTypeName  := TranslateDataType(TXMLDataBindingSimpleProperty(itemProperty).DataType);
-        ptItem:
-          begin
-            propertyItem  := TXMLDataBindingItemProperty(itemProperty).Item;
-            if Assigned(propertyItem) then
-            begin
-              if propertyItem.ItemType = itEnumeration then
-              begin
-                dataTypeName  := PrefixClass;
-                writeTextProp := True;
-              end else
-                dataTypeName  := PrefixInterface;
-
-              { Collections have a Count property, no need to write a
-                HasX property as well. }
-              writeOptional := (propertyItem.ItemType <> itCollection);
-
-              dataTypeName  := dataTypeName + propertyItem.TranslatedName;
-            end;
-          end;
-      end;
-
-
-      if Length(dataTypeName) > 0 then
+      if WriteSchemaInterfaceProperty(AStream, AItem, itemProperty, ASection, member,
+                                      hasMembers and firstMember and (ASection in [dxsInterface, dxsClass])) then
       begin
-        writeOptional := writeOptional and
-                         itemProperty.IsOptional and
-                         (member in [dxmPropertyGet, dxmPropertyDeclaration]);
-
-
-        sourceCode  := TNamedFormatStringList.Create();
-        try
-          case ASection of
-            dxsInterface,
-            dxsClass:
-              begin
-                { Interface declaration }
-                case member of
-                  dxmPropertyGet:
-                    begin
-                      if writeOptional then
-                        sourceCode.Add(PropertyIntfMethodGetOptional);
-
-                      if writeTextProp then
-                        sourceCode.Add(PropertyIntfMethodGetText);
-
-                      sourceCode.Add(PropertyIntfMethodGet);
-                      hasMembers  := True;
-                    end;
-
-                  dxmPropertySet:
-                    if not itemProperty.IsReadOnly then
-                    begin
-                      if writeTextProp then
-                        sourceCode.Add(PropertyIntfMethodSetText);
-
-                      sourceCode.Add(PropertyIntfMethodSet);
-                      hasMembers  := True;
-                    end;
-
-                  dxmPropertyDeclaration:
-                    begin
-                      if writeOptional then
-                        sourceCode.Add(PropertyInterfaceOptional);
-
-                      if itemProperty.IsReadOnly then
-                      begin
-                        if writeTextProp then
-                          sourceCode.Add(PropertyInterfaceTextReadOnly);
-
-                        sourceCode.Add(PropertyInterfaceReadOnly);
-                      end else
-                      begin
-                        if writeTextProp then
-                          sourceCode.Add(PropertyInterfaceText);
-
-                        sourceCode.Add(PropertyInterface);
-                      end;
-
-                      hasMembers  := True;
-                    end;
-                end;
-              end;
-            dxsImplementation:
-              begin
-                { Implementation }
-                case member of
-                  dxmPropertyGet:
-                    begin
-                      if writeOptional then
-                        sourceCode.Add(PropertyImplMethodGetOptional);
-
-                      if writeTextProp then
-                        sourceCode.Add(PropertyImplMethodGetText);
-
-                      sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:s: %<DataType>:s;');
-
-                      case itemProperty.PropertyType of
-                        ptSimple:
-                          sourceCode.Add(XMLToNativeDataType('Result',
-                                                             'ChildNodes[''%<PropertySourceName>:s''].NodeValue',
-                                                             TXMLDataBindingSimpleProperty(itemProperty).DataType));
-
-                        ptItem:
-                          begin
-                            if Assigned(propertyItem) then
-                            begin
-                              case propertyItem.ItemType of
-                                itInterface,
-                                itCollection:
-                                  begin
-                                    sourceCode.Add('begin');
-                                    sourceCode.Add('  Result := (ChildNodes[''%<Name>:s''] as IXML%<PropertyItemName>:s);');
-                                    sourceCode.Add('end;');
-                                  end;
-
-                                itEnumeration:
-                                  begin
-                                    sourceCode.Add('var');
-                                    sourceCode.Add('  nodeValue: WideString;');
-                                    sourceCode.Add('  enumValue: %<DataType>:s;');
-                                    sourceCode.AddLn;
-                                    sourceCode.Add('begin');
-                                    sourceCode.Add('  Result := %<DataType>:s(-1);');
-                                    sourceCode.Add('  nodeValue := Get%<PropertyName>:sText;');
-                                    sourceCode.Add('  for enumValue := Low(%<DataType>:s) to High(%<DataType>:s) do');
-                                    sourceCode.Add('    if %<PropertyName>:sValues[enumValue] = nodeValue then');
-                                    sourceCode.Add('    begin');
-                                    sourceCode.Add('      Result := enumValue;');
-                                    sourceCode.Add('      break;');
-                                    sourceCode.Add('    end;');
-                                    sourceCode.Add('end;');
-                                  end;
-                              end;
-                            end;
-                          end;
-                      end;
-
-                      sourceCode.AddLn;
-                    end;
-                  dxmPropertySet:
-                    if not itemProperty.IsReadOnly then
-                    begin
-                      if writeTextProp then
-                        sourceCode.Add(PropertyImplMethodSetText);
-
-                      sourceCode.Add('procedure TXML%<Name>:s.Set%<PropertyName>:s(const Value: %<DataType>:s);');
-                      value := 'ChildNodes[''%<PropertySourceName>:s''].NodeValue';
-                      
-                      if Assigned(propertyItem) and (propertyItem.ItemType = itEnumeration) then
-                      begin
-                        sourceCode.Add('begin');
-                        sourceCode.Add('  ' + value + ' := %<PropertyItemName>:sValues[Value]');
-                        sourceCode.Add('end;');
-                        sourceCode.AddLn;
-                      end else
-                      begin
-                        if itemProperty.PropertyType <> ptSimple then
-                          raise Exception.Create('Setter must be a simple type');
-
-                        sourceCode.Add(NativeDataTypeToXML(value, 'Value',
-                                                           TXMLDataBindingSimpleProperty(itemProperty).DataType));
-                      end;
-                    end;
-                end;
-              end;
-          end;
-
-          propertyItemName  := '';
-          if Assigned(propertyItem) then
-            propertyItemName  := propertyItem.TranslatedName;
-
-          AStream.Write(sourceCode.Format(['Name',                AItem.TranslatedName,
-                                           'PropertySourceName',  itemProperty.Name,
-                                           'PropertyName',        itemProperty.TranslatedName,
-                                           'PropertyItemName',    propertyItemName,
-                                           'DataType',            dataTypeName]));
-        finally
-          FreeAndNil(sourceCode);
-        end;
+        firstMember := False;
+        hasMembers  := True;
       end;
     end;
   end;
-
-  if ASection = dxsClass then
-    WriteAfterConstruction();
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.WriteSchemaCollection(AStream: TStreamHelper; AItem: TXMLDataBindingCollection; ASection: TDelphiXMLSection);
-begin
-  if not Assigned(AItem.CollectionItem) then
-    Exit;
-
-  case ASection of
-    dxsForward:
-      AStream.WriteLnNamedFmt(InterfaceItemForward,
-                              ['Name',
-                               AItem.TranslatedName]);
-    dxsInterface:
-      begin
-        AStream.WriteLnNamedFmt(InterfaceItemInterface,
-                                ['Name',        AItem.TranslatedName,
-                                 'ParentName',  CollectionInterface]);
-        AStream.WriteLn('    ' + CreateNewGUID());
-
-        WriteSchemaCollectionProperties(AStream, AItem, ASection);
-
-        AStream.WriteLn('  end;');
-        AStream.WriteLn();
-      end;
-    dxsClass:
-      begin
-        AStream.WriteLnNamedFmt(InterfaceItemClass,
-                                ['Name',        AItem.TranslatedName,
-                                 'ParentName',  CollectionClass]);
-
-        WriteSchemaCollectionProperties(AStream, AItem, ASection);
-
-        AStream.WriteLn('  end;');
-        AStream.WriteLn();
-      end;
-    dxsImplementation:
-      begin
-        WriteSchemaCollectionProperties(AStream, AItem, ASection);
-      end;
-  end;
-end;
-
-
-procedure TDelphiXMLDataBindingGenerator.WriteSchemaCollectionProperties(AStream: TStreamHelper; AItem: TXMLDataBindingCollection; ASection: TDelphiXMLSection);
+function TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceCollectionProperties(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection): Boolean;
 var
-  dataIntfName: string;
-  dataTypeName: string;
-  dataClassName: string;
+  dataIntfName: String;
+  dataTypeName: String;
+  dataClassName: String;
+  collectionItem: TXMLDataBindingItem;
   sourceCode: TNamedFormatStringList;
   typeDef: IXMLTypeDef;
 
 begin
-  if ASection = dxsClass then
-    AStream.WriteLn('  protected');
+  Result := False;
 
-  // #ToDo1 (MvR) 17-3-2008: DataType for enumerations
+  if not AItem.IsCollection then
+    Exit;
+
   case AItem.CollectionItem.PropertyType of
     ptSimple:
       begin
@@ -783,9 +918,20 @@ begin
       end;
     ptItem:
       begin
-        dataTypeName  := PrefixInterface + AItem.CollectionItemTranslatedName;
-        dataClassName := PrefixClass + AItem.CollectionItemTranslatedName;
-        dataIntfName  := dataTypeName;
+        collectionItem  := TXMLDataBindingItemProperty(AItem.CollectionItem).Item;
+
+        if collectionItem.ItemType = itEnumeration then
+        begin
+          // #ToDo1 (MvR) 17-3-2008: DataType and conversions for enumerations
+          dataTypeName  := PrefixInterface + collectionItem.TranslatedName;
+          dataClassName := PrefixClass + collectionItem.TranslatedName;
+          dataIntfName  := dataTypeName;
+        end else
+        begin
+          dataTypeName  := PrefixInterface + collectionItem.TranslatedName;
+          dataClassName := PrefixClass + collectionItem.TranslatedName;
+          dataIntfName  := dataTypeName;
+        end;
       end;
   end;
 
@@ -811,37 +957,26 @@ begin
               end;
           end;
         end;
+
       dxsImplementation:
         begin
-          sourceCode.Add('procedure TXML%<Name>:s.AfterConstruction;');
-          sourceCode.Add('begin');
-          sourceCode.Add('  RegisterChildNode(''%<ItemSourceName>:s'', %<DataClass>:s);');
-          sourceCode.AddLn;
-          sourceCode.Add('  ItemTag := ''%<ItemSourceName>:s'';');
-          sourceCode.Add('  ItemInterface := %<DataInterface>:s;');
-          sourceCode.AddLn;
-          sourceCode.Add('  inherited;');
-          sourceCode.Add('end;');
-          sourceCode.AddLn;
-
-
           case AItem.CollectionItem.PropertyType of
             ptSimple:
               begin
                 typeDef := TXMLDataBindingSimpleProperty(AItem.CollectionItem).DataType;
 
-                // #ToDo1 (MvR) 19-3-2008: .Text for strings ?
+                // #ToDo3 (MvR) 19-3-2008: use Text for strings ?
                 sourceCode.Add('function TXML%<Name>:s.Get_%<ItemName>:s(Index: Integer): %<DataType>:s;');
-                sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].NodeValue', typeDef));
+                sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].NodeValue', typeDef, dntCustom));
                 sourceCode.AddLn;
 
                 sourceCode.Add('function TXML%<Name>:s.Add(%<ItemName>:s: %<DataType>:s): %<DataInterface>:s;');
-                sourceCode.Add(NativeDataTypeToXML('Result.NodeValue', '%<ItemName>:s', typeDef,
+                sourceCode.Add(NativeDataTypeToXML('Result.NodeValue', '%<ItemName>:s', typeDef, dntCustom,
                                                    '  Result := AddItem(-1);'));
                 sourceCode.AddLn;
 
                 sourceCode.Add('function TXML%<Name>:s.Insert(Index: Integer; %<ItemName>:s: %<DataType>:s): %<DataInterface>:s;');
-                sourceCode.Add(NativeDataTypeToXML('Result.NodeValue', '%<ItemName>:s', typeDef,
+                sourceCode.Add(NativeDataTypeToXML('Result.NodeValue', '%<ItemName>:s', typeDef, dntCustom,
                                                    '  Result := AddItem(Index);'));
                 sourceCode.AddLn;
               end;
@@ -871,26 +1006,255 @@ begin
         end;
     end;
 
-    case ASection of
-      dxsInterface:
-        begin
-          sourceCode.AddLn;
-          sourceCode.Add('    property %<ItemName>:s[Index: Integer]: %<DataType>:s read Get_%<ItemName>:s; default;');
-        end;
+    if ASection = dxsInterface then
+    begin
+      sourceCode.AddLn;
+      sourceCode.Add('    property %<ItemName>:s[Index: Integer]: %<DataType>:s read Get_%<ItemName>:s; default;');
+    end;
 
+    Result := (sourceCode.Count > 0);
+
+    if Result then
+      AStream.Write(sourceCode.Format(['Name',            AItem.TranslatedName,
+                                       'ItemName',        AItem.CollectionItem.TranslatedName,
+                                       'ItemSourceName',  AItem.CollectionItem.Name,
+                                       'DataType',        dataTypeName,
+                                       'DataClass',       dataClassName,
+                                       'DataInterface',   dataIntfName]));
+  finally
+    FreeAndNil(sourceCode);
+  end;
+end;
+
+
+function TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceProperty(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; AProperty: TXMLDataBindingProperty; ASection: TDelphiXMLSection; AMember: TDelphiXMLMember; ANewLine: Boolean): Boolean;
+
+  procedure WriteNewLine;
+  begin
+    if ANewLine then
+      AStream.WriteLn;
+  end;
+
+
+var
+  sourceCode:       TNamedFormatStringList;
+  writeOptional:    Boolean;
+  writeTextProp:    Boolean;
+  propertyItem:     TXMLDataBindingItem;
+  dataTypeName:     String;
+  value:            String;
+  propertyItemName: String;
+  fieldName:        String;
+
+begin
+  Result  := False;
+
+  if AProperty = AItem.CollectionItem then
+    Exit;
+  
+  { If the property has a collection, it's Count property will be enough
+    to check if an item is present, no need to write a HasX method. }
+  // #ToDo3 (MvR) 14-4-2008: move first check to XMLDataBindingGenerator ?
+  writeOptional := not Assigned(AProperty.Collection) and
+                   AProperty.IsOptional and
+                   (AMember in [dxmPropertyGet, dxmPropertyDeclaration]);
+
+
+  dataTypeName  := '';
+  propertyItem  := nil;
+  fieldName     := '';
+
+  { Get data type }
+  writeTextProp := False;
+
+  if Assigned(AProperty.Collection) then
+  begin
+    dataTypeName  := PrefixInterface + AProperty.Collection.TranslatedName;
+    fieldName     := PrefixField + AProperty.TranslatedName;
+  end else
+  begin
+    case AProperty.PropertyType of
+      ptSimple:
+        dataTypeName  := TranslateDataType(TXMLDataBindingSimpleProperty(AProperty).DataType);
+
+      ptItem:
+        begin
+          propertyItem  := TXMLDataBindingItemProperty(AProperty).Item;
+          if Assigned(propertyItem) then
+          begin
+            if propertyItem.ItemType = itEnumeration then
+            begin
+              dataTypeName  := PrefixClass;
+              writeTextProp := True;
+            end else
+              dataTypeName  := PrefixInterface;
+
+            dataTypeName  := dataTypeName + propertyItem.TranslatedName;
+          end;
+        end;
+    end;
+  end;
+
+
+  if Length(dataTypeName) = 0 then
+    Exit;
+
+
+  sourceCode  := TNamedFormatStringList.Create();
+  try
+    case ASection of
+      dxsInterface,
       dxsClass:
         begin
-          sourceCode.Add('  public');
-          sourceCode.Add('    procedure AfterConstruction; override;');
+          { Interface declaration }
+          case AMember of
+            dxmPropertyGet:
+              begin
+                WriteNewLine;
+
+                if writeOptional then
+                  sourceCode.Add(PropertyIntfMethodGetOptional);
+
+                if writeTextProp then
+                  sourceCode.Add(PropertyIntfMethodGetText);
+
+                sourceCode.Add(PropertyIntfMethodGet);
+              end;
+
+            dxmPropertySet:
+              if not AProperty.IsReadOnly then
+              begin
+                WriteNewLine;
+                
+                if writeTextProp then
+                  sourceCode.Add(PropertyIntfMethodSetText);
+
+                sourceCode.Add(PropertyIntfMethodSet);
+              end;
+
+            dxmPropertyDeclaration:
+              if ASection = dxsInterface then
+              begin
+                WriteNewLine;
+
+                if writeOptional then
+                  sourceCode.Add(PropertyInterfaceOptional);
+
+                if AProperty.IsReadOnly then
+                begin
+                  if writeTextProp then
+                    sourceCode.Add(PropertyInterfaceTextReadOnly);
+
+                  sourceCode.Add(PropertyInterfaceReadOnly);
+                end else
+                begin
+                  if writeTextProp then
+                    sourceCode.Add(PropertyInterfaceText);
+
+                  sourceCode.Add(PropertyInterface);
+                end;
+              end;
+          end;
+        end;
+      dxsImplementation:
+        begin
+          { Implementation }
+          case AMember of
+            dxmPropertyGet:
+              begin
+                WriteNewLine;
+                
+                if writeOptional then
+                  sourceCode.Add(PropertyImplMethodGetOptional);
+
+                if writeTextProp then
+                  sourceCode.Add(PropertyImplMethodGetText);
+
+                sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:s: %<DataType>:s;');
+
+                case AProperty.PropertyType of
+                  ptSimple:
+                    sourceCode.Add(XMLToNativeDataType('Result',
+                                                       '%<PropertySourceName>:s',
+                                                       TXMLDataBindingSimpleProperty(AProperty).DataType,
+                                                       GetDelphiNodeType(AProperty)));
+
+                  ptItem:
+                    begin
+                      if Assigned(AProperty.Collection) then
+                      begin
+                        sourceCode.Add('begin');
+                        sourceCode.Add('  Result := %<FieldName>:s;');
+                        sourceCode.Add('end;');
+                      end else
+                      begin
+                        if Assigned(propertyItem) then
+                        begin
+                          case propertyItem.ItemType of
+                            itInterface:
+                              begin
+                                sourceCode.Add('begin');
+                                sourceCode.Add('  Result := (ChildNodes[''%<PropertySourceName>:s''] as IXML%<PropertyItemName>:s);');
+                                sourceCode.Add('end;');
+                              end;
+
+                            itEnumeration:
+                              begin
+                                sourceCode.Add('begin');
+                                sourceCode.Add('  Result := StringTo%<PropertyItemName>:s(Get%<PropertyName>:sText);');
+                                sourceCode.Add('end;');
+                              end;
+                          end;
+                        end;
+                      end;
+                    end;
+                end;
+
+                sourceCode.AddLn;
+              end;
+            dxmPropertySet:
+              if not AProperty.IsReadOnly then
+              begin
+                WriteNewLine;
+                
+                if writeTextProp then
+                  sourceCode.Add(PropertyImplMethodSetText);
+
+                sourceCode.Add('procedure TXML%<Name>:s.Set%<PropertyName>:s(const Value: %<DataType>:s);');
+                value := '%<PropertySourceName>:s';
+
+                if Assigned(propertyItem) and (propertyItem.ItemType = itEnumeration) then
+                begin
+                  sourceCode.Add(NativeDataTypeToXML(value, '%<PropertyItemName>:sValues[Value]', nil,
+                                                     GetDelphiNodeType(AProperty))); 
+                end else
+                begin
+                  if AProperty.PropertyType <> ptSimple then
+                    raise Exception.Create('Setter must be a simple type');
+
+                  sourceCode.Add(NativeDataTypeToXML(value, 'Value',
+                                                     TXMLDataBindingSimpleProperty(AProperty).DataType,
+                                                     GetDelphiNodeType(AProperty)));
+                end;
+
+                sourceCode.AddLn;
+              end;
+          end;
         end;
     end;
 
-    AStream.Write(sourceCode.Format(['Name',            AItem.TranslatedName,
-                                     'ItemName',        AItem.CollectionItemTranslatedName,
-                                     'ItemSourceName',  AItem.CollectionItem.Name,
-                                     'DataType',        dataTypeName,
-                                     'DataClass',       dataClassName,
-                                     'DataInterface',   dataIntfName]));
+    propertyItemName  := '';
+    if Assigned(propertyItem) then
+      propertyItemName  := propertyItem.TranslatedName;
+
+    Result := (sourceCode.Count > 0);
+    if Result then
+      AStream.Write(sourceCode.Format(['Name',                AItem.TranslatedName,
+                                       'PropertySourceName',  AProperty.Name,
+                                       'PropertyName',        AProperty.TranslatedName,
+                                       'PropertyItemName',    propertyItemName,
+                                       'DataType',            dataTypeName,
+                                       'FieldName',           fieldName]));
   finally
     FreeAndNil(sourceCode);
   end;
@@ -962,52 +1326,66 @@ begin
 end;
 
 
-function TDelphiXMLDataBindingGenerator.DataTypeConversion(const ADestination, ASource: string; ADataType: IXMLTypeDef; AToNative: Boolean; const ALinesBefore: string): string;
+function TDelphiXMLDataBindingGenerator.GetDelphiNodeType(AProperty: TXMLDataBindingProperty): TDelphiNodeType;
+begin
+  if AProperty.IsAttribute then
+    Result := dntAttribute
+  else
+    Result := dntElement;
+end;
+
+
+function TDelphiXMLDataBindingGenerator.DataTypeConversion(const ADestination, ASource: String; ADataType: IXMLTypeDef; AAccessor: TDelphiAccessor; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
 var
   typeMapping:  TTypeMapping;
+  conversion:   String;
 
 begin
   with TNamedFormatStringList.Create() do
   try
-    if not GetDataTypeMapping(ADataType, typeMapping) then
+    if not (Assigned(ADataType) and GetDataTypeMapping(ADataType, typeMapping)) then
       typeMapping.Conversion  := tcNone;
 
 
-    if Length(TypeConversionVariables[typeMapping.Conversion]) > 0 then
+    (*
+    if Length(TypeConversionVariables[AAccessor, ANodeType, typeMapping.Conversion]) > 0 then
     begin
       Add('var');
-      Add(TypeConversionVariables[typeMapping.Conversion]);
+      Add(TypeConversionVariables[AAccessor, ANodeType, typeMapping.Conversion]);
     end;
+    *)
 
     Add('begin');
 
     if Length(ALinesBefore) > 0 then
       Add(ALinesBefore);
 
-    if AToNative then
-      Add(TypeConversionToNative[typeMapping.Conversion])
-    else
-      Add(TypeConversionToXML[typeMapping.Conversion]);
 
+    conversion  := TypeConversion[AAccessor, ANodeType, typeMapping.Conversion];
+    if Length(conversion) = 0 then
+      conversion  := TypeConversionNone[AAccessor, ANodeType];
+
+
+    Add(conversion);
     Add('end;');
-    
-    Result := Format(['Destination', ADestination,
-                      'Source',      ASource]);
+
+    Result := Trim(Format(['Destination', ADestination,
+                           'Source',      ASource]));
   finally
     Free();
   end;
 end;
 
 
-function TDelphiXMLDataBindingGenerator.XMLToNativeDataType(const ADestination, ASource: string; ADataType: IXMLTypeDef; const ALinesBefore: string): string;
+function TDelphiXMLDataBindingGenerator.XMLToNativeDataType(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String): String;
 begin
-  Result := DataTypeConversion(ADestination, ASource, ADataType, True, ALinesBefore);
+  Result := DataTypeConversion(ADestination, ASource, ADataType, daGet, ANodeType, ALinesBefore);
 end;
 
 
-function TDelphiXMLDataBindingGenerator.NativeDataTypeToXML(const ADestination, ASource: string; ADataType: IXMLTypeDef; const ALinesBefore: string): string;
+function TDelphiXMLDataBindingGenerator.NativeDataTypeToXML(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String): String;
 begin
-  Result := DataTypeConversion(ADestination, ASource, ADataType, False, ALinesBefore);
+  Result := DataTypeConversion(ADestination, ASource, ADataType, daSet, ANodeType, ALinesBefore);
 end;
 
 
@@ -1041,6 +1419,26 @@ begin
   end;
 end;
 
+
+{ TXMLSchemaList }
+constructor TXMLSchemaList.Create();
+begin
+  inherited Create(False);
+end;
+
+
+function TXMLSchemaList.GetItem(Index: Integer): TXMLDataBindingSchema;
+begin
+  Result := TXMLDataBindingSchema(inherited GetItem(Index));
+end;
+
+
+procedure TXMLSchemaList.SetItem(Index: Integer; const Value: TXMLDataBindingSchema);
+begin
+  inherited SetItem(Index, Value);
+end;
+
 end.
+
 
 

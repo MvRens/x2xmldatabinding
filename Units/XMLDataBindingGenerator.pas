@@ -1,8 +1,5 @@
 unit XMLDataBindingGenerator;
 
-// #ToDo1 (MvR) 7-3-2008: check if List items can be collapsed if an item is
-//                        already a list parent
-// #ToDo1 (MvR) 19-3-2008: attributes
 interface
 uses
   Classes,
@@ -11,20 +8,21 @@ uses
 
 type
   TXMLDataBindingSchema = class;
+  TXMLDataBindingGeneratorItem = class;
   TXMLDataBindingItem = class;
   TXMLDataBindingInterface = class;
-  TXMLDataBindingCollection = class;
   TXMLDataBindingEnumerationMember = class;
   TXMLDataBindingEnumeration = class;
   TXMLDataBindingProperty = class;
+  TXMLDataBindingUnresolvedItem = class;
 
 
   TXMLDataBindingOutputType = (otSingle, otMultiple);
-  TXMLDataBindingItemType = (itInterface, itCollection, itEnumeration,
-                             itEnumerationMember, itProperty, itForward,
-                             itComplexTypeElement);
+  TXMLDataBindingItemType = (itInterface, itEnumeration, itEnumerationMember,
+                             itProperty, itUnresolved, itAlias);
   TXMLDataBindingInterfaceType = (ifElement, ifComplexType);
   TXMLDataBindingPropertyType = (ptSimple, ptItem);
+  TXMLDataBindingOccurance = (boMinOccurs, boMaxOccurs);
 
 
   TXMLDataBindingIterateItemsProc = procedure(AItem: TXMLDataBindingItem; AData: Pointer; var AAbort: Boolean) of object;
@@ -38,39 +36,44 @@ type
     FSourceFileName:    String;
 
     FSchemas:           TObjectList;
-    FMustResolve: Boolean;
 
     function GetSchemaCount(): Integer;
     function GetSchemas(Index: Integer): TXMLDataBindingSchema;
   protected
     function LoadSchema(const AStream: TStream; const ASchemaName: String): TXMLDataBindingSchema;
-    function GetSchemaData(const ALocation: String): TStream;
+    function GetSchemaData(const ALocation: String; out ASourceFileName: String): TStream;
     function FindSchema(const ALocation: String): TXMLDataBindingSchema;
 
     procedure GenerateSchemaObjects(ASchema: TXMLDataBindingSchema; ARootDocument: Boolean);
     procedure GenerateElementObjects(ASchema: TXMLDataBindingSchema; ARootDocument: Boolean);
     procedure GenerateComplexTypeObjects(ASchema: TXMLDataBindingSchema);
 
+    function CheckElementOccurance(AElement: IXMLElementDef; AOccurance: TXMLDataBindingOccurance): Boolean;
+    function IsElementOptional(AElement: IXMLElementDef): Boolean;
+    function IsElementRepeating(AElement: IXMLElementDef): Boolean;
+    function IsChoice(AElement: IXMLElementDef): Boolean;
+
     function ProcessElement(ASchema: TXMLDataBindingSchema; AElement: IXMLElementDef): TXMLDataBindingItem;
     procedure ProcessChildElement(ASchema: TXMLDataBindingSchema; AElement: IXMLElementDef; AInterface: TXMLDataBindingInterface);
+    procedure ProcessAttribute(ASchema: TXMLDataBindingSchema; AAttribute: IXMLAttributeDef; AInterface: TXMLDataBindingInterface);
 
     function IterateSchemaItems(ASchema: TXMLDataBindingSchema; AIterateProc: TXMLDataBindingIterateItemsProc; AData: Pointer): TXMLDataBindingItem;
 
     procedure FindInterfaceProc(AItem: TXMLDataBindingItem; AData: Pointer; var AAbort: Boolean);
     function FindInterface(ASchema: TXMLDataBindingSchema; const AName: String; AType: TXMLDataBindingInterfaceType): TXMLDataBindingInterface;
 
-    procedure FindCollectionProc(AItem: TXMLDataBindingItem; AData: Pointer; var AAbort: Boolean);
-    function FindCollection(ASchema: TXMLDataBindingSchema; const AName: String): TXMLDataBindingCollection;
-
     procedure FindEnumerationProc(AItem: TXMLDataBindingItem; AData: Pointer; var AAbort: Boolean);
     function FindEnumeration(ASchema: TXMLDataBindingSchema; const AName: String): TXMLDataBindingEnumeration;
 
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+
     procedure ResolveSchema(ASchema: TXMLDataBindingSchema);
-    procedure ResolveItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem);
+    procedure ResolveAlias(ASchema: TXMLDataBindingSchema);
+    procedure ResolveItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingUnresolvedItem);
     procedure ResolveNameConflicts();
 
-    procedure TranslateSchema(ASchema: TXMLDataBindingSchema);
-    procedure TranslateItem(AItem: TXMLDataBindingItem);
+    procedure PostProcessSchema(ASchema: TXMLDataBindingSchema);
+    procedure PostProcessItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem);
     function TranslateItemName(AItem: TXMLDataBindingItem): String; virtual;
 
     procedure GenerateDataBinding(); virtual; abstract;
@@ -91,47 +94,67 @@ type
   end;
 
 
-  TXMLDataBindingSchema = class(TObject)
+  TXMLDataBindingGeneratorItem = class(TObject)
+  private
+    FOwner:   TXMLDataBindingGenerator;
+  protected
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); virtual;
+
+    property Owner: TXMLDataBindingGenerator  read FOwner;
+  public
+    constructor Create(AOwner: TXMLDataBindingGenerator);
+  end;
+
+
+  TXMLDataBindingSchema = class(TXMLDataBindingGeneratorItem)
   private
     FIncludes:            TObjectList;
     FItems:               TObjectList;
     FItemsGenerated:      Boolean;
     FSchemaDef:           IXMLSchemaDef;
     FSchemaName:          String;
+    FSourceFileName:      String;
 
     function GetItemCount(): Integer;
     function GetItems(Index: Integer): TXMLDataBindingItem;
     function GetIncludeCount(): Integer;
     function GetIncludes(Index: Integer): TXMLDataBindingSchema;
   protected
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); override;
+
     procedure AddInclude(ASchema: TXMLDataBindingSchema);
     procedure AddItem(AItem: TXMLDataBindingItem);
+    procedure InsertItem(AItem, AAfter: TXMLDataBindingItem);
 
     property ItemsGenerated:  Boolean read FItemsGenerated  write FItemsGenerated;
   public
-    constructor Create();
+    constructor Create(AOwner: TXMLDataBindingGenerator);
     destructor Destroy(); override;
 
     property IncludeCount:              Integer               read GetIncludeCount;
     property Includes[Index: Integer]:  TXMLDataBindingSchema read GetIncludes;
 
-    property SchemaDef:                 IXMLSchemaDef         read FSchemaDef   write FSchemaDef;
-    property SchemaName:                String                read FSchemaName  write FSchemaName;
+    property SchemaDef:                 IXMLSchemaDef         read FSchemaDef       write FSchemaDef;
+    property SchemaName:                String                read FSchemaName      write FSchemaName;
+    property SourceFileName:            String                read FSourceFileName  write FSourceFileName;
 
     property ItemCount:                 Integer               read GetItemCount;
     property Items[Index: Integer]:     TXMLDataBindingItem   read GetItems;
   end;
 
 
-  TXMLDataBindingItem = class(TObject)
+  TXMLDataBindingItem = class(TXMLDataBindingGeneratorItem)
   private
+    FCollectionItem:  TXMLDataBindingProperty;
     FDocumentElement: Boolean;
     FName:            String;
+    FSchema:          TXMLDataBindingSchema;
     FSchemaItem:      IXMLSchemaItem;
     FTranslatedName:  String;
 
     function GetDocumentation(): String;
     function GetHasDocumentation(): Boolean;
+    function GetIsCollection: Boolean;
   protected
     function GetItemType(): TXMLDataBindingItemType; virtual; abstract;
     procedure SetName(const Value: String);
@@ -139,7 +162,9 @@ type
 
     property SchemaItem:      IXMLSchemaItem            read FSchemaItem;
   public
-    constructor Create(ASchemaItem: IXMLSchemaItem; const AName: String);
+    constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String);
+
+    property Schema:              TXMLDataBindingSchema     read FSchema          write FSchema;
 
     property DocumentElement:     Boolean                   read FDocumentElement write FDocumentElement;
     property Documentation:       String                    read GetDocumentation;
@@ -147,6 +172,9 @@ type
     property ItemType:            TXMLDataBindingItemType   read GetItemType;
     property Name:                String                    read FName;
     property TranslatedName:      String                    read FTranslatedName;
+
+    property CollectionItem:      TXMLDataBindingProperty   read FCollectionItem  write FCollectionItem;
+    property IsCollection:        Boolean                   read GetIsCollection;
   end;
 
 
@@ -162,35 +190,20 @@ type
   protected
     function GetItemType(): TXMLDataBindingItemType; override;
 
+    procedure ReplaceItem(const AOldItem: TXMLDataBindingItem; const ANewItem: TXMLDataBindingItem); override;
+
     procedure AddProperty(AProperty: TXMLDataBindingProperty);
   public
-    constructor Create(ASchemaItem: IXMLSchemaItem; const AName: String);
+    constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String);
     destructor Destroy; override;
 
-    property BaseName:        String                        read FBaseName    write FBaseName;
-    property BaseItem:        TXMLDataBindingInterface      read FBaseItem    write FBaseItem;
+    property BaseName:        String                        read FBaseName        write FBaseName;
+    property BaseItem:        TXMLDataBindingInterface      read FBaseItem        write FBaseItem;
 
     property InterfaceType:   TXMLDataBindingInterfaceType  read FInterfaceType;
 
     property PropertyCount:               Integer                 read GetPropertyCount;
     property Properties[Index: Integer]:  TXMLDataBindingProperty read GetProperties;
-  end;
-
-
-  TXMLDataBindingCollection = class(TXMLDataBindingItem)
-  private
-    FCollectionItem:  TXMLDataBindingProperty;
-
-    function GetActualCollectionItem(): TXMLDataBindingItem;
-    function GetCollectionItemName(): String;
-    function GetCollectionItemTranslatedName(): String;
-    procedure SetCollectionItem(const Value: TXMLDataBindingProperty);
-  protected
-    function GetItemType(): TXMLDataBindingItemType; override;
-  public
-    property CollectionItem:                TXMLDataBindingProperty read FCollectionItem;
-    property CollectionItemName:            String                  read GetCollectionItemName;
-    property CollectionItemTranslatedName:  String                  read GetCollectionItemTranslatedName;
   end;
 
 
@@ -200,7 +213,7 @@ type
   protected
     function GetItemType(): TXMLDataBindingItemType; override;
   public
-    constructor Create(AEnumeration: TXMLDataBindingEnumeration; const AName: String);
+    constructor Create(AOwner: TXMLDataBindingGenerator; AEnumeration: TXMLDataBindingEnumeration; const AName: String);
 
     property Enumeration: TXMLDataBindingEnumeration  read FEnumeration;
   end;
@@ -216,7 +229,7 @@ type
   protected
     function GetItemType(): TXMLDataBindingItemType; override;
   public
-    constructor Create(ASchemaItem: IXMLSchemaItem; ADataType: IXMLTypeDef; const AName: String);
+    constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; ADataType: IXMLTypeDef; const AName: String);
     destructor Destroy(); override;
 
     property DataType:                IXMLTypeDef                       read FDataType;
@@ -227,16 +240,23 @@ type
 
   TXMLDataBindingProperty = class(TXMLDataBindingItem)
   private
-    FIsOptional: Boolean;
+    FIsAttribute:   Boolean;
+    FIsOptional:    Boolean;
+    FIsRepeating:   Boolean;
+    FCollection:    TXMLDataBindingInterface;
   protected
     function GetIsReadOnly(): Boolean; virtual; abstract;
 
     function GetItemType(): TXMLDataBindingItemType; override;
     function GetPropertyType(): TXMLDataBindingPropertyType; virtual; abstract;
   public
+    property IsAttribute:   Boolean                     read FIsAttribute   write FIsAttribute;
     property IsOptional:    Boolean                     read FIsOptional    write FIsOptional;
     property IsReadOnly:    Boolean                     read GetIsReadOnly;
+    property IsRepeating:   Boolean                     read FIsRepeating   write FIsRepeating;
     property PropertyType:  TXMLDataBindingPropertyType read GetPropertyType;
+
+    property Collection:    TXMLDataBindingInterface    read FCollection    write FCollection;
   end;
 
 
@@ -247,7 +267,7 @@ type
     function GetIsReadOnly(): Boolean; override;
     function GetPropertyType(): TXMLDataBindingPropertyType; override;
   public
-    constructor Create(ASchemaItem: IXMLSchemaItem; const AName: String; ADataType: IXMLTypeDef);
+    constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String; ADataType: IXMLTypeDef);
 
     property DataType:  IXMLTypeDef read FDataType;
   end;
@@ -256,37 +276,37 @@ type
   TXMLDataBindingItemProperty = class(TXMLDataBindingProperty)
   private
     FItem:  TXMLDataBindingItem;
-
-    function GetItem(): TXMLDataBindingItem;
   protected
     function GetIsReadOnly(): Boolean; override;
     function GetPropertyType(): TXMLDataBindingPropertyType; override;
-  public
-    constructor Create(ASchemaItem: IXMLSchemaItem; const AName: String; AItem: TXMLDataBindingItem);
 
-    property Item:  TXMLDataBindingItem read GetItem;
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); override;
+  public
+    constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String; AItem: TXMLDataBindingItem);
+
+    property Item:  TXMLDataBindingItem read FItem;
   end;
 
 
-  TXMLDataBindingForwardItem = class(TXMLDataBindingItem)
+  TXMLDataBindingUnresolvedItem = class(TXMLDataBindingItem)
   private
-    FItem:  TXMLDataBindingItem;
     FInterfaceType: TXMLDataBindingInterfaceType;
   protected
     function GetItemType(): TXMLDataBindingItemType; override;
   public
-    constructor Create(ASchemaItem: IXMLSchemaItem; const AName: String; AInterfaceType: TXMLDataBindingInterfaceType);
+    constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String; AInterfaceType: TXMLDataBindingInterfaceType);
 
     property InterfaceType:   TXMLDataBindingInterfaceType  read FInterfaceType;
-    property Item:            TXMLDataBindingItem           read FItem          write FItem;
   end;
 
 
-  TXMLDataBindingComplexTypeElementItem = class(TXMLDataBindingItem)
+  TXMLDataBindingAliasItem = class(TXMLDataBindingItem)
   private
     FItem: TXMLDataBindingItem;
   protected
     function GetItemType(): TXMLDataBindingItemType; override;
+
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); override;
   public
     property Item:  TXMLDataBindingItem read FItem  write FItem;
   end;
@@ -305,6 +325,7 @@ uses
 
 const
   MaxOccursUnbounded  = 'unbounded';
+  UseOptional         = 'optional';
   CollectionPostfix   = 'List';
 
 
@@ -318,29 +339,11 @@ begin
 end;
 
 
-function GetActualItem(AItem: TXMLDataBindingItem): TXMLDataBindingItem;
-begin
-  Result  := AItem;
-
-  while Assigned(Result) do
-  begin
-    case Result.ItemType of
-      itForward:
-        Result  := TXMLDataBindingForwardItem(Result).Item;
-
-      itComplexTypeElement:
-        Result  := TXMLDataBindingComplexTypeElementItem(Result).Item;
-    else
-      break;
-    end;
-  end;
-end;
-
 
 { TXMLDataBindingGenerator }
 constructor TXMLDataBindingGenerator.Create();
 begin
-  inherited;
+  inherited Create();
 
   FIncludePaths := TStringList.Create();
   FSchemas      := TObjectList.Create(True);
@@ -365,10 +368,13 @@ end;
 procedure TXMLDataBindingGenerator.Execute(const AStream: TStream; const ASchemaName: String);
 var
   schemaIndex:    Integer;
+  schema:         TXMLDataBindingSchema;
 
 begin
   FSchemas.Clear();
-  LoadSchema(AStream, ASchemaName);
+  schema  := LoadSchema(AStream, ASchemaName);
+  if Assigned(schema) then
+    schema.SourceFileName := SourceFileName;    
 
   if SchemaCount > 0 then
   begin
@@ -377,26 +383,23 @@ begin
       GenerateSchemaObjects(Schemas[schemaIndex], (schemaIndex = 0));
 
 
-    { Process unresolved references
-      - some references can't be resolved the first time (especially
-        ComplexTypeElement references). Fix this workaround some time. }
-    for schemaIndex := 0 to Pred(SchemaCount) do
+    { Process unresolved references }
+    for schemaIndex := Pred(SchemaCount) downto 0 do
       ResolveSchema(Schemas[schemaIndex]);
 
-    for schemaIndex := 0 to Pred(SchemaCount) do
-      ResolveSchema(Schemas[schemaIndex]);
+
+    { After all lookups have been done, unwrap alias items }
+    for schemaIndex := Pred(SchemaCount) downto 0 do
+      ResolveAlias(Schemas[schemaIndex]);
 
       
-    { Collapse collections }
-
-
     { Resolve naming conflicts }
     ResolveNameConflicts();
 
 
-    { Perform output-specific translations }
+    { Perform final post-processing (translating names, generating collections) }
     for schemaIndex := 0 to Pred(SchemaCount) do
-      TranslateSchema(Schemas[schemaIndex]);
+      PostProcessSchema(Schemas[schemaIndex]);
 
 
     { Output }
@@ -440,6 +443,7 @@ function TXMLDataBindingGenerator.LoadSchema(const AStream: TStream; const ASche
     refSchema:      TXMLDataBindingSchema;
     refIndex:       Integer;
     refStream:      TStream;
+    sourceFileName: String;
 
   begin
     for refIndex := 0 to Pred(ADocRefs.Count) do
@@ -450,11 +454,14 @@ function TXMLDataBindingGenerator.LoadSchema(const AStream: TStream; const ASche
 
       if not Assigned(refSchema) then
       begin
-        refStream     := GetSchemaData(location);
+        refStream     := GetSchemaData(location, sourceFileName);
 
         if Assigned(refStream) then
         try
           refSchema   := LoadSchema(refStream, schemaName);
+
+          if Assigned(refSchema) then
+            refSchema.SourceFileName  := sourceFileName;
         finally
           FreeAndNil(refStream);
         end;
@@ -475,7 +482,7 @@ begin
   schemaDoc.LoadFromStream(AStream);
   schemaDef := schemaDoc.SchemaDef;
 
-  Result            := TXMLDataBindingSchema.Create();
+  Result            := TXMLDataBindingSchema.Create(Self);
   Result.SchemaDef  := schemaDef;
   Result.SchemaName := ASchemaName;
   FSchemas.Add(Result);
@@ -486,7 +493,7 @@ begin
 end;
 
 
-function TXMLDataBindingGenerator.GetSchemaData(const ALocation: String): TStream;
+function TXMLDataBindingGenerator.GetSchemaData(const ALocation: String; out ASourceFileName: String): TStream;
 var
   includeIndex:   Integer;
   includePath:    String;
@@ -502,7 +509,8 @@ begin
 
     if FileExists(includePath + ALocation) then
     begin
-      Result := TFileStream.Create(includePath + ALocation, fmOpenRead or fmShareDenyNone);
+      ASourceFileName := includePath + ALocation;
+      Result := TFileStream.Create(ASourceFileName, fmOpenRead or fmShareDenyNone);
       break;
     end;
   end;
@@ -579,7 +587,7 @@ begin
   for complexTypeIndex := 0 to Pred(schemaDef.ComplexTypes.Count) do
   begin
     complexType   := schemaDef.ComplexTypes[complexTypeIndex];
-    interfaceItem := TXMLDataBindingInterface.Create(complexType, complexType.Name);
+    interfaceItem := TXMLDataBindingInterface.Create(Self, complexType, complexType.Name);
     ASchema.AddItem(interfaceItem);
 
     for elementIndex := 0 to Pred(complexType.ElementDefs.Count) do
@@ -588,12 +596,75 @@ begin
 end;
 
 
+function TXMLDataBindingGenerator.CheckElementOccurance(AElement: IXMLElementDef; AOccurance: TXMLDataBindingOccurance): Boolean;
+
+  function CheckParent(const ANode: IXMLNode): Boolean;
+  var
+    compositor:   IXMLElementCompositor;
+
+  begin
+    Result := False;
+
+    if Supports(ANode, IXMLElementCompositor, compositor) then
+    begin
+      case AOccurance of
+        boMinOccurs:  Result := (compositor.MinOccurs = 0);
+        boMaxOccurs:  Result := (compositor.MaxOccurs = MaxOccursUnbounded) or
+                                (compositor.MaxOccurs > 1);
+      end;
+
+      if not Result then
+        Result := CheckParent(compositor.ParentNode);
+    end;
+  end;
+
+
+begin
+  Result := False;
+  
+  case AOccurance of
+    boMinOccurs:  Result := (AElement.MinOccurs = 0);
+    boMaxOccurs:  Result := (AElement.MaxOccurs = MaxOccursUnbounded) or
+                            (AElement.MaxOccurs > 1);
+  end;
+
+  if not Result then
+    Result := CheckParent(AElement.ParentNode);
+end;
+
+
+function TXMLDataBindingGenerator.IsElementOptional(AElement: IXMLElementDef): Boolean;
+begin
+  Result := CheckElementOccurance(AElement, boMinOccurs);
+end;
+
+
+function TXMLDataBindingGenerator.IsElementRepeating(AElement: IXMLElementDef): Boolean;
+begin
+  Result := CheckElementOccurance(AElement, boMaxOccurs);
+end;
+
+
+function TXMLDataBindingGenerator.IsChoice(AElement: IXMLElementDef): Boolean;
+var
+  compositor:   IXMLElementCompositor;
+
+begin
+  Result := False;
+
+  if Supports(AElement, IXMLElementCompositor, compositor) then
+    Result := (compositor.CompositorType = ctChoice) and
+              (compositor.ElementDefs.Count > 1);
+end;
+
+
 function TXMLDataBindingGenerator.ProcessElement(ASchema: TXMLDataBindingSchema; AElement: IXMLElementDef): TXMLDataBindingItem;
 var
   elementIndex:         Integer;
+  attributeIndex:       Integer;
   enumerationObject:    TXMLDataBindingEnumeration;
   interfaceObject:      TXMLDataBindingInterface;
-  complexTypeElement:   TXMLDataBindingComplexTypeElementItem;
+  aliasItem:            TXMLDataBindingAliasItem;
 
 begin
   Result := nil;
@@ -606,7 +677,7 @@ begin
 
     if not Assigned(Result) then
     begin
-      Result  := TXMLDataBindingForwardItem.Create(AElement, AElement.Ref.Name, ifElement);
+      Result  := TXMLDataBindingUnresolvedItem.Create(Self, AElement, AElement.Ref.Name, ifElement);
       ASchema.AddItem(Result);
     end;
   end else
@@ -619,7 +690,7 @@ begin
 
       if not Assigned(Result) then
       begin
-        Result  := TXMLDataBindingForwardItem.Create(AElement, AElement.DataTypeName, ifComplexType);
+        Result  := TXMLDataBindingUnresolvedItem.Create(Self, AElement, AElement.DataTypeName, ifComplexType);
         ASchema.AddItem(Result);
       end;
 
@@ -627,9 +698,9 @@ begin
       begin
         { The element is global, but only references a complex type. Keep track
           to properly resolve references to the element. }
-        complexTypeElement      := TXMLDataBindingComplexTypeElementItem.Create(AElement, AElement.Name);
-        complexTypeElement.Item := Result;
-        ASchema.AddItem(complexTypeElement);
+        aliasItem       := TXMLDataBindingAliasItem.Create(Self, AElement, AElement.Name);
+        aliasItem.Item  := Result;
+        ASchema.AddItem(aliasItem);
       end;
     end;
 
@@ -638,13 +709,13 @@ begin
       if AElement.DataType.Enumerations.Count > 0 then
       begin
         { Enumeration }
-        enumerationObject := TXMLDataBindingEnumeration.Create(AElement, AElement.DataType, AElement.Name);
+        enumerationObject := TXMLDataBindingEnumeration.Create(Self, AElement, AElement.DataType, AElement.Name);
         ASchema.AddItem(enumerationObject);
         Result := enumerationObject;
       end else if AElement.DataType.IsComplex then
       begin
         { Interface }
-        interfaceObject := TXMLDataBindingInterface.Create(AElement, AElement.Name);
+        interfaceObject := TXMLDataBindingInterface.Create(Self, AElement, AElement.Name);
         if Assigned(AElement.DataType.BaseType) then
           interfaceObject.BaseName := AElement.DataType.BaseTypeName;
 
@@ -652,10 +723,14 @@ begin
         Result := interfaceObject;
       end;
 
-
       if Assigned(interfaceObject) then
+      begin
         for elementIndex := 0 to Pred(AElement.ChildElements.Count) do
           ProcessChildElement(ASchema, AElement.ChildElements[elementIndex], interfaceObject);
+
+        for attributeIndex := 0 to Pred(AElement.AttributeDefs.Count) do
+          ProcessAttribute(ASchema, AElement.AttributeDefs[attributeIndex], interfaceObject);
+      end;
     end;
   end;
 end;
@@ -663,65 +738,46 @@ end;
 
 procedure TXMLDataBindingGenerator.ProcessChildElement(ASchema: TXMLDataBindingSchema; AElement: IXMLElementDef; AInterface: TXMLDataBindingInterface);
 var
-  collectionObject:     TXMLDataBindingCollection;
   propertyType:         TXMLDataBindingItem;
   propertyItem:         TXMLDataBindingProperty;
 
 begin
-  collectionObject := nil;
-
-
-  if Assigned(AInterface) then
-  begin
-    if (AElement.MaxOccurs = MaxOccursUnbounded) or
-       (AElement.MaxOccurs > 1) then
-    begin
-      { Collection }
-      collectionObject  := FindCollection(ASchema, AElement.Name);
-
-      if not Assigned(collectionObject) then
-      begin
-        collectionObject  := TXMLDataBindingCollection.Create(AElement, AElement.Name + CollectionPostfix);
-        ASchema.AddItem(collectionObject);
-      end;
-    end;
-  end;
-
-
-  propertyType := ProcessElement(ASchema, AElement);
-
-  if Assigned(collectionObject) then
-  begin
-    { Create intermediate object for collections }
-    if Assigned(propertyType) then
-      propertyItem  := TXMLDataBindingItemProperty.Create(AElement,
-                                                          propertyType.Name,
-                                                          propertyType)
-    else
-      propertyItem  := TXMLDataBindingSimpleProperty.Create(AElement,
-                                                            AElement.Name,
-                                                            AElement.DataType);
-
-
-    collectionObject.SetCollectionItem(propertyItem);
-    propertyType := collectionObject;
-  end;
-
+  propertyType      := ProcessElement(ASchema, AElement);
 
   if Assigned(AInterface) then
   begin
     if Assigned(propertyType) then
-      propertyItem  := TXMLDataBindingItemProperty.Create(AElement,
+      propertyItem  := TXMLDataBindingItemProperty.Create(Self, AElement,
                                                           AElement.Name,
                                                           propertyType)
     else
-      propertyItem  := TXMLDataBindingSimpleProperty.Create(AElement,
+      propertyItem  := TXMLDataBindingSimpleProperty.Create(Self, AElement,
                                                             AElement.Name,
                                                             AElement.DataType);
 
-    propertyItem.IsOptional := (AElement.MinOccurs = 0);
+    propertyItem.IsOptional   := IsElementOptional(AElement) or
+                                 IsChoice(AElement);
+    propertyItem.IsRepeating  := IsElementRepeating(AElement);
+
     AInterface.AddProperty(propertyItem);
   end;
+end;
+
+
+procedure TXMLDataBindingGenerator.ProcessAttribute(ASchema: TXMLDataBindingSchema; AAttribute: IXMLAttributeDef; AInterface: TXMLDataBindingInterface);
+var
+  propertyItem:   TXMLDataBindingProperty;
+
+begin
+  // #ToDo2 (MvR) 10-4-2008: complex attributes (enumerations)
+  propertyItem  := TXMLDataBindingSimpleProperty.Create(Self, AAttribute,
+                                                        AAttribute.Name,
+                                                        AAttribute.DataType);
+
+  propertyItem.IsOptional   := (AAttribute.Use = UseOptional);
+  propertyItem.IsAttribute  := True;
+  
+  AInterface.AddProperty(propertyItem);
 end;
 
 
@@ -784,7 +840,7 @@ begin
       itInterface:
         AAbort  := (TXMLDataBindingInterface(AItem).InterfaceType = findInfo^.InterfaceType);
 
-      itComplexTypeElement:
+      itAlias:
         AAbort  := (findInfo^.InterfaceType = ifElement);
     end;
   end;
@@ -798,7 +854,7 @@ var
 begin
   findInfo.InterfaceType  := AType;
   findInfo.Name           := AName;
-  Result                  := TXMLDataBindingInterface(GetActualItem(IterateSchemaItems(ASchema, FindInterfaceProc, @findInfo)));
+  Result                  := TXMLDataBindingInterface(IterateSchemaItems(ASchema, FindInterfaceProc, @findInfo));
 end;
 
 
@@ -815,25 +871,14 @@ begin
 end;
 
 
-procedure TXMLDataBindingGenerator.FindCollectionProc(AItem: TXMLDataBindingItem; AData: Pointer; var AAbort: Boolean);
+procedure TXMLDataBindingGenerator.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
 var
-  collection: TXMLDataBindingCollection;
+  schemaIndex:  Integer;
 
 begin
-  if AItem.ItemType = itCollection then
-  begin
-    collection  := TXMLDataBindingCollection(AItem);
-    AAbort      := Assigned(collection.CollectionItem) and
-                   (collection.CollectionItem.Name = PChar(AData));
-  end;
+  for schemaIndex := Pred(SchemaCount) downto 0 do
+    Schemas[schemaIndex].ReplaceItem(AOldItem, ANewItem);
 end;
-
-
-function TXMLDataBindingGenerator.FindCollection(ASchema: TXMLDataBindingSchema; const AName: String): TXMLDataBindingCollection;
-begin
-  Result  := TXMLDataBindingCollection(IterateSchemaItems(ASchema, FindCollectionProc, PChar(AName)));
-end;
-
 
 
 procedure TXMLDataBindingGenerator.ResolveSchema(ASchema: TXMLDataBindingSchema);
@@ -843,7 +888,7 @@ var
   interfaceItem:  TXMLDataBindingInterface;
 
 begin
-  for itemIndex := 0 to Pred(ASchema.ItemCount) do
+  for itemIndex := Pred(ASchema.ItemCount) downto 0 do
   begin
     item  := ASchema.Items[itemIndex];
 
@@ -858,35 +903,50 @@ begin
             interfaceItem.BaseItem  := FindInterface(ASchema, interfaceItem.BaseName, ifComplexType);
         end;
 
-      itForward:
-        ResolveItem(ASchema, item);
+      itUnresolved:
+        ResolveItem(ASchema, TXMLDataBindingUnresolvedItem(item));
     end;
   end;
 end;
 
 
-procedure TXMLDataBindingGenerator.ResolveItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem);
+procedure TXMLDataBindingGenerator.ResolveAlias(ASchema: TXMLDataBindingSchema);
 var
-  forwardItem:    TXMLDataBindingForwardItem;
+  itemIndex:    Integer;
+  item:         TXMLDataBindingItem;
+  aliasItem:    TXMLDataBindingAliasItem;
+  
+begin
+  for itemIndex := Pred(ASchema.ItemCount) downto 0 do
+  begin
+    item  := ASchema.Items[itemIndex];
+
+    if item.ItemType = itAlias then
+    begin
+      aliasItem := TXMLDataBindingAliasItem(item);
+      if Assigned(aliasItem.Item) then
+        ReplaceItem(aliasItem, aliasItem.Item);
+    end;
+  end;
+end;
+
+
+procedure TXMLDataBindingGenerator.ResolveItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingUnresolvedItem);
+var
   referenceItem:  TXMLDataBindingItem;
 
 begin
-  if (not Assigned(AItem)) or (AItem.ItemType <> itForward) then
+  if not Assigned(AItem) then
     Exit;
 
-  { Resolve forwarded item }
-  forwardItem   := TXMLDataBindingForwardItem(AItem);
-  if not Assigned(forwardItem.Item) then
-  begin
-    referenceItem := FindInterface(ASchema, AItem.Name, forwardItem.InterfaceType);
+  referenceItem := FindInterface(ASchema, AItem.Name, AItem.InterfaceType);
 
-    if (not Assigned(referenceItem)) and
-       (forwardItem.InterfaceType = ifElement) then
-      referenceItem := FindEnumeration(ASchema, AItem.Name);
+  if (not Assigned(referenceItem)) and
+     (AItem.InterfaceType = ifElement) then
+    referenceItem := FindEnumeration(ASchema, AItem.Name);
 
-    if Assigned(referenceItem) then
-      forwardItem.Item  := referenceItem;
-  end;
+  if Assigned(referenceItem) then
+    ReplaceItem(AItem, referenceItem);
 end;
 
 
@@ -901,12 +961,8 @@ var
     items:          TObjectList;
 
   begin
-    { Collections use the same Name as their items, differentiate
-      between them while determining conflicts. }
     hashName  := AItem.Name;
-    if AItem.ItemType = itCollection then
-      hashName  := hashName + #1;
-
+    
     if not itemNames.Exists(hashName) then
     begin
       items               := TObjectList.Create(False);
@@ -973,7 +1029,7 @@ begin
       begin
         item      := schema.Items[itemIndex];
 
-        if item.ItemType in [itInterface, itCollection, itEnumeration] then
+        if item.ItemType in [itInterface, itEnumeration] then
           AddItem(item);
       end;
     end;
@@ -1022,40 +1078,97 @@ begin
 end;
 
 
-procedure TXMLDataBindingGenerator.TranslateSchema(ASchema: TXMLDataBindingSchema);
+procedure TXMLDataBindingGenerator.PostProcessSchema(ASchema: TXMLDataBindingSchema);
 var
   itemIndex:  Integer;
 
 begin
-  for itemIndex := 0 to Pred(ASchema.ItemCount) do
-    TranslateItem(ASchema.Items[itemIndex]);
+  for itemIndex := Pred(ASchema.ItemCount) downto 0 do
+    PostProcessItem(ASchema, ASchema.Items[itemIndex]);
 end;
 
 
-procedure TXMLDataBindingGenerator.TranslateItem(AItem: TXMLDataBindingItem);
+procedure TXMLDataBindingGenerator.PostProcessItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem);
 var
-  interfaceItem: TXMLDataBindingInterface;
-  propertyIndex: Integer;
-  enumerationItem: TXMLDataBindingEnumeration;
-  memberIndex: Integer;
+  collectionItem:       TXMLDataBindingInterface;
+  collectionName:       string;
+  enumerationItem:      TXMLDataBindingEnumeration;
+  interfaceItem:        TXMLDataBindingInterface;
+  memberIndex:          Integer;
+  propertyIndex:        Integer;
+  propertyItem:         TXMLDataBindingProperty;
+  repeatingItems:       TObjectList;
 
 begin
+  { Translate name }
   AItem.SetTranslatedName(TranslateItemName(AItem));
 
+
+  { Extract collections }
+  if AItem.ItemType = itInterface then
+  begin
+    interfaceItem                 := TXMLDataBindingInterface(AItem);
+    interfaceItem.CollectionItem  := nil;
+
+    repeatingItems  := TObjectList.Create(False);
+    try
+      for propertyIndex := 0 to Pred(interfaceItem.PropertyCount) do
+        if interfaceItem.Properties[propertyIndex].IsRepeating then
+          repeatingItems.Add(interfaceItem.Properties[propertyIndex]);
+
+      if repeatingItems.Count > 0 then
+      begin
+        if repeatingItems.Count = 1 then
+        begin
+          { Single repeating child, the item itself is a collection parent }
+          interfaceItem.CollectionItem  := TXMLDataBindingProperty(repeatingItems[0]);
+        end else
+        begin
+          { Multiple repeating children, create intermediate collections for each }
+          for propertyIndex := 0 to Pred(repeatingItems.Count) do
+          begin
+            propertyItem  := TXMLDataBindingProperty(repeatingItems[propertyIndex]);
+
+            // #ToDo1 (MvR) 7-4-2008: check if an item with the "List" postfix
+            //                        exists in the schema, as it could cause
+            //                        conflicts.
+
+            // #ToDo1 (MvR) 7-4-2008: check if the interfaceItem has a BaseItem,
+            //                        can't be combined with being a collection
+            case propertyItem.PropertyType of
+              ptSimple: collectionName  := propertyItem.TranslatedName + CollectionPostfix;
+              ptItem:   collectionName  := propertyItem.TranslatedName + CollectionPostfix;
+            end;
+
+            collectionItem                := TXMLDataBindingInterface.Create(Self, propertyItem.SchemaItem, collectionName);
+            collectionItem.CollectionItem := propertyItem;
+            ASchema.InsertItem(collectionItem, interfaceItem);
+
+            propertyItem.Collection       := collectionItem;
+          end;
+        end;
+      end;
+    finally
+      FreeAndNil(repeatingItems);
+    end;
+  end;
+
+  
+  { Process members }
   case AItem.ItemType of
     itInterface:
       begin
         interfaceItem := TXMLDataBindingInterface(AItem);
 
         for propertyIndex := 0 to Pred(interfaceItem.PropertyCount) do
-          TranslateItem(interfaceItem.Properties[propertyIndex]);
+          PostProcessItem(ASchema, interfaceItem.Properties[propertyIndex]);
       end;
     itEnumeration:
       begin
         enumerationItem := TXMLDataBindingEnumeration(AItem);
 
         for memberIndex := 0 to Pred(enumerationItem.MemberCount) do
-          TranslateItem(enumerationItem.Members[memberIndex]);
+          PostProcessItem(ASchema, enumerationItem.Members[memberIndex]);
       end;
   end;
 end;
@@ -1079,10 +1192,24 @@ begin
 end;
 
 
-{ TXMLDataBindingSchema }
-constructor TXMLDataBindingSchema.Create();
+{ TXMLDataBindingGeneratorItem }
+constructor TXMLDataBindingGeneratorItem.Create(AOwner: TXMLDataBindingGenerator);
 begin
-  inherited;
+  inherited Create();
+
+  FOwner  := AOwner;
+end;
+
+
+procedure TXMLDataBindingGeneratorItem.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+begin
+end;
+
+
+{ TXMLDataBindingSchema }
+constructor TXMLDataBindingSchema.Create(AOwner: TXMLDataBindingGenerator);
+begin
+  inherited Create(AOwner);
 
   FIncludes := TObjectList.Create(False);
   FItems := TObjectList.Create(True);
@@ -1098,6 +1225,21 @@ begin
 end;
 
 
+procedure TXMLDataBindingSchema.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+var
+  itemIndex:    Integer;
+
+begin
+  inherited;
+
+  for itemIndex := Pred(ItemCount) downto 0 do
+    if Items[itemIndex] = AOldItem then
+      FItems.Extract(AOldItem)
+    else
+      Items[itemIndex].ReplaceItem(AOldItem, ANewItem);
+end;
+
+
 procedure TXMLDataBindingSchema.AddInclude(ASchema: TXMLDataBindingSchema);
 begin
   if FIncludes.IndexOf(ASchema) = -1 then
@@ -1108,7 +1250,28 @@ end;
 procedure TXMLDataBindingSchema.AddItem(AItem: TXMLDataBindingItem);
 begin
   if FItems.IndexOf(AItem) = -1 then
+  begin
     FItems.Add(AItem);
+    AItem.Schema  := Self;
+  end;
+end;
+
+
+procedure TXMLDataBindingSchema.InsertItem(AItem, AAfter: TXMLDataBindingItem);
+var
+  itemIndex:  Integer;
+
+begin
+  if FItems.IndexOf(AItem) = -1 then
+  begin
+    itemIndex := FItems.IndexOf(AAfter);
+    if itemIndex > -1 then
+      FItems.Insert(Succ(itemIndex), AItem)
+    else
+      FItems.Add(AItem);
+
+    AItem.Schema  := Self;
+  end;
 end;
 
 
@@ -1137,9 +1300,9 @@ end;
 
 
 { TXMLDataBindingItem }
-constructor TXMLDataBindingItem.Create(ASchemaItem: IXMLSchemaItem; const AName: String);
+constructor TXMLDataBindingItem.Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String);
 begin
-  inherited Create();
+  inherited Create(AOwner);
 
   FName := AName;
   FSchemaItem := ASchemaItem;
@@ -1163,11 +1326,18 @@ begin
 end;
 
 
-function TXMLDataBindingItem.GetHasDocumentation: Boolean;
+function TXMLDataBindingItem.GetHasDocumentation(): Boolean;
 begin
   Result  := Assigned(SchemaItem) and
              (SchemaItem.Documentation.Count > 0);
 end;
+
+
+function TXMLDataBindingItem.GetIsCollection(): Boolean;
+begin
+  Result  := Assigned(FCollectionItem);
+end;
+
 
 procedure TXMLDataBindingItem.SetName(const Value: String);
 begin
@@ -1182,9 +1352,9 @@ end;
 
 
 { TXMLDataBindingInterface }
-constructor TXMLDataBindingInterface.Create(ASchemaItem: IXMLSchemaItem; const AName: String);
+constructor TXMLDataBindingInterface.Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String);
 begin
-  inherited Create(ASchemaItem, AName);
+  inherited Create(AOwner, ASchemaItem, AName);
 
   FProperties := TObjectList.Create(True);
   FInterfaceType := GetInterfaceType(SchemaItem);
@@ -1196,6 +1366,18 @@ begin
   FreeAndNil(FProperties);
 
   inherited;
+end;
+
+
+procedure TXMLDataBindingInterface.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+var
+  propertyIndex:  Integer;
+
+begin
+  inherited;
+
+  for propertyIndex := Pred(PropertyCount) downto 0 do
+    Properties[propertyIndex].ReplaceItem(AOldItem, ANewItem);
 end;
 
 
@@ -1223,60 +1405,10 @@ begin
 end;
 
 
-{ TXMLDataBindingCollection }
-function TXMLDataBindingCollection.GetItemType(): TXMLDataBindingItemType;
-begin
-  Result  := itCollection;
-end;
-
-
-function TXMLDataBindingCollection.GetActualCollectionItem(): TXMLDataBindingItem;
-begin
-  Result  := nil;
-
-  if Assigned(CollectionItem) then
-  begin
-    case CollectionItem.PropertyType of
-      ptSimple: Result  := CollectionItem;
-      ptItem:   Result  := TXMLDataBindingItemProperty(CollectionItem).Item;
-    end;
-  end;
-end;
-
-function TXMLDataBindingCollection.GetCollectionItemName(): String;
-var
-  item:   TXMLDataBindingItem;
-
-begin
-  Result  := '';
-  item    := GetActualCollectionItem();
-  if Assigned(item) then
-    Result  := item.Name;
-end;
-
-
-function TXMLDataBindingCollection.GetCollectionItemTranslatedName(): String;
-var
-  item:   TXMLDataBindingItem;
-
-begin
-  Result  := '';
-  item    := GetActualCollectionItem();
-  if Assigned(item) then
-    Result  := item.Name;
-end;
-
-
-procedure TXMLDataBindingCollection.SetCollectionItem(const Value: TXMLDataBindingProperty);
-begin
-  FCollectionItem := Value;
-end;
-
-
 { TXMLDataBindingEnumerationMember }
-constructor TXMLDataBindingEnumerationMember.Create(AEnumeration: TXMLDataBindingEnumeration; const AName: String);
+constructor TXMLDataBindingEnumerationMember.Create(AOwner: TXMLDataBindingGenerator; AEnumeration: TXMLDataBindingEnumeration; const AName: String);
 begin
-  inherited Create(nil, AName);
+  inherited Create(AOwner, nil, AName);
 
   FEnumeration  := AEnumeration;
 end;
@@ -1289,18 +1421,18 @@ end;
 
 
 { TXMLDataBindingEnumeration }
-constructor TXMLDataBindingEnumeration.Create(ASchemaItem: IXMLSchemaItem; ADataType: IXMLTypeDef; const AName: String);
+constructor TXMLDataBindingEnumeration.Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; ADataType: IXMLTypeDef; const AName: String);
 var
   memberIndex:  Integer;
 
 begin
-  inherited Create(ASchemaItem, AName);
+  inherited Create(AOwner, ASchemaItem, AName);
 
   FDataType := ADataType;
   FMembers  := TObjectList.Create();
 
   for memberIndex := 0 to Pred(ADataType.Enumerations.Count) do
-    FMembers.Add(TXMLDataBindingEnumerationMember.Create(Self, ADataType.Enumerations.Items[memberIndex].Value));
+    FMembers.Add(TXMLDataBindingEnumerationMember.Create(Owner, Self, ADataType.Enumerations.Items[memberIndex].Value));
 end;
 
 
@@ -1338,9 +1470,9 @@ end;
 
 
 { TXMLDataBindingSimpleProperty }
-constructor TXMLDataBindingSimpleProperty.Create(ASchemaItem: IXMLSchemaItem; const AName: String; ADataType: IXMLTypeDef);
+constructor TXMLDataBindingSimpleProperty.Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String; ADataType: IXMLTypeDef);
 begin
-  inherited Create(ASchemaItem, AName);
+  inherited Create(AOwner, ASchemaItem, AName);
 
   FDataType := ADataType;
 end;
@@ -1359,11 +1491,20 @@ end;
 
 
 { TXMLDataBindingItemProperty }
-constructor TXMLDataBindingItemProperty.Create(ASchemaItem: IXMLSchemaItem; const AName: String; AItem: TXMLDataBindingItem);
+constructor TXMLDataBindingItemProperty.Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String; AItem: TXMLDataBindingItem);
 begin
-  inherited Create(ASchemaItem, AName);
+  inherited Create(AOwner, ASchemaItem, AName);
 
   FItem := AItem;
+end;
+
+
+procedure TXMLDataBindingItemProperty.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+begin
+  inherited;
+
+  if FItem = AOldItem then
+    FItem := ANewItem;
 end;
 
 
@@ -1379,31 +1520,34 @@ begin
 end;
 
 
-function TXMLDataBindingItemProperty.GetItem(): TXMLDataBindingItem;
+{ TXMLDataBindingUnresolvedItem }
+constructor TXMLDataBindingUnresolvedItem.Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String; AInterfaceType: TXMLDataBindingInterfaceType);
 begin
-  Result := GetActualItem(FItem);
-end;
-
-
-{ TXMLDataBindingForwardItem }
-constructor TXMLDataBindingForwardItem.Create(ASchemaItem: IXMLSchemaItem; const AName: String; AInterfaceType: TXMLDataBindingInterfaceType);
-begin
-  inherited Create(ASchemaItem, AName);
+  inherited Create(AOwner, ASchemaItem, AName);
 
   FInterfaceType := AInterfaceType;
 end;
 
 
-function TXMLDataBindingForwardItem.GetItemType(): TXMLDataBindingItemType;
+function TXMLDataBindingUnresolvedItem.GetItemType(): TXMLDataBindingItemType;
 begin
-  Result  := itForward;
+  Result  := itUnresolved;
 end;
 
 
-{ TXMLDataBindingComplexTypeElementItem }
-function TXMLDataBindingComplexTypeElementItem.GetItemType(): TXMLDataBindingItemType;
+{ TXMLDataBindingAliasItem }
+procedure TXMLDataBindingAliasItem.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
 begin
-  Result  := itComplexTypeElement;
+  inherited;
+
+  if FItem = AOldItem then
+    FItem := ANewItem;
+end;
+
+
+function TXMLDataBindingAliasItem.GetItemType(): TXMLDataBindingItemType;
+begin
+  Result  := itAlias;
 end;
 
 end.

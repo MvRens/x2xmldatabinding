@@ -4,6 +4,8 @@ interface
 type
   TDelphiXMLSection = (dxsForward, dxsInterface, dxsClass, dxsImplementation);
   TDelphiXMLMember = (dxmPropertyGet, dxmPropertySet, dxmPropertyDeclaration);
+  TDelphiAccessor = (daGet, daSet);
+  TDelphiNodeType = (dntElement, dntAttribute, dntCustom);
 
 
 const
@@ -18,6 +20,7 @@ const
 
   UnitInterface       = 'interface'                                             + CrLf +
                         'uses'                                                  + CrLf +
+                        '%<UsesClause>:s'                                       +
                         '  Classes,'                                            + CrLf +
                         '  XMLDoc,'                                             + CrLf +
                         '  XMLIntf;'                                            + CrLf +
@@ -25,6 +28,9 @@ const
                         'type'                                                  + CrLf;
 
   UnitImplementation  = 'implementation'                                        + CrLf +
+                        'uses'                                                  + CrLf +
+                        '  SysUtils;'                                           + CrLf +
+                        ''                                                      + CrLf +
                         ''                                                      + CrLf;
                         
   UnitFooter          = ''                                                      + CrLf +
@@ -110,6 +116,7 @@ const
 
   PrefixInterface         = 'IXML';
   PrefixClass             = 'TXML';
+  PrefixField             = 'F';
 
 
   InterfaceItemForward    = '  IXML%<Name>:s = interface;';
@@ -169,6 +176,7 @@ const
                         (SchemaName:  'int';        DelphiName:  'Integer';     Conversion:    tcNone),
                         (SchemaName:  'integer';    DelphiName:  'Integer';     Conversion:    tcNone),
                         (SchemaName:  'short';      DelphiName:  'Smallint';    Conversion:    tcNone),
+                        // #ToDo1 (MvR) 11-4-2008: differentiate date / time / dateTime
                         (SchemaName:  'date';       DelphiName:  'TDateTime';   Conversion:    tcDateTime),
                         (SchemaName:  'time';       DelphiName:  'TDateTime';   Conversion:    tcDateTime),
                         (SchemaName:  'dateTime';   DelphiName:  'TDateTime';   Conversion:    tcDateTime),
@@ -180,33 +188,180 @@ const
 
 
 
-  TypeConversionNone  = '  %<Destination>:s := %<Source>:s;';
-
-
-  TypeConversionVariables:  array[TTypeConversion] of String =
+  TypeConversionNone:       array[TDelphiAccessor, TDelphiNodeType] of String =
                             (
-                              { tcNone }      '',
-                              { tcBoolean }   '',
-                              { tcFloat }     '',
-                              { tcDateTime }  ''
+                              { daGet }
+                              (
+                                { dntElement }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].NodeValue;',
+                                { dntAttribute }  '  %<Destination>:s := AttributeNodes[''%<Source>:s''].NodeValue;',
+                                { dntCustom }     '  %<Destination>:s := %<Source>:s;'
+                              ),
+                              { daSet }
+                              (
+                                { dntElement }    '  ChildNodes[''%<Destination>:s''].NodeValue := %<Source>:s;',
+                                { dntAttribute }  '  SetAttribute(''%<Destination>:s'', %<Source>:s);',
+                                { dntCustom }     '  %<Destination>:s := %<Source>:s;'
+                              )
                             );
 
-  TypeConversionToNative:   array[TTypeConversion] of String =
+
+  TypeConversionHelpers:    array[TTypeConversion] of String =
                             (
-                              { tcNone }      TypeConversionNone,
-                              { tcBoolean }   TypeConversionNone,
-                              { tcFloat }     TypeConversionNone,
-                              { tcDateTime }  TypeConversionNone
+                              { tcNone }
+                              '',
+
+                              { tcBoolean }
+                              'function BoolToXML(AValue: Boolean): WideString;'  + CrLf +
+                              'begin'                                             + CrLf +
+                              '  Result := LowerCase(BoolToStr(AValue, True));'   + CrLf +
+                              'end;'                                              + CrLf +
+                              ''                                                  + CrLf,
+
+                              { tcFloat }
+                              'function GetXMLFloatFormatSettings: TFormatSettings;'        + CrLf +
+                              'begin'                                                       + CrLf +
+                              '  Result.DecimalSeparator := ''.'';'                         + CrLf +
+                              'end;'                                                        + CrLf +
+                              ''                                                            + CrLf +
+                              'function FloatToXML(AValue: Extended): WideString;'          + CrLf +
+                              'begin'                                                       + CrLf +
+                              '  Result := FloatToStr(AValue, GetXMLFloatFormatSettings);'  + CrLf +
+                              'end;'                                                        + CrLf +
+                              ''                                                            + CrLf +
+                              'function XMLToFloat(const AValue: String): Extended;'        + CrLf +
+                              'begin'                                                       + CrLf +
+                              '  Result := StrToFloat(AValue, GetXMLFloatFormatSettings);'  + CrLf +
+                              'end;'                                                        + CrLf +
+                              ''                                                            + CrLf,
+
+
+                              { tcDate }
+                              // #ToDo1 (MvR) 11-4-2008: handle time in XMLToDateTime
+                              'function DateToXML(AValue: TDateTime): WideString;'      + CrLf +
+                              'begin'                                                   + CrLf +
+                              '  Result := FormatDateTime(''yyyy"-"mm"-"dd'', AValue);' + CrLf +
+                              'end;'                                                    + CrLf +
+                              ''                                                        + CrLf +
+                              'function XMLToDate(const ADate: String): TDateTime;'     + CrLf +
+                              'begin'                                                   + CrLf +
+                              '  try'                                                   + CrLf +
+                              '    Result  := EncodeDate(StrToInt(Copy(ADate, 1, 4)),'  + CrLf +
+                              '                          StrToInt(Copy(ADate, 6, 2)),'  + CrLf +
+                              '                          StrToInt(Copy(ADate, 9, 2)));' + CrLf +
+                              '  except'                                                + CrLf +
+                              '    on E:EConvertError do'                               + CrLf +
+                              '      Result := 0;'                                      + CrLf +
+                              '  end;'                                                  + CrLf +
+                              'end;'                                                    + CrLf +
+                              ''                                                        + CrLf
                             );
 
-  TypeConversionToXML:      array[TTypeConversion] of String =
+
+  TypeConversion:           array[TDelphiAccessor, TDelphiNodeType, TTypeConversion] of String =
                             (
-                              { tcNone }      TypeConversionNone,
-                              { tcBoolean }   '  %<Destination>:s := LowerCase(BoolToStr(%<Source>:s, True));',
-                              { tcFloat }     TypeConversionNone,
-                              { tcDateTime }  TypeConversionNone
+                              { daGet }
+                              (
+                                { dntElement }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(ChildNodes[''%<Source>:s''].NodeValue);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(ChildNodes[''%<Source>:s''].NodeValue);'
+                                ),
+                                { dntAttribute }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(AttributeNodes[''%<Source>:s''].NodeValue);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(AttributeNodes[''%<Source>:s''].NodeValue);'
+                                ),
+                                { dntCustom}
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(%<Source>:s);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(%<Source>:s);'
+                                )
+                              ),
+                              { daSet }
+                              (
+                                { dntElement }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '  ChildNodes[''%<Destination>:s''].NodeValue := BoolToXML(%<Source>:s);',
+                                  { tcFloat }     '  ChildNodes[''%<Destination>:s''].NodeValue := FloatToXML(%<Source>:s);',
+                                  { tcDateTime }  '  ChildNodes[''%<Destination>:s''].NodeValue := DateToXML(%<Source>:s);'
+                                ),
+                                { dntAttribute }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '  SetAttribute(''%<Destination>:s'', BoolToXML(%<Source>:s));',
+                                  { tcFloat }     '  SetAttribute(''%<Destination>:s'', FloatToXML(%<Source>:s));',
+                                  { tcDateTime }  '  SetAttribute(''%<Destination>:s'', DateToXML(%<Source>:s));'
+                                ),
+                                { dntCustom}
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '  %<Destination>:s := BoolToXML(%<Source>:s);',
+                                  { tcFloat }     '  %<Destination>:s := FloatToXML(%<Source>:s);',
+                                  { tcDateTime }  '  %<Destination>:s := DateToXML(%<Source>:s);'
+                                )
+                              )
                             );
 
+  (*
+  TypeConversionVariables:  array[TDelphiAccessor, TDelphiNodeType, TTypeConversion] of String =
+                            (
+                              { daGet }
+                              (
+                                { dntElement }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '',
+                                  { tcDateTime }  ''
+                                ),
+                                { dntAttribute }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '',
+                                  { tcDateTime }  ''
+                                ),
+                                { dntCustom}
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '',
+                                  { tcDateTime }  ''
+                                )
+                              ),
+                              { daSet }
+                              (
+                                { dntElement }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '',
+                                  { tcDateTime }  ''
+                                ),
+                                { dntAttribute }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '',
+                                  { tcDateTime }  ''
+                                ),
+                                { dntCustom}
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '',
+                                  { tcDateTime }  ''
+                                )
+                              )
+                            );
+  *)
 
 implementation
 end.

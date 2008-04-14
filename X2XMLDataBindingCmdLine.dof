@@ -94,13 +94,13 @@ OutputDir=
 UnitOutputDir=Lib
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=
+SearchPath=P:\xtx\xtx\xsd
 Packages=vcl;rtl;vclx;inet;xmlrtl;vclie;inetdbbde;inetdbxpress;dbrtl;dsnap;vcldb;dsnapcon;soaprtl;VclSmp;dbexpress;dbxcds;inetdb;bdertl;vcldbx;webdsnap;websnap;adortl;CLXIB;ibxpress;VCLIB;teeui;teedb;tee;dss;vclactnband;vclshlctrls;dclOfficeXP;Indy70;cxLibraryVCLD7;dxBarD7;dxComnD7;dxBarDBNavD7;dxBarExtDBItemsD7;dxBarExtItemsD7;dxDockingD7;dxsbD7;cxEditorsVCLD7;dxThemeD7;cxDataD7;cxExtEditorsVCLD7;cxPageControlVCLD7;cxGridVCLD7;cxSchedulerVCLD7;cxTreeListVCLD7;cxVerticalGridVCLD7;cxSpreadSheetVCLD7;dxNavBarD7;cxWebD7;cxWebPascalScriptD7;cxWebSnapD7;cxWebTeeChartD7;dxMasterViewD7;dxmdsD7;dxdbtrD7;dxtrmdD7;dxorgcD7;dxdborD7;dxFlowChartD7;dxLayoutControlD7;dxLayoutControlcxEditAdaptersD7;dxPSCoreD7;dxPSTeeChartD7;dxPsPrVwAdvD7;dxPSLnksD7;dxPSdxOCLnkD7;dxPSdxMVLnkD7;dxPSdxLCLnkD7;dxPSdxFCLnkD7;dxPSdxDBTVLnkD7;dxPSdxDBOCLnkD7;dxPSDBTeeChartD7;dxPScxCommonD7;dxPScxTLLnkD7;dxPScxSSLnkD7;dxPScxPCProdD7;dxPScxGridLnkD7;dxPScxExtCommonD7;dxPScxVGridLnkD7;fo_d7;xtx_d7;Rave50CLX;Rave50VCL;pngimaged7;dxGDIPlusD7;UnRegDxPNG
 Conditionals=
 DebugSourceDirs=
 UsePackages=0
 [Parameters]
-RunParams="P:\xtx\xtx\xsd\Offerte.xsd" "P:\xtx\xtx\xsd\xml_Offerte.pas"
+RunParams="P:\xtx\xtx\xsd\Offerte.xsd" "P:\xtx\xtx\xsd\"
 HostApplication=
 Launcher=
 UseLauncher=0
@@ -135,22 +135,23 @@ ProductName=
 ProductVersion=
 Comments=
 [Excluded Packages]
-P:\Algemeen\bin\unageneral_d7_design.bpl=UnameIT's General Components - Design-time Editors
 C:\Program Files\Borland\Indy\D7\dclIndy70.bpl=Internet Direct (Indy) for D7 Property and Component Editors
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=2
-Item0=..\..
-Item1=F:\Development\VDarts\Packages
+Count=3
+Item0=P:\xtx\xtx\xsd
+Item1=..\..
+Item2=F:\Development\VDarts\Packages
 [HistoryLists\hlUnitOutputDirectory]
-Count=5
-Item0=P:\Algemeen\lib
-Item1=..\..\Lib\D7
-Item2=..\..\Dcu
-Item3=..\..\..\Dcu
-Item4=Dcu
+Count=6
+Item0=Lib
+Item1=P:\Algemeen\lib
+Item2=..\..\Lib\D7
+Item3=..\..\Dcu
+Item4=..\..\..\Dcu
+Item5=Dcu
 [HistoryLists\hlBPLOutput]
 Count=3
 Item0=..\..\Lib\D7
