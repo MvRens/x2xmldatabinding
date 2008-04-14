@@ -33,6 +33,7 @@ object MainForm: TMainForm
     Width = 331
     Height = 21
     AddQuotes = False
+    Filter = 'W3C XML Schema files (*.xsd)|*.xsd|All files (*.*)|*.*'
     Anchors = [akLeft, akTop, akRight]
     TabOrder = 0
   end
@@ -72,7 +73,7 @@ object MainForm: TMainForm
       Top = 72
       Width = 416
       Height = 87
-      ActivePage = spFolder
+      ActivePage = spFile
       PropagateEnable = False
       ShowDesignCaption = sdcBottomRight
       Anchors = [akLeft, akTop, akRight, akBottom]
@@ -95,6 +96,7 @@ object MainForm: TMainForm
           Height = 21
           AddQuotes = False
           DialogKind = dkSave
+          Filter = 'Delphi source files (*.pas)|*.pas|All files (*.*)|*.*'
           DialogOptions = [ofOverwritePrompt, ofHideReadOnly]
           TabOrder = 0
         end
@@ -151,7 +153,6 @@ object MainForm: TMainForm
           Width = 121
           Height = 21
           TabOrder = 2
-          Text = '.pas'
         end
       end
     end

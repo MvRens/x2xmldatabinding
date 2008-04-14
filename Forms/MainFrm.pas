@@ -129,7 +129,8 @@ end;
 
 procedure TMainForm.GetFileName(Sender: TObject; const SchemaName: String; var Path, FileName: String);
 begin
-  FileName  := edtFolderPrefix.Text + FileName + edtFolderPostfix.Text;
+  FileName  := ChangeFileExt(edtFolderPrefix.Text + FileName,
+                             edtFolderPostfix.Text + ExtractFileExt(FileName));
   CheckValidFileName(FileName);
 end;
 
