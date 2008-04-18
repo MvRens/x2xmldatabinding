@@ -158,6 +158,8 @@ const
                     'virtual', 'while', 'with', 'write', 'writeonly', 'xor'
                   );
 
+  SafeChars = ['A'..'Z', 'a'..'z', '0'..'9', '_', '-'];
+
 
 type
   TTypeConversion   = (tcNone, tcBoolean, tcFloat, tcDateTime);

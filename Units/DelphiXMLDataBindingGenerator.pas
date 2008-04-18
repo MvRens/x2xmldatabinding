@@ -318,17 +318,36 @@ end;
 
 function TDelphiXMLDataBindingGenerator.DelphiSafeName(const AName: String): String;
 var
+  charIndex:  Integer;
   wordIndex:  Integer;
 
 begin
   Result := AName;
 
-  for wordIndex := Low(ReservedWords) to High(ReservedWords) do
+
+  { Remove unsafe characters }
+  for charIndex := Length(Result) downto 1 do
   begin
-    if Result = ReservedWords[wordIndex] then
-    begin
+    if not (Result[charIndex] in SafeChars) then
+      Delete(Result, charIndex, 1);
+  end;
+
+
+  if Length(Result) > 0 then
+  begin
+    { Number as the first character is not allowed }
+    if Result[1] in ['0'..'9'] then
       Result := '_' + Result;
-      Break;
+
+
+    { Check for reserved words }
+    for wordIndex := Low(ReservedWords) to High(ReservedWords) do
+    begin
+      if Result = ReservedWords[wordIndex] then
+      begin
+        Result := '_' + Result;
+        Break;
+      end;
     end;
   end;
 end;

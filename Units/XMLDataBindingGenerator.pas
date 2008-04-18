@@ -19,7 +19,8 @@ type
 
   TXMLDataBindingOutputType = (otSingle, otMultiple);
   TXMLDataBindingItemType = (itInterface, itEnumeration, itEnumerationMember,
-                             itProperty, itUnresolved, itAlias);
+                             itProperty, itUnresolved,
+                             itComplexTypeAlias, itSimpleTypeAlias);
   TXMLDataBindingInterfaceType = (ifElement, ifComplexType);
   TXMLDataBindingPropertyType = (ptSimple, ptItem);
   TXMLDataBindingOccurance = (boMinOccurs, boMaxOccurs);
@@ -300,7 +301,7 @@ type
   end;
 
 
-  TXMLDataBindingAliasItem = class(TXMLDataBindingItem)
+  TXMLDataBindingComplexTypeAliasItem = class(TXMLDataBindingItem)
   private
     FItem: TXMLDataBindingItem;
   protected
@@ -311,6 +312,16 @@ type
     property Item:  TXMLDataBindingItem read FItem  write FItem;
   end;
 
+
+  TXMLDataBindingSimpleTypeAliasItem = class(TXMLDataBindingItem)
+  private
+    FDataType:  IXMLTypeDef;
+  protected
+    function GetItemType(): TXMLDataBindingItemType; override;
+  public
+    property DataType:  IXMLTypeDef read FDataType  write FDataType;
+  end;
+  
 
 implementation
 uses
@@ -587,7 +598,12 @@ begin
   for complexTypeIndex := 0 to Pred(schemaDef.ComplexTypes.Count) do
   begin
     complexType   := schemaDef.ComplexTypes[complexTypeIndex];
+
     interfaceItem := TXMLDataBindingInterface.Create(Self, complexType, complexType.Name);
+
+    if complexType.DerivationMethod <> dmNone then
+      interfaceItem.BaseName := complexType.BaseTypeName;
+
     ASchema.AddItem(interfaceItem);
 
     for elementIndex := 0 to Pred(complexType.ElementDefs.Count) do
@@ -664,7 +680,8 @@ var
   attributeIndex:       Integer;
   enumerationObject:    TXMLDataBindingEnumeration;
   interfaceObject:      TXMLDataBindingInterface;
-  aliasItem:            TXMLDataBindingAliasItem;
+  complexAliasItem:     TXMLDataBindingComplexTypeAliasItem;
+  simpleAliasItem:      TXMLDataBindingSimpleTypeAliasItem;
 
 begin
   Result := nil;
@@ -682,25 +699,35 @@ begin
     end;
   end else
   begin
-    if (not AElement.DataType.IsAnonymous) and
-       AElement.DataType.IsComplex then
+    if not AElement.DataType.IsAnonymous then
     begin
-      { Find data type. If not found, mark as "resolve later". }
-      Result        := FindInterface(ASchema, AElement.DataTypeName, ifComplexType);
-
-      if not Assigned(Result) then
+      if AElement.DataType.IsComplex then
       begin
-        Result  := TXMLDataBindingUnresolvedItem.Create(Self, AElement, AElement.DataTypeName, ifComplexType);
-        ASchema.AddItem(Result);
-      end;
+        { Find data type. If not found, mark as "resolve later". }
+        Result        := FindInterface(ASchema, AElement.DataTypeName, ifComplexType);
 
-      if AElement.IsGlobal then
+        if not Assigned(Result) then
+        begin
+          Result  := TXMLDataBindingUnresolvedItem.Create(Self, AElement, AElement.DataTypeName, ifComplexType);
+          ASchema.AddItem(Result);
+        end;
+
+        if AElement.IsGlobal then
+        begin
+          { The element is global, but only references a complex type. Keep track
+            to properly resolve references to the element. }
+          complexAliasItem      := TXMLDataBindingComplexTypeAliasItem.Create(Self, AElement, AElement.Name);
+          complexAliasItem.Item := Result;
+          ASchema.AddItem(complexAliasItem);
+        end;
+      end else if AElement.IsGlobal then
       begin
-        { The element is global, but only references a complex type. Keep track
-          to properly resolve references to the element. }
-        aliasItem       := TXMLDataBindingAliasItem.Create(Self, AElement, AElement.Name);
-        aliasItem.Item  := Result;
-        ASchema.AddItem(aliasItem);
+        { The element is global, but only references a simple type. }
+        simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AElement, AElement.Name);
+        simpleAliasItem.DataType  := AElement.DataType;
+        ASchema.AddItem(simpleAliasItem);
+
+        Result  := simpleAliasItem;
       end;
     end;
 
@@ -840,7 +867,8 @@ begin
       itInterface:
         AAbort  := (TXMLDataBindingInterface(AItem).InterfaceType = findInfo^.InterfaceType);
 
-      itAlias:
+      itComplexTypeAlias,
+      itSimpleTypeAlias:
         AAbort  := (findInfo^.InterfaceType = ifElement);
     end;
   end;
@@ -912,20 +940,36 @@ end;
 
 procedure TXMLDataBindingGenerator.ResolveAlias(ASchema: TXMLDataBindingSchema);
 var
-  itemIndex:    Integer;
-  item:         TXMLDataBindingItem;
-  aliasItem:    TXMLDataBindingAliasItem;
-  
+  itemIndex:          Integer;
+  item:               TXMLDataBindingItem;
+  complexAliasItem:   TXMLDataBindingComplexTypeAliasItem;
+  simpleAliasItem:    TXMLDataBindingSimpleTypeAliasItem;
+
 begin
   for itemIndex := Pred(ASchema.ItemCount) downto 0 do
   begin
     item  := ASchema.Items[itemIndex];
 
-    if item.ItemType = itAlias then
-    begin
-      aliasItem := TXMLDataBindingAliasItem(item);
-      if Assigned(aliasItem.Item) then
-        ReplaceItem(aliasItem, aliasItem.Item);
+    case item.ItemType of
+      itComplexTypeAlias:
+        begin
+          { Replace alias element with the actual complex type }
+          complexAliasItem  := TXMLDataBindingComplexTypeAliasItem(item);
+          if Assigned(complexAliasItem.Item) then
+          begin
+            ReplaceItem(complexAliasItem, complexAliasItem.Item);
+            FreeAndNil(complexAliasItem);
+          end;
+        end;
+
+      itSimpleTypeAlias:
+        begin
+          { Remove the alias element - TXMLDataBindingInterfaceItem.ReplaceItem
+            will take care of fixing it's properties. }
+          simpleAliasItem := TXMLDataBindingSimpleTypeAliasItem(item);
+          ReplaceItem(simpleAliasItem, nil);
+          FreeAndNil(simpleAliasItem);
+        end;
     end;
   end;
 end;
@@ -1371,13 +1415,43 @@ end;
 
 procedure TXMLDataBindingInterface.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
 var
-  propertyIndex:  Integer;
+  propertyIndex:    Integer;
+  propertyItem:     TXMLDataBindingProperty;
+  itemProperty:     TXMLDataBindingItemProperty;
+  simpleProperty:   TXMLDataBindingSimpleProperty;
 
 begin
   inherited;
 
   for propertyIndex := Pred(PropertyCount) downto 0 do
-    Properties[propertyIndex].ReplaceItem(AOldItem, ANewItem);
+  begin
+    propertyItem  := Properties[propertyIndex];
+
+    if propertyItem = AOldItem then
+      FProperties.Extract(AOldItem)
+    else
+    begin
+      if (AOldItem.ItemType = itSimpleTypeAlias) and
+         (propertyItem.PropertyType = ptItem) then
+      begin
+        itemProperty  := TXMLDataBindingItemProperty(propertyItem);
+
+        if itemProperty.Item = AOldItem then
+        begin
+          { Replace item property with simple property }
+          simpleProperty  := TXMLDataBindingSimpleProperty.Create(Owner,
+                                                                  itemProperty.SchemaItem,
+                                                                  itemProperty.Name,
+                                                                  TXMLDataBindingSimpleTypeAliasItem(AOldItem).DataType);
+
+          { FProperties owns itemProperty and will free it }
+          FProperties[propertyIndex]  := simpleProperty;
+        end else
+          Properties[propertyIndex].ReplaceItem(AOldItem, ANewItem);
+      end else
+        Properties[propertyIndex].ReplaceItem(AOldItem, ANewItem);
+    end;
+  end;
 end;
 
 
@@ -1535,8 +1609,8 @@ begin
 end;
 
 
-{ TXMLDataBindingAliasItem }
-procedure TXMLDataBindingAliasItem.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+{ TXMLDataBindingComplexTypeAliasItem }
+procedure TXMLDataBindingComplexTypeAliasItem.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
 begin
   inherited;
 
@@ -1545,9 +1619,16 @@ begin
 end;
 
 
-function TXMLDataBindingAliasItem.GetItemType(): TXMLDataBindingItemType;
+function TXMLDataBindingComplexTypeAliasItem.GetItemType(): TXMLDataBindingItemType;
 begin
-  Result  := itAlias;
+  Result  := itComplexTypeAlias;
+end;
+
+
+{ TXMLDataBindingSimpleTypeAliasItem }
+function TXMLDataBindingSimpleTypeAliasItem.GetItemType: TXMLDataBindingItemType;
+begin
+  Result  := itSimpleTypeAlias;
 end;
 
 end.
