@@ -73,12 +73,14 @@ const
 
 
   PropertyIntfMethodGetOptional = '    function GetHas%<PropertyName>:s: Boolean;';
+  PropertyIntfMethodGetNil      = '    function GetIs%<PropertyName>:sNil: Boolean;';
   PropertyIntfMethodGetText     = '    function Get%<PropertyName>:sText: WideString;';
   PropertyIntfMethodGet         = '    function Get%<PropertyName>:s: %<DataType>:s;';
   PropertyIntfMethodSetText     = '    procedure Set%<PropertyName>:sText(const Value: WideString);';
   PropertyIntfMethodSet         = '    procedure Set%<PropertyName>:s(const Value: %<DataType>:s);';
 
   PropertyInterfaceOptional     = '    property Has%<PropertyName>:s: Boolean read GetHas%<PropertyName>:s;';
+  PropertyInterfaceNil          = '    property Is%<PropertyName>:sNil: Boolean read GetIs%<PropertyName>:sNil;';
   PropertyInterfaceTextReadOnly = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText;';
   PropertyInterfaceReadOnly     = '    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s;';
   PropertyInterfaceText         = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText write Set%<PropertyName>:sText;';
@@ -89,6 +91,17 @@ const
                                   '  Result := Assigned(ChildNodes.FindNode(''%<PropertySourceName>:s''));' + CrLf +
                                   'end;'                                                                    + CrLf +
                                   ''                                                                        + CrLf;
+
+  PropertyImplMethodGetNil      = 'function TXML%<Name>:s.GetIs%<PropertyName>:sNil: Boolean;'                                + CrLf +
+                                  'var'                                                                                       + CrLf +
+                                  '  childNode: IXMLNode;'                                                                    + CrLf +
+                                  ''                                                                                          + CrLf +
+                                  'begin'                                                                                     + CrLf +
+                                  '  childNode := ChildNodes[''%<PropertySourceName>:s''];'                                   + CrLf +
+                                  '  Result := childNode.HasAttribute(''nil'', XMLSchemaInstanceURI) and'                     + CrLf +
+                                  '            StrToBoolDef(childNode.GetAttributeNS(''nil'', XMLSchemaInstanceURI), False);' + CrLf +
+                                  'end;'                                                                                      + CrLf +
+                                  ''                                                                                          + CrLf;
 
   PropertyImplMethodGetText     = 'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'            + CrLf +
                                   'begin'                                                                   + CrLf +

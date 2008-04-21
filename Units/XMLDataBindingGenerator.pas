@@ -14,6 +14,7 @@ type
   TXMLDataBindingEnumerationMember = class;
   TXMLDataBindingEnumeration = class;
   TXMLDataBindingProperty = class;
+  TXMLDataBindingItemProperty = class;
   TXMLDataBindingUnresolvedItem = class;
 
 
@@ -243,6 +244,7 @@ type
   private
     FIsAttribute:   Boolean;
     FIsOptional:    Boolean;
+    FIsNillable:    Boolean;
     FIsRepeating:   Boolean;
     FCollection:    TXMLDataBindingInterface;
   protected
@@ -253,6 +255,7 @@ type
   public
     property IsAttribute:   Boolean                     read FIsAttribute   write FIsAttribute;
     property IsOptional:    Boolean                     read FIsOptional    write FIsOptional;
+    property IsNillable:    Boolean                     read FIsNillable    write FIsNillable;
     property IsReadOnly:    Boolean                     read GetIsReadOnly;
     property IsRepeating:   Boolean                     read FIsRepeating   write FIsRepeating;
     property PropertyType:  TXMLDataBindingPropertyType read GetPropertyType;
@@ -269,6 +272,7 @@ type
     function GetPropertyType(): TXMLDataBindingPropertyType; override;
   public
     constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String; ADataType: IXMLTypeDef);
+    constructor CreateFromAlias(AOwner: TXMLDataBindingGenerator; AProperty: TXMLDataBindingItemProperty; ADataType: IXMLTypeDef);
 
     property DataType:  IXMLTypeDef read FDataType;
   end;
@@ -338,6 +342,7 @@ const
   MaxOccursUnbounded  = 'unbounded';
   UseOptional         = 'optional';
   CollectionPostfix   = 'List';
+  AttributeNillable   = 'nillable';
 
 
 
@@ -624,8 +629,7 @@ function TXMLDataBindingGenerator.CheckElementOccurance(AElement: IXMLElementDef
     if Supports(ANode, IXMLElementCompositor, compositor) then
     begin
       case AOccurance of
-        boMinOccurs:  Result := (compositor.MinOccurs = 0) or
-                                (compositor.CompositorType = ctChoice);
+        boMinOccurs:  Result := (compositor.MinOccurs = 0);
         boMaxOccurs:  Result := (compositor.MaxOccurs = MaxOccursUnbounded) or
                                 (compositor.MaxOccurs > 1);
       end;
@@ -669,7 +673,7 @@ var
 begin
   Result := False;
 
-  if Supports(AElement, IXMLElementCompositor, compositor) then
+  if Supports(AElement.ParentNode, IXMLElementCompositor, compositor) then
     Result := (compositor.CompositorType = ctChoice) and
               (compositor.ElementDefs.Count > 1);
 end;
@@ -766,6 +770,7 @@ end;
 
 procedure TXMLDataBindingGenerator.ProcessChildElement(ASchema: TXMLDataBindingSchema; AElement: IXMLElementDef; AInterface: TXMLDataBindingInterface);
 var
+  actualElement:        IXMLElementDef;
   propertyType:         TXMLDataBindingItem;
   propertyItem:         TXMLDataBindingProperty;
 
@@ -786,6 +791,16 @@ begin
     propertyItem.IsOptional   := IsElementOptional(AElement) or
                                  IsChoice(AElement);
     propertyItem.IsRepeating  := IsElementRepeating(AElement);
+
+
+    actualElement := AElement;
+    while Assigned(actualElement) and Assigned(actualElement.Ref) do
+      actualElement := actualElement.Ref;
+
+    if AElement.HasAttribute(AttributeNillable) then
+      propertyItem.IsNillable := StrToBoolDef(AElement.Attributes[AttributeNillable], False)
+    else if actualElement.HasAttribute(AttributeNillable) then
+      propertyItem.IsNillable := StrToBoolDef(actualElement.Attributes[AttributeNillable], False);
 
     AInterface.AddProperty(propertyItem);
   end;
@@ -1440,10 +1455,7 @@ begin
         if itemProperty.Item = AOldItem then
         begin
           { Replace item property with simple property }
-          simpleProperty  := TXMLDataBindingSimpleProperty.Create(Owner,
-                                                                  itemProperty.SchemaItem,
-                                                                  itemProperty.Name,
-                                                                  TXMLDataBindingSimpleTypeAliasItem(AOldItem).DataType);
+          simpleProperty  := TXMLDataBindingSimpleProperty.CreateFromAlias(Owner, itemProperty, TXMLDataBindingSimpleTypeAliasItem(AOldItem).DataType);
 
           { FProperties owns itemProperty and will free it }
           FProperties[propertyIndex]  := simpleProperty;
@@ -1550,6 +1562,17 @@ begin
   inherited Create(AOwner, ASchemaItem, AName);
 
   FDataType := ADataType;
+end;
+
+
+constructor TXMLDataBindingSimpleProperty.CreateFromAlias(AOwner: TXMLDataBindingGenerator; AProperty: TXMLDataBindingItemProperty; ADataType: IXMLTypeDef);
+begin
+  Create(AOwner, AProperty.SchemaItem, AProperty.Name, ADataType);
+
+  IsAttribute := AProperty.IsAttribute;
+  IsOptional  := AProperty.IsOptional;
+  IsNillable  := AProperty.IsNillable;
+  IsRepeating := AProperty.IsRepeating;
 end;
 
 

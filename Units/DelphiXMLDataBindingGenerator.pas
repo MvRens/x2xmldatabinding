@@ -447,11 +447,15 @@ begin
     end;
   end;
 
-  if hasItem and (ASection = dxsInterface) then
+  if ASection = dxsInterface then
   begin
-    // #ToDo3 (MvR) 9-3-2008: namespace support?
     AStream.WriteLn('const');
-    AStream.WriteLn('  TargetNamespace = '''';');
+    AStream.WriteLn('  XMLSchemaInstanceURI = ''http://www.w3.org/2001/XMLSchema-instance'';');
+
+    if hasItem then
+      // #ToDo3 (MvR) 9-3-2008: namespace support?
+      AStream.WriteLn('  TargetNamespace = '''';');
+
     AStream.WriteLn();
     AStream.WriteLn();
   end;
@@ -1063,6 +1067,7 @@ function TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceProperty(AStream: TS
 var
   sourceCode:       TNamedFormatStringList;
   writeOptional:    Boolean;
+  writeNil:         Boolean;
   writeTextProp:    Boolean;
   propertyItem:     TXMLDataBindingItem;
   dataTypeName:     String;
@@ -1075,13 +1080,19 @@ begin
 
   if AProperty = AItem.CollectionItem then
     Exit;
-  
+
   { If the property has a collection, it's Count property will be enough
     to check if an item is present, no need to write a HasX method. }
   // #ToDo3 (MvR) 14-4-2008: move first check to XMLDataBindingGenerator ?
-  writeOptional := not Assigned(AProperty.Collection) and
-                   AProperty.IsOptional and
-                   (AMember in [dxmPropertyGet, dxmPropertyDeclaration]);
+  writeOptional := False;
+  writeNil      := False;
+
+  if AMember in [dxmPropertyGet, dxmPropertyDeclaration] then
+  begin
+    writeOptional := not Assigned(AProperty.Collection) and
+                     AProperty.IsOptional;
+    writeNil      := AProperty.IsNillable;
+  end;
 
 
   dataTypeName  := '';
@@ -1139,6 +1150,9 @@ begin
                 if writeOptional then
                   sourceCode.Add(PropertyIntfMethodGetOptional);
 
+                if writeNil then
+                  sourceCode.Add(PropertyIntfMethodGetNil);
+
                 if writeTextProp then
                   sourceCode.Add(PropertyIntfMethodGetText);
 
@@ -1164,6 +1178,9 @@ begin
                 if writeOptional then
                   sourceCode.Add(PropertyInterfaceOptional);
 
+                if writeNil then
+                  sourceCode.Add(PropertyInterfaceNil);
+
                 if AProperty.IsReadOnly then
                 begin
                   if writeTextProp then
@@ -1187,9 +1204,13 @@ begin
             dxmPropertyGet:
               begin
                 WriteNewLine;
-                
+
+                // #ToDo1 (MvR) 21-4-2008: optional attributes!
                 if writeOptional then
                   sourceCode.Add(PropertyImplMethodGetOptional);
+
+                if writeNil then
+                  sourceCode.Add(PropertyImplMethodGetNil);
 
                 if writeTextProp then
                   sourceCode.Add(PropertyImplMethodGetText);
