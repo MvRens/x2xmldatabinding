@@ -162,7 +162,7 @@ const
 
 
 type
-  TTypeConversion   = (tcNone, tcBoolean, tcFloat, tcDateTime);
+  TTypeConversion   = (tcNone, tcBoolean, tcFloat, tcDateTime, tcString);
   TTypeConversions  = set of TTypeConversion;
 
   TTypeMapping  = record
@@ -185,7 +185,7 @@ const
                         (SchemaName:  'float';      DelphiName:  'Double';      Conversion:    tcFloat),
                         (SchemaName:  'double';     DelphiName:  'Double';      Conversion:    tcFloat),
                         (SchemaName:  'boolean';    DelphiName:  'Boolean';     Conversion:    tcBoolean),
-                        (SchemaName:  'string';     DelphiName:  'WideString';  Conversion:    tcNone)
+                        (SchemaName:  'string';     DelphiName:  'WideString';  Conversion:    tcString)
                       );
 
 
@@ -255,7 +255,10 @@ const
                               '      Result := 0;'                                      + CrLf +
                               '  end;'                                                  + CrLf +
                               'end;'                                                    + CrLf +
-                              ''                                                        + CrLf
+                              ''                                                        + CrLf,
+
+                              { tcString }
+                              ''
                             );
 
 
@@ -268,21 +271,24 @@ const
                                   { tcNone }      '',
                                   { tcBoolean }   '',
                                   { tcFloat }     '  %<Destination>:s := XMLToFloat(ChildNodes[''%<Source>:s''].NodeValue);',
-                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(ChildNodes[''%<Source>:s''].NodeValue);'
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(ChildNodes[''%<Source>:s''].NodeValue);',
+                                  { tcString }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].Text;'
                                 ),
                                 { dntAttribute }
                                 (
                                   { tcNone }      '',
                                   { tcBoolean }   '',
                                   { tcFloat }     '  %<Destination>:s := XMLToFloat(AttributeNodes[''%<Source>:s''].NodeValue);',
-                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(AttributeNodes[''%<Source>:s''].NodeValue);'
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(AttributeNodes[''%<Source>:s''].NodeValue);',
+                                  { tcString }    '  %<Destination>:s := AttributeNodes[''%<Source>:s''].Text;'
                                 ),
                                 { dntCustom}
                                 (
                                   { tcNone }      '',
                                   { tcBoolean }   '',
                                   { tcFloat }     '  %<Destination>:s := XMLToFloat(%<Source>:s);',
-                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(%<Source>:s);'
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(%<Source>:s);',
+                                  { tcString }    ''
                                 )
                               ),
                               { daSet }
@@ -292,78 +298,28 @@ const
                                   { tcNone }      '',
                                   { tcBoolean }   '  ChildNodes[''%<Destination>:s''].NodeValue := BoolToXML(%<Source>:s);',
                                   { tcFloat }     '  ChildNodes[''%<Destination>:s''].NodeValue := FloatToXML(%<Source>:s);',
-                                  { tcDateTime }  '  ChildNodes[''%<Destination>:s''].NodeValue := DateToXML(%<Source>:s);'
+                                  { tcDateTime }  '  ChildNodes[''%<Destination>:s''].NodeValue := DateToXML(%<Source>:s);',
+                                  { tcString }    ''
                                 ),
                                 { dntAttribute }
                                 (
                                   { tcNone }      '',
                                   { tcBoolean }   '  SetAttribute(''%<Destination>:s'', BoolToXML(%<Source>:s));',
                                   { tcFloat }     '  SetAttribute(''%<Destination>:s'', FloatToXML(%<Source>:s));',
-                                  { tcDateTime }  '  SetAttribute(''%<Destination>:s'', DateToXML(%<Source>:s));'
+                                  { tcDateTime }  '  SetAttribute(''%<Destination>:s'', DateToXML(%<Source>:s));',
+                                  { tcString }    ''
                                 ),
                                 { dntCustom}
                                 (
                                   { tcNone }      '',
                                   { tcBoolean }   '  %<Destination>:s := BoolToXML(%<Source>:s);',
                                   { tcFloat }     '  %<Destination>:s := FloatToXML(%<Source>:s);',
-                                  { tcDateTime }  '  %<Destination>:s := DateToXML(%<Source>:s);'
+                                  { tcDateTime }  '  %<Destination>:s := DateToXML(%<Source>:s);',
+                                  { tcString }    ''
                                 )
                               )
                             );
 
-  (*
-  TypeConversionVariables:  array[TDelphiAccessor, TDelphiNodeType, TTypeConversion] of String =
-                            (
-                              { daGet }
-                              (
-                                { dntElement }
-                                (
-                                  { tcNone }      '',
-                                  { tcBoolean }   '',
-                                  { tcFloat }     '',
-                                  { tcDateTime }  ''
-                                ),
-                                { dntAttribute }
-                                (
-                                  { tcNone }      '',
-                                  { tcBoolean }   '',
-                                  { tcFloat }     '',
-                                  { tcDateTime }  ''
-                                ),
-                                { dntCustom}
-                                (
-                                  { tcNone }      '',
-                                  { tcBoolean }   '',
-                                  { tcFloat }     '',
-                                  { tcDateTime }  ''
-                                )
-                              ),
-                              { daSet }
-                              (
-                                { dntElement }
-                                (
-                                  { tcNone }      '',
-                                  { tcBoolean }   '',
-                                  { tcFloat }     '',
-                                  { tcDateTime }  ''
-                                ),
-                                { dntAttribute }
-                                (
-                                  { tcNone }      '',
-                                  { tcBoolean }   '',
-                                  { tcFloat }     '',
-                                  { tcDateTime }  ''
-                                ),
-                                { dntCustom}
-                                (
-                                  { tcNone }      '',
-                                  { tcBoolean }   '',
-                                  { tcFloat }     '',
-                                  { tcDateTime }  ''
-                                )
-                              )
-                            );
-  *)
 
 implementation
 end.

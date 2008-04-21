@@ -624,7 +624,8 @@ function TXMLDataBindingGenerator.CheckElementOccurance(AElement: IXMLElementDef
     if Supports(ANode, IXMLElementCompositor, compositor) then
     begin
       case AOccurance of
-        boMinOccurs:  Result := (compositor.MinOccurs = 0);
+        boMinOccurs:  Result := (compositor.MinOccurs = 0) or
+                                (compositor.CompositorType = ctChoice);
         boMaxOccurs:  Result := (compositor.MaxOccurs = MaxOccursUnbounded) or
                                 (compositor.MaxOccurs > 1);
       end;

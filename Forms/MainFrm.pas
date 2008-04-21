@@ -1,45 +1,58 @@
 unit MainFrm;
 
+{$WARN UNIT_PLATFORM OFF}
+
 interface
 uses
   Classes,
+  ComCtrls,
   Controls,
+  Dialogs,
   Forms,
   Mask,
   StdCtrls,
 
-  JvComponent,
-  JvExControls,
-  JvExMask,
-  JvPageList,
-  JvToolEdit;
+  cxButtonEdit,
+  cxContainer,
+  cxControls,
+  cxEdit,
+  cxLookAndFeels,
+  cxMaskEdit,
+  cxTextEdit;
 
 
 type
   TMainForm = class(TForm)
     btnClose:                                   TButton;
     btnGenerate:                                TButton;
-    deFolder:                                   TJvDirectoryEdit;
-    edtFolderPostfix:                           TEdit;
-    edtFolderPrefix:                            TEdit;
-    feFile:                                     TJvFilenameEdit;
-    feSchema:                                   TJvFilenameEdit;
+    DefaultEditStyle:                           TcxDefaultEditStyleController;
+    deFolder:                                   TcxButtonEdit;
+    dlgOutputFile:                              TSaveDialog;
+    dlgSchema:                                  TOpenDialog;
+    edtFolderPostfix:                           TcxTextEdit;
+    edtFolderPrefix:                            TcxTextEdit;
+    feFile:                                     TcxButtonEdit;
+    feSchema:                                   TcxButtonEdit;
     gbOutput:                                   TGroupBox;
     lblFile:                                    TLabel;
     lblFolder:                                  TLabel;
     lblFolderPostfix:                           TLabel;
     lblFolderPrefix:                            TLabel;
     lblSchema:                                  TLabel;
-    plOutput:                                   TJvPageList;
+    LookAndFeel:                                TcxLookAndFeelController;
+    plOutput:                                   TPageControl;
     rbFile:                                     TRadioButton;
     rbFolder:                                   TRadioButton;
-    spFile:                                     TJvStandardPage;
-    spFolder:                                   TJvStandardPage;
+    spFile:                                     TTabSheet;
+    spFolder:                                   TTabSheet;
 
     procedure btnCloseClick(Sender: TObject);
     procedure btnGenerateClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure OutputTypeClick(Sender: TObject);
+    procedure feFilePropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
+    procedure deFolderPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
+    procedure feSchemaPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
   private
     procedure GetFileName(Sender: TObject; const SchemaName: String; var Path, FileName: String);
   end;
@@ -47,6 +60,7 @@ type
 
 implementation
 uses
+  FileCtrl,
   SysUtils,
   Windows,
 
@@ -92,7 +106,7 @@ end;
 
 procedure TMainForm.btnGenerateClick(Sender: TObject);
 begin
-  if not FileExists(feSchema.FileName) then
+  if not FileExists(feSchema.Text) then
   begin
     MessageBox(Self.Handle, 'Please specify a valid schema file.',
                'Schema file does not exist', MB_OK or MB_ICONERROR);
@@ -106,7 +120,7 @@ begin
     if rbFile.Checked then
     begin
       OutputType  := otSingle;
-      OutputPath  := feFile.FileName;
+      OutputPath  := feFile.Text;
     end else if rbFolder.Checked then
     begin
       OutputType  := otMultiple;
@@ -114,7 +128,9 @@ begin
     end;
 
     OnGetFileName := GetFileName;
-    Execute(feSchema.FileName);
+    Execute(feSchema.Text);
+
+    ShowMessage('The data binding has been generated.');
   finally
     Free();
   end;
@@ -132,6 +148,30 @@ begin
   FileName  := ChangeFileExt(edtFolderPrefix.Text + FileName,
                              edtFolderPostfix.Text + ExtractFileExt(FileName));
   CheckValidFileName(FileName);
+end;
+
+
+procedure TMainForm.feFilePropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
+begin
+  if dlgOutputFile.Execute() then
+    feFile.Text := dlgOutputFile.FileName;
+end;
+
+
+procedure TMainForm.deFolderPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
+var
+  directory:  String;
+
+begin
+  if SelectDirectory('Select output folder', '', directory) then
+    deFolder.Text := directory;
+end;
+
+
+procedure TMainForm.feSchemaPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
+begin
+  if dlgSchema.Execute() then
+    feSchema.Text := dlgSchema.FileName;
 end;
 
 end.

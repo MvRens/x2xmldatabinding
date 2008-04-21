@@ -921,6 +921,7 @@ var
   collectionItem: TXMLDataBindingItem;
   sourceCode: TNamedFormatStringList;
   typeDef: IXMLTypeDef;
+  typeMapping: TTypeMapping;
 
 begin
   Result := False;
@@ -984,9 +985,13 @@ begin
               begin
                 typeDef := TXMLDataBindingSimpleProperty(AItem.CollectionItem).DataType;
 
-                // #ToDo3 (MvR) 19-3-2008: use Text for strings ?
                 sourceCode.Add('function TXML%<Name>:s.Get_%<ItemName>:s(Index: Integer): %<DataType>:s;');
-                sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].NodeValue', typeDef, dntCustom));
+
+                if GetDataTypeMapping(typeDef, typeMapping) and (typeMapping.Conversion = tcString) then
+                  sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].Text', typeDef, dntCustom))
+                else
+                  sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].NodeValue', typeDef, dntCustom));
+
                 sourceCode.AddLn;
 
                 sourceCode.Add('function TXML%<Name>:s.Add(%<ItemName>:s: %<DataType>:s): %<DataInterface>:s;');
@@ -1365,14 +1370,6 @@ begin
     if not (Assigned(ADataType) and GetDataTypeMapping(ADataType, typeMapping)) then
       typeMapping.Conversion  := tcNone;
 
-
-    (*
-    if Length(TypeConversionVariables[AAccessor, ANodeType, typeMapping.Conversion]) > 0 then
-    begin
-      Add('var');
-      Add(TypeConversionVariables[AAccessor, ANodeType, typeMapping.Conversion]);
-    end;
-    *)
 
     Add('begin');
 
