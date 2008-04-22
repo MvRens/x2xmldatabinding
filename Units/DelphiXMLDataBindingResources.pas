@@ -109,7 +109,7 @@ const
 
   PropertyImplMethodGetText     = 'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'            + CrLf +
                                   'begin'                                                                   + CrLf +
-                                  '  Result := ChildNodes[''%<PropertySourceName>:s''].NodeValue;'          + CrLf +
+                                  '  Result := ChildNodes[''%<PropertySourceName>:s''].Text;'               + CrLf +
                                   'end;'                                                                    + CrLf +
                                   ''                                                                        + CrLf;
 
