@@ -28,6 +28,7 @@ type
 
 
   TXMLDataBindingIterateItemsProc = procedure(AItem: TXMLDataBindingItem; AData: Pointer; var AAbort: Boolean) of object;
+  TXMLDataBindingPostProcessItemEvent = procedure(Sender: TObject; Item: TXMLDataBindingItem) of object;
 
 
   TXMLDataBindingGenerator = class(TObject)
@@ -38,6 +39,8 @@ type
     FSourceFileName:    String;
 
     FSchemas:           TObjectList;
+
+    FOnPostProcessItem: TXMLDataBindingPostProcessItemEvent;
 
     function GetSchemaCount(): Integer;
     function GetSchemas(Index: Integer): TXMLDataBindingSchema;
@@ -83,6 +86,8 @@ type
     property SourceFileName:            String                read FSourceFileName  write FSourceFileName;
     property SchemaCount:               Integer               read GetSchemaCount;
     property Schemas[Index: Integer]:   TXMLDataBindingSchema read GetSchemas;
+  protected
+    procedure DoPostProcessItem(AItem: TXMLDataBindingItem);
   public
     constructor Create();
     destructor Destroy(); override;
@@ -93,6 +98,8 @@ type
     property IncludePaths:    TStrings                  read FIncludePaths;
     property OutputType:      TXMLDataBindingOutputType read FOutputType      write FOutputType;
     property OutputPath:      String                    read FOutputPath      write FOutputPath;
+
+    property OnPostProcessItem: TXMLDataBindingPostProcessItemEvent read FOnPostProcessItem write FOnPostProcessItem;
   end;
 
 
@@ -160,7 +167,6 @@ type
   protected
     function GetItemType(): TXMLDataBindingItemType; virtual; abstract;
     procedure SetName(const Value: String);
-    procedure SetTranslatedName(const Value: string);
 
     property SchemaItem:      IXMLSchemaItem            read FSchemaItem;
   public
@@ -173,7 +179,7 @@ type
     property HasDocumentation:    Boolean                   read GetHasDocumentation;
     property ItemType:            TXMLDataBindingItemType   read GetItemType;
     property Name:                String                    read FName;
-    property TranslatedName:      String                    read FTranslatedName;
+    property TranslatedName:      String                    read FTranslatedName  write FTranslatedName;
 
     property CollectionItem:      TXMLDataBindingProperty   read FCollectionItem  write FCollectionItem;
     property IsCollection:        Boolean                   read GetIsCollection;
@@ -408,7 +414,7 @@ begin
     for schemaIndex := Pred(SchemaCount) downto 0 do
       ResolveAlias(Schemas[schemaIndex]);
 
-      
+
     { Resolve naming conflicts }
     ResolveNameConflicts();
 
@@ -611,8 +617,8 @@ begin
 
     ASchema.AddItem(interfaceItem);
 
-    for elementIndex := 0 to Pred(complexType.ElementDefs.Count) do
-      ProcessChildElement(ASchema, complexType.ElementDefs[elementIndex], interfaceItem);
+    for elementIndex := 0 to Pred(complexType.ElementDefList.Count) do
+      ProcessChildElement(ASchema, complexType.ElementDefList[elementIndex], interfaceItem);
   end;
 end;
 
@@ -681,12 +687,12 @@ end;
 
 function TXMLDataBindingGenerator.ProcessElement(ASchema: TXMLDataBindingSchema; AElement: IXMLElementDef): TXMLDataBindingItem;
 var
-  elementIndex:         Integer;
   attributeIndex:       Integer;
   enumerationObject:    TXMLDataBindingEnumeration;
   interfaceObject:      TXMLDataBindingInterface;
   complexAliasItem:     TXMLDataBindingComplexTypeAliasItem;
   simpleAliasItem:      TXMLDataBindingSimpleTypeAliasItem;
+  elementIndex:         Integer;
 
 begin
   Result := nil;
@@ -1161,8 +1167,9 @@ var
 
 begin
   { Translate name }
-  AItem.SetTranslatedName(TranslateItemName(AItem));
-
+  AItem.TranslatedName  := TranslateItemName(AItem);
+  DoPostProcessItem(AItem);
+  
 
   { Extract collections }
   if AItem.ItemType = itInterface then
@@ -1249,6 +1256,13 @@ end;
 function TXMLDataBindingGenerator.GetSchemas(Index: Integer): TXMLDataBindingSchema;
 begin
   Result  := TXMLDataBindingSchema(FSchemas[Index]);
+end;
+
+
+procedure TXMLDataBindingGenerator.DoPostProcessItem(AItem: TXMLDataBindingItem);
+begin
+  if Assigned(FOnPostProcessItem) then
+    FOnPostProcessItem(Self, AItem);
 end;
 
 
@@ -1402,12 +1416,6 @@ end;
 procedure TXMLDataBindingItem.SetName(const Value: String);
 begin
   FName := Value;
-end;
-
-
-procedure TXMLDataBindingItem.SetTranslatedName(const Value: string);
-begin
-  FTranslatedName := Value;
 end;
 
 

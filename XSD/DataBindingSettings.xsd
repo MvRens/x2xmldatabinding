@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="DataBindingSettings">
+		<xs:annotation>
+			<xs:documentation>Contains the settings and hints for the Delphi XML Data Binding.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Output" type="DataBindingOutput" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="DataBindingOutput">
+		<xs:annotation>
+			<xs:documentation>Contains the user-defined output settings last used</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="OutputType" type="DataBindingOutputType"/>
+			<xs:choice>
+				<xs:element name="OutputSingle">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="FileName" type="xs:string"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="OutputMultiple">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="Path" type="xs:string"/>
+							<xs:element name="Prefix" type="xs:string"/>
+							<xs:element name="Postfix" type="xs:string"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:choice>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="DataBindingOutputType">
+		<xs:annotation>
+			<xs:documentation>Determines the output type</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:NMTOKEN">
+			<xs:enumeration value="Single"/>
+			<xs:enumeration value="Multiple"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

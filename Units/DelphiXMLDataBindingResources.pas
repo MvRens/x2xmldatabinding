@@ -12,7 +12,9 @@ const
   CrLf  = #13#10;
   
   UnitHeader          = '{'                                                     + CrLf +
-                        '  X2Software XML Data Binding Wizard'                  + CrLf +
+                        '  X2Software XML Data Binding'                         + CrLf +
+                        ''                                                      + CrLf +
+                        '    Generated on:   %<DateTime>:s'                     + CrLf +
                         '    Generated from: %<SourceFileName>:s'               + CrLf +
                         '}'                                                     + CrLf +
                         'unit %<UnitName>:s;'                                   + CrLf +
@@ -73,14 +75,16 @@ const
 
 
   PropertyIntfMethodGetOptional = '    function GetHas%<PropertyName>:s: Boolean;';
-  PropertyIntfMethodGetNil      = '    function GetIs%<PropertyName>:sNil: Boolean;';
+  PropertyIntfMethodGetNil      = '    function Get%<PropertyName>:sIsNil: Boolean;';
   PropertyIntfMethodGetText     = '    function Get%<PropertyName>:sText: WideString;';
   PropertyIntfMethodGet         = '    function Get%<PropertyName>:s: %<DataType>:s;';
+  PropertyIntfMethodSetNil      = '    procedure Set%<PropertyName>:sIsNil(const Value: Boolean);';
   PropertyIntfMethodSetText     = '    procedure Set%<PropertyName>:sText(const Value: WideString);';
   PropertyIntfMethodSet         = '    procedure Set%<PropertyName>:s(const Value: %<DataType>:s);';
 
   PropertyInterfaceOptional     = '    property Has%<PropertyName>:s: Boolean read GetHas%<PropertyName>:s;';
-  PropertyInterfaceNil          = '    property Is%<PropertyName>:sNil: Boolean read GetIs%<PropertyName>:sNil;';
+  PropertyInterfaceNilReadOnly  = '    property %<PropertyName>:sIsNil: Boolean read Get%<PropertyName>:sIsNil;';
+  PropertyInterfaceNil          = '    property %<PropertyName>:sIsNil: Boolean read Get%<PropertyName>:sIsNil write Set%<PropertyName>:sIsNil;';
   PropertyInterfaceTextReadOnly = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText;';
   PropertyInterfaceReadOnly     = '    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s;';
   PropertyInterfaceText         = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText write Set%<PropertyName>:sText;';
@@ -92,16 +96,16 @@ const
                                   'end;'                                                                    + CrLf +
                                   ''                                                                        + CrLf;
 
-  PropertyImplMethodGetNil      = 'function TXML%<Name>:s.GetIs%<PropertyName>:sNil: Boolean;'                                + CrLf +
-                                  'var'                                                                                       + CrLf +
-                                  '  childNode: IXMLNode;'                                                                    + CrLf +
-                                  ''                                                                                          + CrLf +
+  PropertyImplMethodGetNil      = 'function TXML%<Name>:s.Get%<PropertyName>:sIsNil: Boolean;'                                + CrLf +
                                   'begin'                                                                                     + CrLf +
-                                  '  childNode := ChildNodes[''%<PropertySourceName>:s''];'                                   + CrLf +
-                                  '  Result := childNode.HasAttribute(''nil'', XMLSchemaInstanceURI) and'                     + CrLf +
-                                  '            StrToBoolDef(childNode.GetAttributeNS(''nil'', XMLSchemaInstanceURI), False);' + CrLf +
+                                  '  Result := GetNodeIsNil(ChildNodes[''%<PropertySourceName>:s'']);'                        + CrLf +
                                   'end;'                                                                                      + CrLf +
                                   ''                                                                                          + CrLf;
+  PropertyImplMethodSetNil      = 'procedure TXML%<Name>:s.Set%<PropertyName>:sIsNil(const Value: Boolean);'    + CrLf +
+                                  'begin'                                                                       + CrLf +
+                                  '  SetNodeIsNil(ChildNodes[''%<PropertySourceName>:s''], Value);'             + CrLf +
+                                  'end;'                                                                        + CrLf +
+                                  ''                                                                            + CrLf;
 
   PropertyImplMethodGetText     = 'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'            + CrLf +
                                   'begin'                                                                   + CrLf +
@@ -147,18 +151,18 @@ const
 
   // #ToDo1 (MvR) 9-3-2008: document / node / etc
   // #ToDo1 (MvR) 9-3-2008: WideString etc ?
-  ReservedWords:  array[0..111] of String =
+  ReservedWords:  array[0..106] of String =
                   (
                     'absolute', 'abstract', 'and', 'array', 'as', 'asm',
-                    'assembler', 'automated', 'begin', 'case', 'cdecl', 'class',
-                    'const', 'constructor', 'contains', 'default', 'deprecated',
+                    'assembler', {'automated', }'begin', 'case', 'cdecl', 'class',
+                    'const', 'constructor', {'contains', }'default', 'deprecated',
                     'destructor', 'dispid', 'dispinterface', 'div', 'do',
                     'downto', 'dynamic', 'else', 'end', 'except', 'export',
-                    'exports', 'external', 'far', 'file', 'final', 'finalization',
+                    'exports', 'external', 'far', {'file', 'final', }'finalization',
                     'finally', 'for', 'forward', 'function', 'goto', 'if',
                     'implementation', 'implements', 'in', 'index', 'inherited',
                     'initialization', 'inline', 'interface', 'is', 'label',
-                    'library', 'local', 'message', 'mod', 'name', 'near',
+                    'library', 'local', 'message', 'mod', {'name', }'near',
                     'nil', 'nodefault', 'not', 'object', 'of', 'or', 'out',
                     'overload', 'override', 'package', 'packed', 'pascal',
                     'platform', 'private', 'procedure', 'program', 'property',
@@ -332,6 +336,25 @@ const
                                 )
                               )
                             );
+
+
+  NilElementHelpers = '{ Nillable element helpers }'                                                          + CrLf +
+                      'function GetNodeIsNil(ANode: IXMLNode): Boolean;'                                      + CrLf +
+                      'begin'                                                                                 + CrLf +
+                      '  Result := ANode.HasAttribute(''nil'', XMLSchemaInstanceURI) and'                     + CrLf +
+                      '            StrToBoolDef(ANode.GetAttributeNS(''nil'', XMLSchemaInstanceURI), False);' + CrLf +
+                      'end;'                                                                                  + CrLf +
+                      ''                                                                                      + CrLf +
+                      'procedure SetNodeIsNil(ANode: IXMLNode; ASetNil: Boolean);'                            + CrLf +
+                      'begin'                                                                                 + CrLf +
+                      '  if ASetNil then'                                                                     + CrLf +
+                      '  begin'                                                                               + CrLf +
+                      '    ANode.ChildNodes.Clear;'                                                           + CrLf +
+                      '    ANode.SetAttributeNS(''nil'', XMLSchemaInstanceURI, ''true'');'                    + CrLf +
+                      '  end else'                                                                            + CrLf +
+                      '    ANode.AttributeNodes.Delete(''nil'', XMLSchemaInstanceURI);'                       + CrLf +
+                      'end;'                                                                                  + CrLf +
+                      ''                                                                                      + CrLf;
 
 
 implementation

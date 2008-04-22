@@ -8,7 +8,9 @@ uses
   XMLDataBindingGenerator in 'Units\XMLDataBindingGenerator.pas',
   DelphiXMLDataBindingGenerator in 'Units\DelphiXMLDataBindingGenerator.pas',
   XMLDataBindingHelpers in 'Units\XMLDataBindingHelpers.pas',
-  DelphiXMLDataBindingResources in 'Units\DelphiXMLDataBindingResources.pas';
+  DelphiXMLDataBindingResources in 'Units\DelphiXMLDataBindingResources.pas',
+  DataBindingSettingsXML in 'Units\DataBindingSettingsXML.pas',
+  DataBindingHintsXML in 'Units\DataBindingHintsXML.pas';
 
 {$R *.res}
 

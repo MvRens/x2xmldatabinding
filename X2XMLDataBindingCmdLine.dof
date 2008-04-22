@@ -100,7 +100,7 @@ Conditionals=
 DebugSourceDirs=
 UsePackages=0
 [Parameters]
-RunParams="Z:\SAM\Mitsubishi\Copernica\Koppelingbeschijving.xsd" "C:\Temp\Koppelingbeschrijving.pas"
+RunParams="P:\test\XMLDataBinding\XSD\DataBindingSettings.xsd" "P:\test\XMLDataBinding\Units\DataBindingSettingsXML.pas"
 HostApplication=
 Launcher=
 UseLauncher=0

@@ -343,7 +343,7 @@ begin
     { Check for reserved words }
     for wordIndex := Low(ReservedWords) to High(ReservedWords) do
     begin
-      if Result = ReservedWords[wordIndex] then
+      if SameText(Result, ReservedWords[wordIndex]) then
       begin
         Result := '_' + Result;
         Break;
@@ -368,7 +368,8 @@ procedure TDelphiXMLDataBindingGenerator.WriteUnitHeader(AStream: TStreamHelper;
 begin
   AStream.WriteNamedFmt(UnitHeader,
                         ['SourceFileName',  ASourceFileName,
-                         'UnitName',        ChangeFileExt(ExtractFileName(AFileName), '')]);
+                         'UnitName',        ChangeFileExt(ExtractFileName(AFileName), ''),
+                         'DateTime',        DateTimeToStr(Now)]);
 end;
 
 
@@ -569,9 +570,11 @@ var
   typeMapping:      TTypeMapping;
   conversion:       TTypeConversion;
   hasHelpers:       Boolean;
+  hasNillable:      Boolean;
 
 begin
   usedConversions := [];
+  hasNillable     := False;
 
   { Determine which conversions are used }
   for schemaIndex := Pred(ASchemaList.Count) downto 0 do
@@ -591,6 +594,9 @@ begin
             propertyItem  := TXMLDataBindingSimpleProperty(interfaceItem.Properties[propertyIndex]);
             if GetDataTypeMapping(propertyItem.DataType, typeMapping) then
               Include(usedConversions, typeMapping.Conversion);
+
+            if propertyItem.IsNillable then
+              hasNillable := True;
           end;
         end;
       end;
@@ -614,6 +620,9 @@ begin
 
   if hasHelpers then
     AStream.WriteLn();
+
+  if hasNillable then
+    AStream.Write(NilElementHelpers);
 end;
 
 
@@ -815,7 +824,7 @@ begin
             begin
               WritePrototype;
               AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s);',
-                                      ['SourceName', itemProperty.Item.Name,
+                                      ['SourceName', propertyItem.Name,
                                        'Name',       itemProperty.Item.TranslatedName]);
             end;
         end;
@@ -1085,14 +1094,11 @@ begin
     to check if an item is present, no need to write a HasX method. }
   // #ToDo3 (MvR) 14-4-2008: move first check to XMLDataBindingGenerator ?
   writeOptional := False;
-  writeNil      := False;
+  writeNil      := AProperty.IsNillable;
 
   if AMember in [dxmPropertyGet, dxmPropertyDeclaration] then
-  begin
     writeOptional := not Assigned(AProperty.Collection) and
                      AProperty.IsOptional;
-    writeNil      := AProperty.IsNillable;
-  end;
 
 
   dataTypeName  := '';
@@ -1163,7 +1169,10 @@ begin
               if not AProperty.IsReadOnly then
               begin
                 WriteNewLine;
-                
+
+                if writeNil then
+                  sourceCode.Add(PropertyIntfMethodSetNil);
+
                 if writeTextProp then
                   sourceCode.Add(PropertyIntfMethodSetText);
 
@@ -1178,17 +1187,20 @@ begin
                 if writeOptional then
                   sourceCode.Add(PropertyInterfaceOptional);
 
-                if writeNil then
-                  sourceCode.Add(PropertyInterfaceNil);
-
                 if AProperty.IsReadOnly then
                 begin
+                  if writeNil then
+                    sourceCode.Add(PropertyInterfaceNilReadOnly);
+
                   if writeTextProp then
                     sourceCode.Add(PropertyInterfaceTextReadOnly);
 
                   sourceCode.Add(PropertyInterfaceReadOnly);
                 end else
                 begin
+                  if writeNil then
+                    sourceCode.Add(PropertyInterfaceNil);
+
                   if writeTextProp then
                     sourceCode.Add(PropertyInterfaceText);
 
@@ -1261,7 +1273,10 @@ begin
               if not AProperty.IsReadOnly then
               begin
                 WriteNewLine;
-                
+
+                if writeNil then
+                  sourceCode.Add(PropertyImplMethodSetNil);
+
                 if writeTextProp then
                   sourceCode.Add(PropertyImplMethodSetText);
 
