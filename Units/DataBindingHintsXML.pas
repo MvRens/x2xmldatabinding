@@ -1,5 +1,7 @@
 {
-  X2Software XML Data Binding Wizard
+  X2Software XML Data Binding
+
+    Generated on:   24-4-2008 11:37:14
     Generated from: P:\test\XMLDataBinding\XSD\DataBindingHints.xsd
 }
 unit DataBindingHintsXML;
@@ -22,7 +24,7 @@ type
     Contains hints and mappings for the data binding output
   }
   IXMLDataBindingHints = interface(IXMLNode)
-    ['{DA83EE96-932F-45FB-A7B4-9BF68E10A082}']
+    ['{BF3AC439-748A-4051-B05D-31067CDF0781}']
     function GetHasEnumerations: Boolean;
     function GetEnumerations: IXMLEnumerations;
 
@@ -31,7 +33,7 @@ type
   end;
 
   IXMLEnumerations = interface(IXMLNodeCollection)
-    ['{5DD6B71B-6E29-46C0-B900-59445CF98597}']
+    ['{12A3082B-138D-4F00-8D53-AEE76E4A9AD9}']
     function Get_Enumeration(Index: Integer): IXMLEnumeration;
     function Add: IXMLEnumeration;
     function Insert(Index: Integer): IXMLEnumeration;
@@ -40,7 +42,7 @@ type
   end;
 
   IXMLEnumeration = interface(IXMLNodeCollection)
-    ['{DA297C8A-C7A8-4BC6-8969-0939B67A584F}']
+    ['{BAF25450-A88E-42A7-A466-652E5EA90D1F}']
     function Get_Member(Index: Integer): IXMLMember;
     function Add: IXMLMember;
     function Insert(Index: Integer): IXMLMember;
@@ -55,7 +57,7 @@ type
   end;
 
   IXMLMember = interface(IXMLNode)
-    ['{BE7BEDE3-0609-437C-A699-3FB67263E88D}']
+    ['{202F3AB6-9908-4B87-9271-16B737BFC7CB}']
     function GetName: WideString;
 
     procedure SetName(const Value: WideString);
@@ -111,14 +113,12 @@ type
 
 
 const
-  XMLSchemaInstanceURI = 'http://www.w3.org/2001/XMLSchema-instance';
-  TargetNamespace = '';
+  TargetNamespace = 'http://www.x2software.net/xsd/databinding/DataBindingHints.xsd';
 
 
 implementation
 uses
   SysUtils;
-
 
 { Document functions }
 function GetDataBindingHints(ADocument: IXMLDocument): IXMLDataBindingHints;

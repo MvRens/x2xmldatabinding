@@ -1,5 +1,7 @@
 {
-  X2Software XML Data Binding Wizard
+  X2Software XML Data Binding
+
+    Generated on:   24-4-2008 11:37:27
     Generated from: P:\test\XMLDataBinding\XSD\DataBindingSettings.xsd
 }
 unit DataBindingSettingsXML;
@@ -24,7 +26,7 @@ type
     Contains the settings and hints for the Delphi XML Data Binding.
   }
   IXMLDataBindingSettings = interface(IXMLNode)
-    ['{2F402DC3-E73C-487E-A921-357A99CF717F}']
+    ['{C78D63A5-77C2-4547-AC37-5311160D543B}']
     function GetHasOutput: Boolean;
     function GetOutput: IXMLDataBindingOutput;
 
@@ -36,7 +38,7 @@ type
     Contains the user-defined output settings last used
   }
   IXMLDataBindingOutput = interface(IXMLNode)
-    ['{812D7883-4F30-4B28-AA38-B107A99C90EC}']
+    ['{81374819-83EF-42A8-A7B8-2F59A470D77B}']
     function GetOutputTypeText: WideString;
     function GetOutputType: TXMLOutputType;
     function GetHasOutputSingle: Boolean;
@@ -56,7 +58,7 @@ type
   end;
 
   IXMLOutputSingle = interface(IXMLNode)
-    ['{025F89C0-0036-44DD-B0FC-833D572B668E}']
+    ['{9BB52722-C7C0-45F8-81A1-59BE074BF62E}']
     function GetFileName: WideString;
 
     procedure SetFileName(const Value: WideString);
@@ -65,7 +67,7 @@ type
   end;
 
   IXMLOutputMultiple = interface(IXMLNode)
-    ['{ABF68B77-E356-42DC-9166-72AA956EDA8E}']
+    ['{4B5AC82E-572A-4C21-B779-4626BF79E0E6}']
     function GetPath: WideString;
     function GetPrefix: WideString;
     function GetPostfix: WideString;
@@ -131,8 +133,7 @@ type
 
 
 const
-  XMLSchemaInstanceURI = 'http://www.w3.org/2001/XMLSchema-instance';
-  TargetNamespace = '';
+  TargetNamespace = 'http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd';
 
 
 const
@@ -148,7 +149,6 @@ const
 implementation
 uses
   SysUtils;
-
 
 { Document functions }
 function GetDataBindingSettings(ADocument: IXMLDocument): IXMLDataBindingSettings;
@@ -221,7 +221,7 @@ end;
 
 function TXMLDataBindingOutput.GetOutputTypeText: WideString;
 begin
-  Result := ChildNodes['OutputType'].NodeValue;
+  Result := ChildNodes['OutputType'].Text;
 end;
 
 

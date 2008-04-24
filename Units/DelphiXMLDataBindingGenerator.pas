@@ -54,7 +54,7 @@ type
     procedure WriteSection(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
     procedure WriteDocumentFunctions(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
     procedure WriteEnumerationConversions(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
-    procedure WriteConversionHelpers(AStream: TStreamHelper; ASchemaList: TXMLSchemaList);
+    procedure WriteImplementationUses(AStream: TStreamHelper; ASchemaList: TXMLSchemaList);
     procedure WriteDocumentation(AStream: TStreamHelper; AItem: TXMLDataBindingItem);
     procedure WriteAfterConstruction(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
     function WriteInlineCollectionFields(AStream: TStreamHelper; AItem: TXMLDataBindingInterface): Boolean;
@@ -173,9 +173,9 @@ begin
     WriteEnumerationConversions(unitStream, dxsInterface, ASchemaList);
 
     unitStream.Write(UnitImplementation);
+    WriteImplementationUses(unitStream, ASchemaList);
     WriteDocumentFunctions(unitStream, dxsImplementation, ASchemaList);
     WriteEnumerationConversions(unitStream, dxsImplementation, ASchemaList);
-    WriteConversionHelpers(unitStream, ASchemaList);
 
     WriteSection(unitStream, dxsImplementation, ASchemaList);
 
@@ -402,13 +402,18 @@ var
   item:             TXMLDataBindingItem;
   interfaceItem:    TXMLDataBindingInterface;
   hasItem:          Boolean;
+  nameSpace:        String;
 
 begin
-  hasItem := False;
+  hasItem   := False;
+  nameSpace := '';
 
   for schemaIndex := 0 to Pred(ASchemaList.Count) do
   begin
     schema := ASchemaList[schemaIndex];
+    
+    if Length(schema.TargetNamespace) > 0 then
+      nameSpace := schema.TargetNamespace;
 
     for itemIndex := 0 to Pred(schema.ItemCount) do
     begin
@@ -444,19 +449,14 @@ begin
 
           AStream.WriteLn();
         end;
-      end;     
+      end;
     end;
   end;
 
-  if ASection = dxsInterface then
+  if (ASection = dxsInterface) and hasItem then
   begin
     AStream.WriteLn('const');
-    AStream.WriteLn('  XMLSchemaInstanceURI = ''http://www.w3.org/2001/XMLSchema-instance'';');
-
-    if hasItem then
-      // #ToDo3 (MvR) 9-3-2008: namespace support?
-      AStream.WriteLn('  TargetNamespace = '''';');
-
+    AStream.WriteLnFmt('  TargetNamespace = ''%s'';', [nameSpace]);
     AStream.WriteLn();
     AStream.WriteLn();
   end;
@@ -558,9 +558,9 @@ begin
 end;
 
 
-procedure TDelphiXMLDataBindingGenerator.WriteConversionHelpers(AStream: TStreamHelper; ASchemaList: TXMLSchemaList);
+procedure TDelphiXMLDataBindingGenerator.WriteImplementationUses(AStream: TStreamHelper; ASchemaList: TXMLSchemaList);
 var
-  usedConversions:  TTypeConversions;
+  needsUtils:       Boolean;
   schemaIndex:      Integer;
   schema:           TXMLDataBindingSchema;
   itemIndex:        Integer;
@@ -568,15 +568,11 @@ var
   propertyIndex:    Integer;
   propertyItem:     TXMLDataBindingSimpleProperty;
   typeMapping:      TTypeMapping;
-  conversion:       TTypeConversion;
-  hasHelpers:       Boolean;
-  hasNillable:      Boolean;
 
 begin
-  usedConversions := [];
-  hasNillable     := False;
+  needsUtils  := False;
 
-  { Determine which conversions are used }
+  { Determine if any helper functions are used }
   for schemaIndex := Pred(ASchemaList.Count) downto 0 do
   begin
     schema  := ASchemaList[schemaIndex];
@@ -592,11 +588,21 @@ begin
           if interfaceItem.Properties[propertyIndex].PropertyType = ptSimple then
           begin
             propertyItem  := TXMLDataBindingSimpleProperty(interfaceItem.Properties[propertyIndex]);
-            if GetDataTypeMapping(propertyItem.DataType, typeMapping) then
-              Include(usedConversions, typeMapping.Conversion);
 
             if propertyItem.IsNillable then
-              hasNillable := True;
+            begin
+              needsUtils  := True;
+              Break;
+            end;
+
+            if GetDataTypeMapping(propertyItem.DataType, typeMapping) then
+            begin
+              if TypeConversionReqUtils[typeMapping.Conversion] then
+              begin
+                needsUtils  := True;
+                Break;
+              end;
+            end;
           end;
         end;
       end;
@@ -604,25 +610,16 @@ begin
   end;
 
 
-  hasHelpers  := False;
-  for conversion := Low(TTypeConversion) to High(TTypeConversion) do
-    if conversion in usedConversions then
-    begin
-      if Length(TypeConversionHelpers[conversion]) > 0 then
-      begin
-        if not hasHelpers then
-          AStream.WriteLn('{ Data type conversion helpers }');
+  AStream.WriteLn('uses');
 
-        AStream.Write(TypeConversionHelpers[conversion]);
-        hasHelpers  := True;
-      end;
-    end;
+  if needsUtils then
+  begin
+    AStream.WriteLn('  SysUtils,');
+    AStream.WriteLn('  XMLDataBindingUtils;');
+  end else
+    AStream.WriteLn('  SysUtils;');
 
-  if hasHelpers then
-    AStream.WriteLn();
-
-  if hasNillable then
-    AStream.Write(NilElementHelpers);
+  AStream.WriteLn;
 end;
 
 

@@ -30,6 +30,7 @@ type
   TMainForm = class(TForm)
     btnClose:                                   TButton;
     btnGenerate:                                TButton;
+    btnHints:                                   TButton;
     DefaultEditStyle:                           TcxDefaultEditStyleController;
     deFolder:                                   TcxButtonEdit;
     dlgOutputFile:                              TSaveDialog;
@@ -59,9 +60,12 @@ type
     procedure deFolderPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
     procedure feSchemaPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
     procedure feSchemaPropertiesChange(Sender: TObject);
+    procedure btnHintsClick(Sender: TObject);
   private
     FHints: IXMLDataBindingHints;
     FHintsXPath: IDOMNodeSelect;
+
+    function CheckValidSchemaFile(): Boolean;
 
     procedure PostProcessItem(Sender: TObject; Item: TXMLDataBindingItem);
     procedure GetFileName(Sender: TObject; const SchemaName: String; var Path, FileName: String);
@@ -78,6 +82,8 @@ uses
   SysUtils,
   Windows,
 
+  MSXMLDOM,
+  MSXML2_TLB,
   X2UtNamedFormat,
   X2UtTempFile,
 
@@ -86,9 +92,9 @@ uses
 
 
 const
-  XPathHintEnumerationMember  = '//Enumerations' +
-                                '/Enumeration[@Name=''%<Enumeration>:s'']' +
-                                '/Member[@Name=''%<Member>:s'']/text()';
+  XPathHintEnumerationMember  = '/d:DataBindingHints/d:Enumerations' +
+                                '/d:Enumeration[@Name=''%<Enumeration>:s'']' +
+                                '/d:Member[@Name=''%<Member>:s'']/text()';
 
 
 {$R *.dfm}
@@ -130,22 +136,23 @@ end;
 
 procedure TMainForm.btnGenerateClick(Sender: TObject);
 var
-  hintsFile:  String;
+  hintsFile:      String;
+  domDocument:    IXMLDOMDocument2;
 
 begin
-  if not FileExists(feSchema.Text) then
-  begin
-    MessageBox(Self.Handle, 'Please specify a valid schema file.',
-               'Schema file does not exist', MB_OK or MB_ICONERROR);
-
-    ActiveControl := feFile;
+  if not CheckValidSchemaFile() then
     Exit;
-  end;
 
   hintsFile := ChangeFileExt(feSchema.Text, '.hints.xml');
   if FileExists(hintsFile) then
   begin
     FHints      := LoadDataBindingHints(hintsFile);
+
+    { Set the default namespace for XPath expressions to work }
+    domDocument := ((FHints.OwnerDocument.DOMDocument as IXMLDOMNodeRef).GetXMLDOMNode as IXMLDOMDocument2);
+    domDocument.setProperty('SelectionLanguage', 'XPath');
+    domDocument.setProperty('SelectionNamespaces', 'xmlns:d="' + DataBindingHintsXML.TargetNamespace + '"');
+
     FHintsXPath := (FHints.OwnerDocument.DocumentElement.DOMNode as IDOMNodeSelect);
   end;
 
@@ -321,6 +328,43 @@ begin
   end;
 
   settings.OwnerDocument.SaveToFile(fileName);
+end;
+
+
+function TMainForm.CheckValidSchemaFile(): Boolean;
+begin
+  Result := FileExists(feSchema.Text);
+
+  if not Result then
+  begin
+    MessageBox(Self.Handle, 'Please specify a valid schema file.',
+               'Schema file does not exist', MB_OK or MB_ICONERROR);
+
+    ActiveControl := feFile;
+  end;
+end;
+
+
+procedure TMainForm.btnHintsClick(Sender: TObject);
+var
+  hintsFile:  String;
+  hints:      IXMLDataBindingHints;
+
+begin
+  if CheckValidSchemaFile() then
+  begin
+    hintsFile := ChangeFileExt(feSchema.Text, '.hints.xml');
+    if FileExists(hintsFile) then
+    begin
+      if MessageBox(Self.Handle, 'Do you want to overwrite the existing hints file?',
+                    'Overwrite', MB_YESNO or MB_ICONQUESTION) <> ID_YES then
+        Exit;
+    end;
+
+    hints := NewDataBindingHints();
+    hints.OwnerDocument.SaveToFile(hintsFile);
+    ShowMessage('The hints file has been generated.');
+  end;
 end;
 
 end.

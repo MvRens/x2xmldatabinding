@@ -10,7 +10,8 @@ uses
   XMLDataBindingHelpers in 'Units\XMLDataBindingHelpers.pas',
   DelphiXMLDataBindingResources in 'Units\DelphiXMLDataBindingResources.pas',
   DataBindingSettingsXML in 'Units\DataBindingSettingsXML.pas',
-  DataBindingHintsXML in 'Units\DataBindingHintsXML.pas';
+  DataBindingHintsXML in 'Units\DataBindingHintsXML.pas',
+  MSXML2_TLB in 'Units\MSXML2_TLB.pas';
 
 {$R *.res}
 

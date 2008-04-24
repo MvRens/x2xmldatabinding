@@ -128,6 +128,7 @@ type
     function GetItems(Index: Integer): TXMLDataBindingItem;
     function GetIncludeCount(): Integer;
     function GetIncludes(Index: Integer): TXMLDataBindingSchema;
+    function GetTargetNamespace: String;
   protected
     procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); override;
 
@@ -139,6 +140,8 @@ type
   public
     constructor Create(AOwner: TXMLDataBindingGenerator);
     destructor Destroy(); override;
+
+    property TargetNamespace:           String                read GetTargetNamespace;
 
     property IncludeCount:              Integer               read GetIncludeCount;
     property Includes[Index: Integer]:  TXMLDataBindingSchema read GetIncludes;
@@ -336,6 +339,7 @@ type
 implementation
 uses
   SysUtils,
+  Variants,
   Windows,
   XMLDoc,
   XMLIntf,
@@ -1370,6 +1374,14 @@ end;
 function TXMLDataBindingSchema.GetItems(Index: Integer): TXMLDataBindingItem;
 begin
   Result  := TXMLDataBindingItem(FItems[Index]);
+end;
+
+
+function TXMLDataBindingSchema.GetTargetNamespace(): String;
+begin
+  Result  := '';
+  if Assigned(FSchemaDef) and (not VarIsNull(FSchemaDef.TargetNamespace)) then
+    Result  := FSchemaDef.TargetNamespace;
 end;
 
 

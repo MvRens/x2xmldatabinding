@@ -29,12 +29,8 @@ const
                         ''                                                      + CrLf +
                         'type'                                                  + CrLf;
 
-  UnitImplementation  = 'implementation'                                        + CrLf +
-                        'uses'                                                  + CrLf +
-                        '  SysUtils;'                                           + CrLf +
-                        ''                                                      + CrLf +
-                        ''                                                      + CrLf;
-                        
+  UnitImplementation  = 'implementation'                                        + CrLf;
+
   UnitFooter          = ''                                                      + CrLf +
                         'end.'                                                  + CrLf;
 
@@ -179,7 +175,14 @@ const
 
 
 type
-  TTypeConversion   = (tcNone, tcBoolean, tcFloat, tcDateTime, tcString);
+  TTypeConversion   = (tcNone,
+                       tcBoolean,
+                       tcFloat,
+                       tcDateTime,
+                       tcDate,
+                       tcTime,
+                       tcString);
+                       
   TTypeConversions  = set of TTypeConversion;
 
   TTypeMapping  = record
@@ -195,9 +198,8 @@ const
                         (SchemaName:  'int';        DelphiName:  'Integer';     Conversion:    tcNone),
                         (SchemaName:  'integer';    DelphiName:  'Integer';     Conversion:    tcNone),
                         (SchemaName:  'short';      DelphiName:  'Smallint';    Conversion:    tcNone),
-                        // #ToDo1 (MvR) 11-4-2008: differentiate date / time / dateTime
-                        (SchemaName:  'date';       DelphiName:  'TDateTime';   Conversion:    tcDateTime),
-                        (SchemaName:  'time';       DelphiName:  'TDateTime';   Conversion:    tcDateTime),
+                        (SchemaName:  'date';       DelphiName:  'TDateTime';   Conversion:    tcDate),
+                        (SchemaName:  'time';       DelphiName:  'TDateTime';   Conversion:    tcTime),
                         (SchemaName:  'dateTime';   DelphiName:  'TDateTime';   Conversion:    tcDateTime),
                         (SchemaName:  'float';      DelphiName:  'Double';      Conversion:    tcFloat),
                         (SchemaName:  'double';     DelphiName:  'Double';      Conversion:    tcFloat),
@@ -206,6 +208,16 @@ const
                       );
 
 
+  TypeConversionReqUtils:   array[TTypeConversion] of Boolean =
+                            (
+                              { tcNone }      False,
+                              { tcBoolean }   True,
+                              { tcFloat }     True,
+                              { tcDateTime }  True,
+                              { tcDate }      True,
+                              { tcTime }      True,
+                              { tcString }    False
+                            );
 
   TypeConversionNone:       array[TDelphiAccessor, TDelphiNodeType] of String =
                             (
@@ -224,61 +236,6 @@ const
                             );
 
 
-  TypeConversionHelpers:    array[TTypeConversion] of String =
-                            (
-                              { tcNone }
-                              '',
-
-                              { tcBoolean }
-                              'function BoolToXML(AValue: Boolean): WideString;'  + CrLf +
-                              'begin'                                             + CrLf +
-                              '  Result := LowerCase(BoolToStr(AValue, True));'   + CrLf +
-                              'end;'                                              + CrLf +
-                              ''                                                  + CrLf,
-
-                              { tcFloat }
-                              'function GetXMLFloatFormatSettings: TFormatSettings;'        + CrLf +
-                              'begin'                                                       + CrLf +
-                              '  Result.DecimalSeparator := ''.'';'                         + CrLf +
-                              'end;'                                                        + CrLf +
-                              ''                                                            + CrLf +
-                              'function FloatToXML(AValue: Extended): WideString;'          + CrLf +
-                              'begin'                                                       + CrLf +
-                              '  Result := FloatToStr(AValue, GetXMLFloatFormatSettings);'  + CrLf +
-                              'end;'                                                        + CrLf +
-                              ''                                                            + CrLf +
-                              'function XMLToFloat(const AValue: String): Extended;'        + CrLf +
-                              'begin'                                                       + CrLf +
-                              '  Result := StrToFloat(AValue, GetXMLFloatFormatSettings);'  + CrLf +
-                              'end;'                                                        + CrLf +
-                              ''                                                            + CrLf,
-
-
-                              { tcDate }
-                              // #ToDo1 (MvR) 11-4-2008: handle time in XMLToDateTime
-                              'function DateToXML(AValue: TDateTime): WideString;'      + CrLf +
-                              'begin'                                                   + CrLf +
-                              '  Result := FormatDateTime(''yyyy"-"mm"-"dd'', AValue);' + CrLf +
-                              'end;'                                                    + CrLf +
-                              ''                                                        + CrLf +
-                              'function XMLToDate(const ADate: String): TDateTime;'     + CrLf +
-                              'begin'                                                   + CrLf +
-                              '  try'                                                   + CrLf +
-                              '    Result  := EncodeDate(StrToInt(Copy(ADate, 1, 4)),'  + CrLf +
-                              '                          StrToInt(Copy(ADate, 6, 2)),'  + CrLf +
-                              '                          StrToInt(Copy(ADate, 9, 2)));' + CrLf +
-                              '  except'                                                + CrLf +
-                              '    on E:EConvertError do'                               + CrLf +
-                              '      Result := 0;'                                      + CrLf +
-                              '  end;'                                                  + CrLf +
-                              'end;'                                                    + CrLf +
-                              ''                                                        + CrLf,
-
-                              { tcString }
-                              ''
-                            );
-
-
   TypeConversion:           array[TDelphiAccessor, TDelphiNodeType, TTypeConversion] of String =
                             (
                               { daGet }
@@ -288,7 +245,9 @@ const
                                   { tcNone }      '',
                                   { tcBoolean }   '',
                                   { tcFloat }     '  %<Destination>:s := XMLToFloat(ChildNodes[''%<Source>:s''].NodeValue);',
-                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(ChildNodes[''%<Source>:s''].NodeValue);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(ChildNodes[''%<Source>:s''].NodeValue, xdtDateTime);',
+                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(ChildNodes[''%<Source>:s''].NodeValue, xdtDate);',
+                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(ChildNodes[''%<Source>:s''].NodeValue, xdtTime);',
                                   { tcString }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].Text;'
                                 ),
                                 { dntAttribute }
@@ -296,7 +255,9 @@ const
                                   { tcNone }      '',
                                   { tcBoolean }   '',
                                   { tcFloat }     '  %<Destination>:s := XMLToFloat(AttributeNodes[''%<Source>:s''].NodeValue);',
-                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(AttributeNodes[''%<Source>:s''].NodeValue);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(AttributeNodes[''%<Source>:s''].NodeValue, xdtDateTime);',
+                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(AttributeNodes[''%<Source>:s''].NodeValue, xdtDate);',
+                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(AttributeNodes[''%<Source>:s''].NodeValue, xdtTime);',
                                   { tcString }    '  %<Destination>:s := AttributeNodes[''%<Source>:s''].Text;'
                                 ),
                                 { dntCustom}
@@ -304,7 +265,9 @@ const
                                   { tcNone }      '',
                                   { tcBoolean }   '',
                                   { tcFloat }     '  %<Destination>:s := XMLToFloat(%<Source>:s);',
-                                  { tcDateTime }  '  %<Destination>:s := XMLToDate(%<Source>:s);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(%<Source>:s, xdtDateTime);',
+                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(%<Source>:s, xdtDate);',
+                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(%<Source>:s, xdtTime);',
                                   { tcString }    ''
                                 )
                               ),
@@ -315,7 +278,9 @@ const
                                   { tcNone }      '',
                                   { tcBoolean }   '  ChildNodes[''%<Destination>:s''].NodeValue := BoolToXML(%<Source>:s);',
                                   { tcFloat }     '  ChildNodes[''%<Destination>:s''].NodeValue := FloatToXML(%<Source>:s);',
-                                  { tcDateTime }  '  ChildNodes[''%<Destination>:s''].NodeValue := DateToXML(%<Source>:s);',
+                                  { tcDateTime }  '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
+                                  { tcDate }      '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
+                                  { tcTime }      '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
                                   { tcString }    ''
                                 ),
                                 { dntAttribute }
@@ -323,7 +288,9 @@ const
                                   { tcNone }      '',
                                   { tcBoolean }   '  SetAttribute(''%<Destination>:s'', BoolToXML(%<Source>:s));',
                                   { tcFloat }     '  SetAttribute(''%<Destination>:s'', FloatToXML(%<Source>:s));',
-                                  { tcDateTime }  '  SetAttribute(''%<Destination>:s'', DateToXML(%<Source>:s));',
+                                  { tcDateTime }  '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtDateTime));',
+                                  { tcDate }      '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtDate));',
+                                  { tcTime }      '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtTime));',
                                   { tcString }    ''
                                 ),
                                 { dntCustom}
@@ -331,30 +298,13 @@ const
                                   { tcNone }      '',
                                   { tcBoolean }   '  %<Destination>:s := BoolToXML(%<Source>:s);',
                                   { tcFloat }     '  %<Destination>:s := FloatToXML(%<Source>:s);',
-                                  { tcDateTime }  '  %<Destination>:s := DateToXML(%<Source>:s);',
+                                  { tcDateTime }  '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtDateTime);',
+                                  { tcDate }      '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtDate);',
+                                  { tcTime }      '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtTime);',
                                   { tcString }    ''
                                 )
                               )
                             );
-
-
-  NilElementHelpers = '{ Nillable element helpers }'                                                          + CrLf +
-                      'function GetNodeIsNil(ANode: IXMLNode): Boolean;'                                      + CrLf +
-                      'begin'                                                                                 + CrLf +
-                      '  Result := ANode.HasAttribute(''nil'', XMLSchemaInstanceURI) and'                     + CrLf +
-                      '            StrToBoolDef(ANode.GetAttributeNS(''nil'', XMLSchemaInstanceURI), False);' + CrLf +
-                      'end;'                                                                                  + CrLf +
-                      ''                                                                                      + CrLf +
-                      'procedure SetNodeIsNil(ANode: IXMLNode; ASetNil: Boolean);'                            + CrLf +
-                      'begin'                                                                                 + CrLf +
-                      '  if ASetNil then'                                                                     + CrLf +
-                      '  begin'                                                                               + CrLf +
-                      '    ANode.ChildNodes.Clear;'                                                           + CrLf +
-                      '    ANode.SetAttributeNS(''nil'', XMLSchemaInstanceURI, ''true'');'                    + CrLf +
-                      '  end else'                                                                            + CrLf +
-                      '    ANode.AttributeNodes.Delete(''nil'', XMLSchemaInstanceURI);'                       + CrLf +
-                      'end;'                                                                                  + CrLf +
-                      ''                                                                                      + CrLf;
 
 
 implementation

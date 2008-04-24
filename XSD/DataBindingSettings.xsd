@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:schema targetNamespace="http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd" xmlns:tns="http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:element name="DataBindingSettings">
 		<xs:annotation>
 			<xs:documentation>Contains the settings and hints for the Delphi XML Data Binding.</xs:documentation>
 		</xs:annotation>
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="Output" type="DataBindingOutput" minOccurs="0"/>
+				<xs:element name="Output" type="tns:DataBindingOutput" minOccurs="0"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
@@ -15,7 +15,7 @@
 			<xs:documentation>Contains the user-defined output settings last used</xs:documentation>
 		</xs:annotation>
 		<xs:sequence>
-			<xs:element name="OutputType" type="DataBindingOutputType"/>
+			<xs:element name="OutputType" type="tns:DataBindingOutputType"/>
 			<xs:choice>
 				<xs:element name="OutputSingle">
 					<xs:complexType>
