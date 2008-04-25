@@ -92,9 +92,14 @@ uses
 
 
 const
-  XPathHintEnumerationMember  = '/d:DataBindingHints/d:Enumerations' +
+  XPathHintBase               = '/d:DataBindingHints';
+
+  XPathHintEnumerationMember  = XPathHintBase + '/d:Enumerations' +
                                 '/d:Enumeration[@Name=''%<Enumeration>:s'']' +
                                 '/d:Member[@Name=''%<Member>:s'']/text()';
+
+  XPathHintDocumentElement    = XPathHintBase + '/d:DocumentElements' +
+                                '/d:DocumentElement[@Name=''%<Name>:s'']';
 
 
 {$R *.dfm}
@@ -211,6 +216,14 @@ begin
 
     if Assigned(hint) and (Length(hint.nodeValue) > 0) then
       Item.TranslatedName := hint.nodeValue;
+  end;
+
+  if Item.ItemType = itInterface then
+  begin
+    if FHints.HasDocumentElements then
+      Item.DocumentElement  := Assigned(FHintsXPath.selectNode(NamedFormat(XPathHintDocumentElement,
+                                                                           ['Name', Item.Name])));
+
   end;
 end;
 

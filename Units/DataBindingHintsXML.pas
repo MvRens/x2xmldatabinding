@@ -1,7 +1,7 @@
 {
   X2Software XML Data Binding
 
-    Generated on:   24-4-2008 11:37:14
+    Generated on:   25-4-2008 10:37:37
     Generated from: P:\test\XMLDataBinding\XSD\DataBindingHints.xsd
 }
 unit DataBindingHintsXML;
@@ -18,22 +18,28 @@ type
   IXMLEnumerations = interface;
   IXMLEnumeration = interface;
   IXMLMember = interface;
+  IXMLDocumentElements = interface;
+  IXMLDocumentElement = interface;
 
   { Interfaces for DataBindingHints }
   {
     Contains hints and mappings for the data binding output
   }
   IXMLDataBindingHints = interface(IXMLNode)
-    ['{BF3AC439-748A-4051-B05D-31067CDF0781}']
+    ['{33A3ED30-3F1C-4607-A848-D3F17297687F}']
     function GetHasEnumerations: Boolean;
     function GetEnumerations: IXMLEnumerations;
+    function GetHasDocumentElements: Boolean;
+    function GetDocumentElements: IXMLDocumentElements;
 
     property HasEnumerations: Boolean read GetHasEnumerations;
     property Enumerations: IXMLEnumerations read GetEnumerations;
+    property HasDocumentElements: Boolean read GetHasDocumentElements;
+    property DocumentElements: IXMLDocumentElements read GetDocumentElements;
   end;
 
   IXMLEnumerations = interface(IXMLNodeCollection)
-    ['{12A3082B-138D-4F00-8D53-AEE76E4A9AD9}']
+    ['{BD382537-6E8E-4821-A6FB-598234A7B646}']
     function Get_Enumeration(Index: Integer): IXMLEnumeration;
     function Add: IXMLEnumeration;
     function Insert(Index: Integer): IXMLEnumeration;
@@ -42,7 +48,7 @@ type
   end;
 
   IXMLEnumeration = interface(IXMLNodeCollection)
-    ['{BAF25450-A88E-42A7-A466-652E5EA90D1F}']
+    ['{DC00C775-25B9-4612-A712-9D2DAC346415}']
     function Get_Member(Index: Integer): IXMLMember;
     function Add: IXMLMember;
     function Insert(Index: Integer): IXMLMember;
@@ -57,7 +63,29 @@ type
   end;
 
   IXMLMember = interface(IXMLNode)
-    ['{202F3AB6-9908-4B87-9271-16B737BFC7CB}']
+    ['{C242311F-B6B6-44B6-BAF2-40EBE6501963}']
+    function GetName: WideString;
+
+    procedure SetName(const Value: WideString);
+
+    property Name: WideString read GetName write SetName;
+  end;
+
+  {
+    If present, only elements which are included in this list will be marked as 
+    a Document Element.
+  }
+  IXMLDocumentElements = interface(IXMLNodeCollection)
+    ['{A2036427-9FCE-41DF-B254-4BFBA42258AA}']
+    function Get_DocumentElement(Index: Integer): IXMLDocumentElement;
+    function Add: IXMLDocumentElement;
+    function Insert(Index: Integer): IXMLDocumentElement;
+
+    property DocumentElement[Index: Integer]: IXMLDocumentElement read Get_DocumentElement; default;
+  end;
+
+  IXMLDocumentElement = interface(IXMLNode)
+    ['{DBC9940F-A0A3-42A4-83CF-AD90BD0892E5}']
     function GetName: WideString;
 
     procedure SetName(const Value: WideString);
@@ -73,6 +101,8 @@ type
   protected
     function GetHasEnumerations: Boolean;
     function GetEnumerations: IXMLEnumerations;
+    function GetHasDocumentElements: Boolean;
+    function GetDocumentElements: IXMLDocumentElements;
   end;
 
   TXMLEnumerations = class(TXMLNodeCollection, IXMLEnumerations)
@@ -98,6 +128,22 @@ type
   end;
 
   TXMLMember = class(TXMLNode, IXMLMember)
+  protected
+    function GetName: WideString;
+
+    procedure SetName(const Value: WideString);
+  end;
+
+  TXMLDocumentElements = class(TXMLNodeCollection, IXMLDocumentElements)
+  public
+    procedure AfterConstruction; override;
+  protected
+    function Get_DocumentElement(Index: Integer): IXMLDocumentElement;
+    function Add: IXMLDocumentElement;
+    function Insert(Index: Integer): IXMLDocumentElement;
+  end;
+
+  TXMLDocumentElement = class(TXMLNode, IXMLDocumentElement)
   protected
     function GetName: WideString;
 
@@ -152,6 +198,7 @@ end;
 procedure TXMLDataBindingHints.AfterConstruction;
 begin
   RegisterChildNode('Enumerations', TXMLEnumerations);
+  RegisterChildNode('DocumentElements', TXMLDocumentElements);
   inherited;
 end;
 
@@ -164,6 +211,17 @@ end;
 function TXMLDataBindingHints.GetEnumerations: IXMLEnumerations;
 begin
   Result := (ChildNodes['Enumerations'] as IXMLEnumerations);
+end;
+
+function TXMLDataBindingHints.GetHasDocumentElements: Boolean;
+begin
+  Result := Assigned(ChildNodes.FindNode('DocumentElements'));
+end;
+
+
+function TXMLDataBindingHints.GetDocumentElements: IXMLDocumentElements;
+begin
+  Result := (ChildNodes['DocumentElements'] as IXMLDocumentElements);
 end;
 
 procedure TXMLEnumerations.AfterConstruction;
@@ -232,6 +290,41 @@ begin
 end;
 
 procedure TXMLMember.SetName(const Value: WideString);
+begin
+  SetAttribute('Name', Value);
+end;
+
+procedure TXMLDocumentElements.AfterConstruction;
+begin
+  RegisterChildNode('DocumentElement', TXMLDocumentElement);
+
+  ItemTag := 'DocumentElement';
+  ItemInterface := IXMLDocumentElement;
+
+  inherited;
+end;
+
+function TXMLDocumentElements.Get_DocumentElement(Index: Integer): IXMLDocumentElement;
+begin
+  Result := (List[Index] as IXMLDocumentElement);
+end;
+
+function TXMLDocumentElements.Add: IXMLDocumentElement;
+begin
+  Result := (AddItem(-1) as IXMLDocumentElement);
+end;
+
+function TXMLDocumentElements.Insert(Index: Integer): IXMLDocumentElement;
+begin
+  Result := (AddItem(Index) as IXMLDocumentElement);
+end;
+
+function TXMLDocumentElement.GetName: WideString;
+begin
+  Result := AttributeNodes['Name'].Text;
+end;
+
+procedure TXMLDocumentElement.SetName(const Value: WideString);
 begin
   SetAttribute('Name', Value);
 end;

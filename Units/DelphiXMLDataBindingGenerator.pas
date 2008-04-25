@@ -1089,7 +1089,6 @@ begin
 
   { If the property has a collection, it's Count property will be enough
     to check if an item is present, no need to write a HasX method. }
-  // #ToDo3 (MvR) 14-4-2008: move first check to XMLDataBindingGenerator ?
   writeOptional := False;
   writeNil      := AProperty.IsNillable;
 

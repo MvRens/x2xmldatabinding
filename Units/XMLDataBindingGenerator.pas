@@ -1,5 +1,7 @@
 unit XMLDataBindingGenerator;
 
+// #ToDo2 (MvR) 25-4-2008: typed wrapper for NodeValue if needed (eg. element with attributes and a value)
+
 interface
 uses
   Classes,
@@ -526,8 +528,6 @@ var
 
 begin
   Result := nil;
-
-  // #ToDo3 (MvR) 31-1-2007: support more locations than just a filename ?
 
   for includeIndex := 0 to Pred(IncludePaths.Count) do
   begin
@@ -1189,13 +1189,15 @@ begin
 
       if repeatingItems.Count > 0 then
       begin
-        if repeatingItems.Count = 1 then
+        if (repeatingItems.Count = 1) and
+           (not Assigned(interfaceItem.BaseItem)) then
         begin
           { Single repeating child, the item itself is a collection parent }
           interfaceItem.CollectionItem  := TXMLDataBindingProperty(repeatingItems[0]);
         end else
         begin
-          { Multiple repeating children, create intermediate collections for each }
+          { Multiple repeating children or this interface is a descendant,
+            create intermediate collections for each }
           for propertyIndex := 0 to Pred(repeatingItems.Count) do
           begin
             propertyItem  := TXMLDataBindingProperty(repeatingItems[propertyIndex]);
@@ -1204,8 +1206,6 @@ begin
             //                        exists in the schema, as it could cause
             //                        conflicts.
 
-            // #ToDo1 (MvR) 7-4-2008: check if the interfaceItem has a BaseItem,
-            //                        can't be combined with being a collection
             case propertyItem.PropertyType of
               ptSimple: collectionName  := propertyItem.TranslatedName + CollectionPostfix;
               ptItem:   collectionName  := propertyItem.TranslatedName + CollectionPostfix;

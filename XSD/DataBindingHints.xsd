@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:tns="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd" targetNamespace="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd">
+<xs:schema targetNamespace="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd" xmlns:tns="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:element name="DataBindingHints">
 		<xs:annotation>
 			<xs:documentation>Contains hints and mappings for the data binding output</xs:documentation>
 		</xs:annotation>
 		<xs:complexType>
-			<xs:sequence>
+			<xs:all>
 				<xs:element name="Enumerations" minOccurs="0">
 					<xs:complexType>
 						<xs:sequence>
@@ -28,7 +28,21 @@
 						</xs:sequence>
 					</xs:complexType>
 				</xs:element>
-			</xs:sequence>
+				<xs:element name="DocumentElements" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>If present, only elements which are included in this list will be marked as a Document Element.</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="DocumentElement" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:attribute name="Name" type="xs:string" use="required"/>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:all>
 		</xs:complexType>
 	</xs:element>
 </xs:schema>
