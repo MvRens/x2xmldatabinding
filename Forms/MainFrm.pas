@@ -62,12 +62,9 @@ type
     procedure feSchemaPropertiesChange(Sender: TObject);
     procedure btnHintsClick(Sender: TObject);
   private
-    FHints: IXMLDataBindingHints;
-    FHintsXPath: IDOMNodeSelect;
-
     function CheckValidSchemaFile(): Boolean;
+    function CheckReadOnly(const AFileName: String): Boolean;
 
-    procedure PostProcessItem(Sender: TObject; Item: TXMLDataBindingItem);
     procedure GetFileName(Sender: TObject; const SchemaName: String; var Path, FileName: String);
 
     function GetSettingsFileName(const AFileName: String): String;
@@ -91,15 +88,26 @@ uses
   DelphiXMLDataBindingGenerator;
 
 
-const
-  XPathHintBase               = '/d:DataBindingHints';
+type
+  TProtectedXMLDataBindingItem  = class(TXMLDataBindingItem);
 
-  XPathHintEnumerationMember  = XPathHintBase + '/d:Enumerations' +
-                                '/d:Enumeration[@Name=''%<Enumeration>:s'']' +
-                                '/d:Member[@Name=''%<Member>:s'']/text()';
+  THintsDelphiXMLDataBindingGenerator = class(TDelphiXMLDataBindingGenerator)
+  private
+    FHints:       IXMLDataBindingHints;
+  protected
+    procedure GenerateDataBinding; override;
 
-  XPathHintDocumentElement    = XPathHintBase + '/d:DocumentElements' +
-                                '/d:DocumentElement[@Name=''%<Name>:s'']';
+    procedure ProcessHints;
+
+    procedure ProcessEnumerations;
+    procedure ProcessDocumentElements;
+    procedure ProcessInterfaces;
+
+    function FindSchema(const ASchemaName: String; out ASchema: TXMLDataBindingSchema): Boolean;
+    function FindNode(const ASchemaName, AXPath: String; out AItem: TXMLDataBindingItem): Boolean;
+  public
+    property Hints: IXMLDataBindingHints  read FHints write FHints;
+  end;
 
 
 {$R *.dfm}
@@ -142,7 +150,8 @@ end;
 procedure TMainForm.btnGenerateClick(Sender: TObject);
 var
   hintsFile:      String;
-  domDocument:    IXMLDOMDocument2;
+  hints:          IXMLDataBindingHints;
+  generator:      THintsDelphiXMLDataBindingGenerator;
 
 begin
   if not CheckValidSchemaFile() then
@@ -150,43 +159,37 @@ begin
 
   hintsFile := ChangeFileExt(feSchema.Text, '.hints.xml');
   if FileExists(hintsFile) then
-  begin
-    FHints      := LoadDataBindingHints(hintsFile);
-
-    { Set the default namespace for XPath expressions to work }
-    domDocument := ((FHints.OwnerDocument.DOMDocument as IXMLDOMNodeRef).GetXMLDOMNode as IXMLDOMDocument2);
-    domDocument.setProperty('SelectionLanguage', 'XPath');
-    domDocument.setProperty('SelectionNamespaces', 'xmlns:d="' + DataBindingHintsXML.TargetNamespace + '"');
-
-    FHintsXPath := (FHints.OwnerDocument.DocumentElement.DOMNode as IDOMNodeSelect);
-  end;
+    hints := LoadDataBindingHints(hintsFile);
 
   try
-    with TDelphiXMLDataBindingGenerator.Create() do
+    generator := THintsDelphiXMLDataBindingGenerator.Create();
     try
+      generator.Hints := hints;
+
       if rbFile.Checked then
       begin
-        OutputType  := otSingle;
-        OutputPath  := feFile.Text;
+        if not CheckReadOnly(feFile.Text) then
+          Exit;
+
+        generator.OutputType  := otSingle;
+        generator.OutputPath  := feFile.Text;
       end else if rbFolder.Checked then
       begin
-        OutputType  := otMultiple;
-        OutputPath  := deFolder.Text;
+        generator.OutputType  := otMultiple;
+        generator.OutputPath  := deFolder.Text;
       end;
 
-      OnPostProcessItem := PostProcessItem;
-      OnGetFileName := GetFileName;
-      Execute(feSchema.Text);
+      generator.OnGetFileName := GetFileName;
+      generator.Execute(feSchema.Text);
 
       SaveSettings(feSchema.Text);
 
       ShowMessage('The data binding has been generated.');
     finally
-      Free();
+      FreeAndNil(generator);
     end;
   finally
-    FHints      := nil;
-    FHintsXPath := nil;
+    hints := nil;
   end;
 end;
 
@@ -194,37 +197,6 @@ end;
 procedure TMainForm.btnCloseClick(Sender: TObject);
 begin
   Close();
-end;
-
-
-procedure TMainForm.PostProcessItem(Sender: TObject; Item: TXMLDataBindingItem);
-var
-  member: TXMLDataBindingEnumerationMember;
-  hint: IDOMNode;
-
-begin
-  if not Assigned(FHintsXPath) then
-    Exit;
-
-  if Item.ItemType = itEnumerationMember then
-  begin
-    { Check if a hint for a new name is available }
-    member  := TXMLDataBindingEnumerationMember(Item);
-    hint    := FHintsXPath.selectNode(NamedFormat(XPathHintEnumerationMember,
-                                                  ['Enumeration',  member.Enumeration.Name,
-                                                   'Member',       member.Name]));
-
-    if Assigned(hint) and (Length(hint.nodeValue) > 0) then
-      Item.TranslatedName := hint.nodeValue;
-  end;
-
-  if Item.ItemType = itInterface then
-  begin
-    if FHints.HasDocumentElements then
-      Item.DocumentElement  := Assigned(FHintsXPath.selectNode(NamedFormat(XPathHintDocumentElement,
-                                                                           ['Name', Item.Name])));
-
-  end;
 end;
 
 
@@ -354,6 +326,24 @@ begin
                'Schema file does not exist', MB_OK or MB_ICONERROR);
 
     ActiveControl := feFile;
+    Exit;
+  end;
+end;
+
+
+function TMainForm.CheckReadOnly(const AFileName: String): Boolean;
+begin
+  Result := True;
+
+  if FileExists(AFileName) and FileIsReadOnly(AFileName) then
+  begin
+    if MessageBox(Self.Handle, 'The output file is read-only. Do you want to ' +
+                               'remove the read-only attribute?',
+                               'Read-only', MB_YESNO or MB_ICONQUESTION) = ID_YES then
+    begin
+      Result := FileSetReadOnly(AFileName, False);
+    end else
+      Result := False;
   end;
 end;
 
@@ -377,6 +367,227 @@ begin
     hints := NewDataBindingHints();
     hints.OwnerDocument.SaveToFile(hintsFile);
     ShowMessage('The hints file has been generated.');
+  end;
+end;
+
+
+{ THintsDelphiXMLDataBindingGenerator }
+procedure THintsDelphiXMLDataBindingGenerator.GenerateDataBinding;
+begin
+  if Assigned(Hints) then
+    ProcessHints;
+
+  inherited GenerateDataBinding;
+end;
+
+
+procedure THintsDelphiXMLDataBindingGenerator.ProcessHints;
+begin
+  if Hints.HasEnumerations then
+    ProcessEnumerations;
+
+  if Hints.HasDocumentElements then
+    ProcessDocumentElements;
+
+  if Hints.HasInterfaces then
+    ProcessInterfaces;
+end;
+
+
+procedure THintsDelphiXMLDataBindingGenerator.ProcessEnumerations;
+var
+  itemIndex:        Integer;
+  enumeration:      IXMLEnumeration;
+  schemaItem:       TXMLDataBindingItem;
+  enumerationItem:  TXMLDataBindingEnumeration;
+  hintMemberIndex:  Integer;
+  memberName:       String;
+  memberIndex:      Integer;
+
+begin
+  for itemIndex := 0 to Pred(Hints.Enumerations.Count) do
+  begin
+    enumeration := Hints.Enumerations[itemIndex];
+
+    if FindNode(enumeration.Schema, enumeration.XPath, schemaItem) and
+       (schemaItem.ItemType = itEnumeration) then
+    begin
+      enumerationItem := TXMLDataBindingEnumeration(schemaItem);
+
+      for hintMemberIndex := 0 to Pred(enumeration.Count) do
+      begin
+        memberName  := enumeration.Member[hintMemberIndex].Name;
+
+        for memberIndex := 0 to Pred(enumerationItem.MemberCount) do
+        begin
+          if enumerationItem.Members[memberIndex].Name = memberName then
+          begin
+            enumerationItem.Members[memberIndex].TranslatedName := enumeration[hintMemberIndex].Text;
+            Break;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+
+
+procedure THintsDelphiXMLDataBindingGenerator.ProcessDocumentElements;
+var
+  schemaIndex:      Integer;
+  schema:           TXMLDataBindingSchema;
+  itemIndex:        Integer;
+  documentElement:  IXMLDocumentElement;
+  schemaItem:       TXMLDataBindingItem;
+
+begin
+  for schemaIndex := 0 to Pred(SchemaCount) do
+  begin
+    schema  := Schemas[schemaIndex];
+
+    for itemIndex := 0 to Pred(schema.ItemCount) do
+      schema.Items[itemIndex].DocumentElement := False;
+  end;
+
+  for itemIndex := 0 to Pred(Hints.DocumentElements.Count) do
+  begin
+    documentElement := Hints.DocumentElements[itemIndex];
+
+    if FindNode(documentElement.Schema, documentElement.XPath, schemaItem) then
+    begin
+      if schemaItem.ItemType = itInterface then
+        schemaItem.DocumentElement  := True;
+    end;
+  end;
+end;
+
+
+procedure THintsDelphiXMLDataBindingGenerator.ProcessInterfaces;
+var
+  itemIndex:        Integer;
+  interfaceName:    IXMLInterfaceName;
+  schemaItem:       TXMLDataBindingItem;
+
+begin
+  for itemIndex := 0 to Pred(Hints.Interfaces.Count) do
+  begin
+    interfaceName := Hints.Interfaces[itemIndex];
+
+    if FindNode(interfaceName.Schema, interfaceName.XPath, schemaItem) then
+    begin
+      if schemaItem.ItemType in [itInterface, itEnumeration] then
+        schemaItem.TranslatedName := interfaceName.Text;
+    end;
+  end;
+end;
+
+
+function THintsDelphiXMLDataBindingGenerator.FindSchema(const ASchemaName: String; out ASchema: TXMLDataBindingSchema): Boolean;
+var
+  schemaIndex:  Integer;
+
+begin
+  Result := False;
+
+  if SchemaCount > 0 then
+  begin
+    if Length(ASchemaName) = 0 then
+    begin
+      ASchema := Schemas[0];
+      Result  := True;
+    end else
+    begin
+      for schemaIndex := 0 to Pred(SchemaCount) do
+        if SameText(Schemas[schemaIndex].SchemaName, ASchemaName) then
+        begin
+          ASchema := Schemas[schemaIndex];
+          Result  := True;
+          Break;
+        end;
+    end;
+  end;
+end;
+
+
+function THintsDelphiXMLDataBindingGenerator.FindNode(const ASchemaName, AXPath: String; out AItem: TXMLDataBindingItem): Boolean;
+
+  function SameNode(ANode1, ANode2: IDOMNode): Boolean;
+  var
+    attributeIndex: Integer;
+    attribute1:     IDOMNode;
+    attribute2:     IDOMNode;
+    hasParent1:     Boolean;
+    hasParent2:     Boolean;
+
+  begin
+    { Compare name and number of attributes }
+    Result := (ANode1.nodeName = ANode2.nodeName) and
+              (ANode1.attributes.length = ANode2.attributes.length);
+
+    if Result then
+    begin
+      { Compare attribute content }
+      for attributeIndex := 0 to Pred(ANode1.attributes.length) do
+      begin
+        attribute1  := ANode1.attributes[attributeIndex];
+        attribute2  := ANode2.attributes[attributeIndex];
+
+        Result  := (attribute1.nodeName = attribute2.nodeName) and
+                   (attribute1.nodeValue = attribute2.nodeValue);
+
+        if not Result then
+          Break;
+      end;
+
+      if Result then
+      begin
+        { Compare parent nodes }
+        hasParent1  := Assigned(ANode1.parentNode) and (ANode1.parentNode.nodeType <> NODE_DOCUMENT);
+        hasParent2  := Assigned(ANode2.parentNode) and (ANode2.parentNode.nodeType <> NODE_DOCUMENT);
+
+        if hasParent1 = hasParent2 then
+        begin
+          if hasParent1 then
+            Result := SameNode(ANode1.parentNode, ANode2.parentNode);
+        end else
+          Result := False;
+      end;
+    end;
+  end;
+
+
+var
+  schema:       TXMLDataBindingSchema;
+  schemaItem:   IDOMNode;
+  item:         TProtectedXMLDataBindingItem;
+  itemIndex:    Integer;
+  domDocument:  IXMLDOMDocument2;
+
+begin
+  Result  := False;
+
+  if (Length(AXPath) > 0) and FindSchema(ASchemaName, schema) then
+  begin
+    domDocument := ((schema.SchemaDef.OwnerDocument.DOMDocument as IXMLDOMNodeRef).GetXMLDOMNode as IXMLDOMDocument2);
+    domDocument.setProperty('SelectionLanguage', 'XPath');
+    domDocument.setProperty('SelectionNamespaces', 'xmlns:xs="http://www.w3.org/2001/XMLSchema"');
+
+    schemaItem  := (schema.SchemaDef.DOMNode as IDOMNodeSelect).selectNode(AXPath);
+
+    if Assigned(schemaItem) then
+    begin
+      for itemIndex := 0 to Pred(schema.ItemCount) do
+      begin
+        item  := TProtectedXMLDataBindingItem(schema.Items[itemIndex]);
+
+        if Assigned(item.SchemaItem) and SameNode(item.SchemaItem.DOMNode, schemaItem) then
+        begin
+          AItem   := schema.Items[itemIndex];
+          Result  := True;
+          Break;
+        end;
+      end;
+    end;
   end;
 end;
 
