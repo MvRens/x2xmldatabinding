@@ -1,5 +1,6 @@
 program X2XMLDataBindingTests;
 
+{$APPTYPE CONSOLE}
 uses
   ActiveX,
   GUITestRunner,

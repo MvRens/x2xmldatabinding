@@ -9,10 +9,14 @@ unit XMLDataBindingUtils;
 
 interface
 uses
+  Classes,
+  SysUtils,
   XMLIntf;
 
-  
+
 type
+  EBase64Error        = class(Exception);
+
   TXMLDateTimeFormat  = (xdtDateTime, xdtDate, xdtTime);
   TXMLTimeFragment    = (xtfMilliseconds, xtfTimezone);
   TXMLTimeFragments   = set of TXMLTimeFragment;
@@ -31,6 +35,9 @@ const
 
   function FloatToXML(AValue: Extended): WideString;
   function XMLToFloat(const AValue: WideString): Extended;
+
+  function Base64Encode(AValue: String): String;
+  function Base64Decode(AValue: String): String;
 
   function GetNodeIsNil(ANode: IXMLNode): Boolean;
   procedure SetNodeIsNil(ANode: IXMLNode; ASetNil: Boolean);
@@ -61,11 +68,16 @@ const
 
   XMLIsNilAttribute = 'nil';
 
+  Base64ValidChars  = ['A'..'Z', 'a'..'z', '0'..'9', '+', '/'];
+  Base64LookupTable = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+                      'abcdefghijklmnopqrstuvwxyz' +
+                      '0123456789+/';
+  Base64Padding     = '=';
+
 
 implementation
 uses
   DateUtils,
-  SysUtils,
   Windows;
 
 
@@ -259,6 +271,132 @@ end;
 function XMLToFloat(const AValue: WideString): Extended;
 begin
   Result := StrToFloat(AValue, GetXMLFloatFormatSettings());
+end;
+
+
+function Base64Encode(AValue: String): String;
+var
+  pos: Integer;
+  lookupIndex: array[0..3] of Byte;
+  padCount: Integer;
+
+begin
+  Result    := '';
+  if Length(AValue) = 0 then
+    exit;
+
+  padCount  := 0;
+
+  { At least 3 input bytes are required, and the input must be a multiple of 3 }
+  if Length(AValue) < 3 then
+    padCount  := 3 - Length(AValue)
+  else if Length(AValue) mod 3 <> 0 then
+    padCount  := 3 - (Length(AValue) mod 3);
+
+  if padCount > 0 then
+    AValue    := AValue + StringOfChar(#0, padCount);
+
+  pos := 1;
+
+  { Process in 3-byte blocks }
+  while pos <= Length(AValue) - 2 do
+  begin
+    { Each 3 input bytes are converted into 4 index values
+      in the range of 0..63, by taking 6 bits each step.
+
+      6 high bytes of first char }
+    lookupIndex[0]  := (Ord(AValue[pos]) shr 2) and $3F;
+
+    { 2 low bytes of first char + 4 high bytes of second char }
+    lookupIndex[1]  := ((Ord(AValue[pos]) shl 4) and $3F) or
+                       (Ord(AValue[pos + 1]) shr 4);
+
+    { 4 low bytes of second char + 2 high bytes of third char }
+    lookupIndex[2]  :=((Ord(AValue[pos + 1]) shl 2) and $3F) or
+                      (Ord(AValue[pos + 2]) shr 6);
+
+    { 6 low bytes of third char }
+    lookupIndex[3]  := Ord(AValue[pos + 2]) and $3F;
+
+    Result := Result + Base64LookupTable[lookupIndex[0] + 1] +
+                       Base64LookupTable[lookupIndex[1] + 1] +
+                       Base64LookupTable[lookupIndex[2] + 1] +
+                       Base64LookupTable[lookupIndex[3] + 1];
+    Inc(pos, 3);
+  end;
+
+  { Replace padding }
+  if padCount > 0 then
+  begin
+    for pos := Length(Result) downto Length(Result) - Pred(padCount) do
+      Result[pos] := Base64Padding;
+  end;
+end;
+
+
+function Base64LookupIndex(AChar: Char): Byte;
+var
+  lookupIndex:  Integer;
+
+begin
+  Result  := Ord(Base64Padding);
+
+  for lookupIndex := 1 to Length(Base64LookupTable) do
+    if Base64LookupTable[lookupIndex] = AChar then
+    begin
+      Result  := Pred(lookupIndex);
+      break;
+    end;
+end;
+
+
+function Base64Decode(AValue: String): String;
+var
+  pos: Integer;
+  padCount: Integer;
+  value: Byte;
+
+begin
+  Result  := '';
+  if Length(AValue) = 0 then
+    exit;
+
+  if Length(AValue) mod 4 <> 0 then
+    raise EBase64Error.Create('Value length must be a multiple of 4');
+
+  padCount := 0;
+  pos := Length(AValue);
+
+  { Count padding chars }
+  while (pos > 0) and (AValue[pos] = Base64Padding) do
+  begin
+    Inc(padCount);
+    Dec(pos);
+  end;
+  
+  Result := '';
+  pos := 1;
+
+  while pos <= Length(AValue) - 3 do
+  begin
+    value   := (Base64LookupIndex(AValue[pos]) shl 2) or
+               (Base64LookupIndex(AValue[pos + 1]) shr 4);
+    Result  := Result + Chr(value);
+
+    value   := (Base64LookupIndex(AValue[pos + 1]) shl 4) or
+               (Base64LookupIndex(AValue[pos + 2]) shr 2);
+    Result  := Result + Chr(value);
+
+    value   := (Base64LookupIndex(AValue[pos + 2]) shl 6) or
+               (Base64LookupIndex(AValue[pos + 3]));
+    Result  := Result + Chr(value);
+
+    Inc(pos, 4);
+  end;
+
+  { Delete padding }
+  if padCount > 0 then
+    SetLength(Result, Length(Result) - padCount);
 end;
 
 

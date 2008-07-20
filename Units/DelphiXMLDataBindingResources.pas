@@ -181,7 +181,8 @@ type
                        tcDateTime,
                        tcDate,
                        tcTime,
-                       tcString);
+                       tcString,
+                       tcBase64);
                        
   TTypeConversions  = set of TTypeConversion;
 
@@ -193,18 +194,19 @@ type
 
 
 const
-  SimpleTypeMapping:  array[0..9] of TTypeMapping =
+  SimpleTypeMapping:  array[0..10] of TTypeMapping =
                       (
-                        (SchemaName:  'int';        DelphiName:  'Integer';     Conversion:    tcNone),
-                        (SchemaName:  'integer';    DelphiName:  'Integer';     Conversion:    tcNone),
-                        (SchemaName:  'short';      DelphiName:  'Smallint';    Conversion:    tcNone),
-                        (SchemaName:  'date';       DelphiName:  'TDateTime';   Conversion:    tcDate),
-                        (SchemaName:  'time';       DelphiName:  'TDateTime';   Conversion:    tcTime),
-                        (SchemaName:  'dateTime';   DelphiName:  'TDateTime';   Conversion:    tcDateTime),
-                        (SchemaName:  'float';      DelphiName:  'Double';      Conversion:    tcFloat),
-                        (SchemaName:  'double';     DelphiName:  'Double';      Conversion:    tcFloat),
-                        (SchemaName:  'boolean';    DelphiName:  'Boolean';     Conversion:    tcBoolean),
-                        (SchemaName:  'string';     DelphiName:  'WideString';  Conversion:    tcString)
+                        (SchemaName:  'int';          DelphiName:  'Integer';     Conversion:    tcNone),
+                        (SchemaName:  'integer';      DelphiName:  'Integer';     Conversion:    tcNone),
+                        (SchemaName:  'short';        DelphiName:  'Smallint';    Conversion:    tcNone),
+                        (SchemaName:  'date';         DelphiName:  'TDateTime';   Conversion:    tcDate),
+                        (SchemaName:  'time';         DelphiName:  'TDateTime';   Conversion:    tcTime),
+                        (SchemaName:  'dateTime';     DelphiName:  'TDateTime';   Conversion:    tcDateTime),
+                        (SchemaName:  'float';        DelphiName:  'Double';      Conversion:    tcFloat),
+                        (SchemaName:  'double';       DelphiName:  'Double';      Conversion:    tcFloat),
+                        (SchemaName:  'boolean';      DelphiName:  'Boolean';     Conversion:    tcBoolean),
+                        (SchemaName:  'string';       DelphiName:  'WideString';  Conversion:    tcString),
+                        (SchemaName:  'base64Binary'; DelphiName:  'WideString';  Conversion:    tcBase64)
                       );
 
 
@@ -216,7 +218,8 @@ const
                               { tcDateTime }  True,
                               { tcDate }      True,
                               { tcTime }      True,
-                              { tcString }    False
+                              { tcString }    False,
+                              { tcBase64 }    True
                             );
 
   TypeConversionNone:       array[TDelphiAccessor, TDelphiNodeType] of String =
@@ -248,7 +251,8 @@ const
                                   { tcDateTime }  '  %<Destination>:s := XMLToDateTime(ChildNodes[''%<Source>:s''].NodeValue, xdtDateTime);',
                                   { tcDate }      '  %<Destination>:s := XMLToDateTime(ChildNodes[''%<Source>:s''].NodeValue, xdtDate);',
                                   { tcTime }      '  %<Destination>:s := XMLToDateTime(ChildNodes[''%<Source>:s''].NodeValue, xdtTime);',
-                                  { tcString }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].Text;'
+                                  { tcString }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].Text;',
+                                  { tcBas64 }     '  %<Destination>:s := Base64Decode(Trim(ChildNodes[''%<Source>:s''].Text));'
                                 ),
                                 { dntAttribute }
                                 (
@@ -258,7 +262,8 @@ const
                                   { tcDateTime }  '  %<Destination>:s := XMLToDateTime(AttributeNodes[''%<Source>:s''].NodeValue, xdtDateTime);',
                                   { tcDate }      '  %<Destination>:s := XMLToDateTime(AttributeNodes[''%<Source>:s''].NodeValue, xdtDate);',
                                   { tcTime }      '  %<Destination>:s := XMLToDateTime(AttributeNodes[''%<Source>:s''].NodeValue, xdtTime);',
-                                  { tcString }    '  %<Destination>:s := AttributeNodes[''%<Source>:s''].Text;'
+                                  { tcString }    '  %<Destination>:s := AttributeNodes[''%<Source>:s''].Text;',
+                                  { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(AttributeNodes[''%<Source>:s''].Text));'
                                 ),
                                 { dntCustom}
                                 (
@@ -268,7 +273,8 @@ const
                                   { tcDateTime }  '  %<Destination>:s := XMLToDateTime(%<Source>:s, xdtDateTime);',
                                   { tcDate }      '  %<Destination>:s := XMLToDateTime(%<Source>:s, xdtDate);',
                                   { tcTime }      '  %<Destination>:s := XMLToDateTime(%<Source>:s, xdtTime);',
-                                  { tcString }    ''
+                                  { tcString }    '',
+                                  { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(%<Source>:s));'
                                 )
                               ),
                               { daSet }
@@ -281,7 +287,8 @@ const
                                   { tcDateTime }  '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
                                   { tcDate }      '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
                                   { tcTime }      '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
-                                  { tcString }    ''
+                                  { tcString }    '',
+                                  { tcBase64 }    '  ChildNodes[''%<Destination>:s''].NodeValue := Base64Encode(%<Source>:s);'
                                 ),
                                 { dntAttribute }
                                 (
@@ -291,7 +298,8 @@ const
                                   { tcDateTime }  '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtDateTime));',
                                   { tcDate }      '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtDate));',
                                   { tcTime }      '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtTime));',
-                                  { tcString }    ''
+                                  { tcString }    '',
+                                  { tcBase64 }    '  SetAttribute(''%<Destination>:s'', Base64Encode(%<Source>:s));'
                                 ),
                                 { dntCustom}
                                 (
@@ -301,7 +309,8 @@ const
                                   { tcDateTime }  '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtDateTime);',
                                   { tcDate }      '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtDate);',
                                   { tcTime }      '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtTime);',
-                                  { tcString }    ''
+                                  { tcString }    '',
+                                  { tcBase64 }    '  %<Destination>:s := Base64Encode(%<Source>:s);'
                                 )
                               )
                             );

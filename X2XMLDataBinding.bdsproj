@@ -130,7 +130,7 @@
 			<Directories Name="UsePackages">False</Directories>
 		</Directories>
 		<Parameters>
-			<Parameters Name="RunParams">"F:\Archive\2007\XMLDataBinding\Tests\Data\02. Collection.xsd"</Parameters>
+			<Parameters Name="RunParams">"F:\Archive\2007\XMLDataBinding\DMS_export_import_formaat.xsd"</Parameters>
 			<Parameters Name="HostApplication"></Parameters>
 			<Parameters Name="Launcher"></Parameters>
 			<Parameters Name="UseLauncher">False</Parameters>
