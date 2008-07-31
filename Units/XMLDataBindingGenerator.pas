@@ -717,6 +717,7 @@ var
   complexAliasItem:     TXMLDataBindingComplexTypeAliasItem;
   simpleAliasItem:      TXMLDataBindingSimpleTypeAliasItem;
   elementIndex:         Integer;
+  simpleTypeDef:        IXMLSimpleTypeDef;
 
 begin
   Result := nil;
@@ -755,24 +756,27 @@ begin
           complexAliasItem.Item := Result;
           ASchema.AddItem(complexAliasItem);
         end;
-      end else if AElement.DataType.Enumerations.Count > 0 then
+      end else if Supports(AElement.DataType, IXMLSimpleTypeDef, simpleTypeDef) then
       begin
-        { References enumeration. }
-        Result  := FindEnumeration(ASchema, AElement.DataTypeName);
-
-        if not Assigned(Result) then
+        if simpleTypeDef.Enumerations.Count > 0 then
         begin
-          Result  := TXMLDataBindingUnresolvedItem.Create(Self, AElement, AElement.DataTypeName, ifEnumeration);
-          ASchema.AddItem(Result);
-        end;
-      end else if AElement.IsGlobal then
-      begin
-        { The element is global, but only references a simple type. }
-        simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AElement, AElement.Name);
-        simpleAliasItem.DataType  := AElement.DataType;
-        ASchema.AddItem(simpleAliasItem);
+          { References enumeration. }
+          Result  := FindEnumeration(ASchema, AElement.DataTypeName);
 
-        Result  := simpleAliasItem;
+          if not Assigned(Result) then
+          begin
+            Result  := TXMLDataBindingUnresolvedItem.Create(Self, AElement, AElement.DataTypeName, ifEnumeration);
+            ASchema.AddItem(Result);
+          end;
+        end else if simpleTypeDef.IsBuiltInType and AElement.IsGlobal then
+        begin
+          { The element is global, but only references a simple type. }
+          simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AElement, AElement.Name);
+          simpleAliasItem.DataType  := AElement.DataType;
+          ASchema.AddItem(simpleAliasItem);
+
+          Result  := simpleAliasItem;
+        end;
       end;
     end;
 
@@ -1239,15 +1243,20 @@ begin
             // #ToDo1 (MvR) 7-4-2008: check if an item with the "List" postfix
             //                        exists in the schema, as it could cause
             //                        conflicts.
+            // #ToDo1 (MvR) 30-7-2008: temporary implementation; have to check
+            //                         for proper functioning later.
+            collectionItem := FindInterface(ASchema, propertyItem.TranslatedName + CollectionPostfix, ifElement);
+            if not Assigned(collectionItem) then
+            begin
+              case propertyItem.PropertyType of
+                ptSimple: collectionName  := propertyItem.TranslatedName + CollectionPostfix;
+                ptItem:   collectionName  := propertyItem.TranslatedName + CollectionPostfix;
+              end;
 
-            case propertyItem.PropertyType of
-              ptSimple: collectionName  := propertyItem.TranslatedName + CollectionPostfix;
-              ptItem:   collectionName  := propertyItem.TranslatedName + CollectionPostfix;
+              collectionItem                := TXMLDataBindingInterface.Create(Self, propertyItem.SchemaItem, collectionName);
+              collectionItem.CollectionItem := propertyItem;
+              ASchema.InsertItem(collectionItem, interfaceItem);
             end;
-
-            collectionItem                := TXMLDataBindingInterface.Create(Self, propertyItem.SchemaItem, collectionName);
-            collectionItem.CollectionItem := propertyItem;
-            ASchema.InsertItem(collectionItem, interfaceItem);
 
             propertyItem.Collection       := collectionItem;
           end;

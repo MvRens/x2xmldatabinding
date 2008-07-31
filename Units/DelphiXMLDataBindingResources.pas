@@ -38,36 +38,36 @@ const
 
   DocumentBinding                 = 'GetDocBinding(''%<SourceName>:s'', TXML%<Name>:s, TargetNamespace) as IXML%<Name>:s';
 
-  DocumentFunctionsInterface      = '  function Get%<Name>:s(ADocument: IXMLDocument): IXML%<Name>:s;'      + CrLf +
-                                    '  function Load%<Name>:s(const AFileName: String): IXML%<Name>:s;'     + CrLf +
-                                    '  function Load%<Name>:sFromStream(AStream: TStream): IXML%<Name>:s;'  + CrLf +
-                                    '  function New%<Name>:s: IXML%<Name>:s;'                               + CrLf;
+  DocumentFunctionsInterface      = '  function Get%<Name>:s(ADocument: XMLIntf.IXMLDocument): IXML%<Name>:s;'  + CrLf +
+                                    '  function Load%<Name>:s(const AFileName: String): IXML%<Name>:s;'         + CrLf +
+                                    '  function Load%<Name>:sFromStream(AStream: TStream): IXML%<Name>:s;'      + CrLf +
+                                    '  function New%<Name>:s: IXML%<Name>:s;'                                   + CrLf;
 
-  DocumentFunctionsImplementation = 'function Get%<Name>:s(ADocument: IXMLDocument): IXML%<Name>:s;'        + CrLf +
-                                    'begin'                                                                 + CrLf +
-                                    '  Result := ADocument.' + DocumentBinding                              + CrLf +
-                                    'end;'                                                                  + CrLf +
-                                    ''                                                                      + CrLf +
-                                    'function Load%<Name>:s(const AFileName: String): IXML%<Name>:s;'       + CrLf +
-                                    'begin'                                                                 + CrLf +
-                                    '  Result := LoadXMLDocument(AFileName).' + DocumentBinding             + CrLf +
-                                    'end;'                                                                  + CrLf +
-                                    ''                                                                      + CrLf +
-                                    'function Load%<Name>:sFromStream(AStream: TStream): IXML%<Name>:s;'    + CrLf +
-                                    'var'                                                                   + CrLf +
-                                    '  doc: IXMLDocument;'                                                  + CrLf +
-                                    ''                                                                      + CrLf +
-                                    'begin'                                                                 + CrLf +
-                                    '  doc := NewXMLDocument;'                                              + CrLf +
-                                    '  doc.LoadFromStream(AStream);'                                        + CrLf +
-                                    '  Result  := Get%<Name>:s(doc);'                                       + CrLf +
-                                    'end;'                                                                  + CrLf +
-                                    ''                                                                      + CrLf +
-                                    'function New%<Name>:s: IXML%<Name>:s;'                                 + CrLf +
-                                    'begin'                                                                 + CrLf +
-                                    '  Result := NewXMLDocument.' + DocumentBinding                         + CrLf +
-                                    'end;'                                                                  + CrLf +
-                                    ''                                                                      + CrLf;
+  DocumentFunctionsImplementation = 'function Get%<Name>:s(ADocument: XMLIntf.IXMLDocument): IXML%<Name>:s;'  + CrLf +
+                                    'begin'                                                                   + CrLf +
+                                    '  Result := ADocument.' + DocumentBinding                                + CrLf +
+                                    'end;'                                                                    + CrLf +
+                                    ''                                                                        + CrLf +
+                                    'function Load%<Name>:s(const AFileName: String): IXML%<Name>:s;'         + CrLf +
+                                    'begin'                                                                   + CrLf +
+                                    '  Result := LoadXMLDocument(AFileName).' + DocumentBinding               + CrLf +
+                                    'end;'                                                                    + CrLf +
+                                    ''                                                                        + CrLf +
+                                    'function Load%<Name>:sFromStream(AStream: TStream): IXML%<Name>:s;'      + CrLf +
+                                    'var'                                                                     + CrLf +
+                                    '  doc: XMLIntf.IXMLDocument;'                                            + CrLf +
+                                    ''                                                                        + CrLf +
+                                    'begin'                                                                   + CrLf +
+                                    '  doc := NewXMLDocument;'                                                + CrLf +
+                                    '  doc.LoadFromStream(AStream);'                                          + CrLf +
+                                    '  Result  := Get%<Name>:s(doc);'                                         + CrLf +
+                                    'end;'                                                                    + CrLf +
+                                    ''                                                                        + CrLf +
+                                    'function New%<Name>:s: IXML%<Name>:s;'                                   + CrLf +
+                                    'begin'                                                                   + CrLf +
+                                    '  Result := NewXMLDocument.' + DocumentBinding                           + CrLf +
+                                    'end;'                                                                    + CrLf +
+                                    ''                                                                        + CrLf;
 
 
   PropertyIntfMethodGetOptional = '    function GetHas%<PropertyName>:s: Boolean;';
@@ -194,7 +194,7 @@ type
 
 
 const
-  SimpleTypeMapping:  array[0..10] of TTypeMapping =
+  SimpleTypeMapping:  array[0..11] of TTypeMapping =
                       (
                         (SchemaName:  'int';          DelphiName:  'Integer';     Conversion:    tcNone),
                         (SchemaName:  'integer';      DelphiName:  'Integer';     Conversion:    tcNone),
@@ -206,6 +206,7 @@ const
                         (SchemaName:  'double';       DelphiName:  'Double';      Conversion:    tcFloat),
                         (SchemaName:  'boolean';      DelphiName:  'Boolean';     Conversion:    tcBoolean),
                         (SchemaName:  'string';       DelphiName:  'WideString';  Conversion:    tcString),
+                        (SchemaName:  'anyURI';       DelphiName:  'WideString';  Conversion:    tcString),
                         (SchemaName:  'base64Binary'; DelphiName:  'WideString';  Conversion:    tcBase64)
                       );
 

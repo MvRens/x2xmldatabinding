@@ -780,50 +780,52 @@ begin
 
 
   hasPrototype  := False;
-    
+
   for propertyIndex := 0 to Pred(AItem.PropertyCount) do
   begin
     propertyItem  := AItem.Properties[propertyIndex];
 
-    if (not AItem.IsCollection) and Assigned(propertyItem.Collection) then
+    if propertyItem.PropertyType = ptItem then
     begin
-      WritePrototype;
-
-      { Inline collection }
-      if ASection = dxsImplementation then
-      begin
-        AStream.WriteLnNamedFmt('  RegisterChildNode(''%<ItemSourceName>:s'', %<ItemClass>:s);',
-                                ['ItemSourceName',      propertyItem.Name,
-                                 'ItemClass',           PrefixClass + propertyItem.TranslatedName]);
-
-        AStream.WriteLnNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'') as %<CollectionInterface>:s;',
-                                ['FieldName',           PrefixField + propertyItem.TranslatedName,
-                                 'CollectionClass',     PrefixClass + propertyItem.Collection.TranslatedName,
-                                 'CollectionInterface', PrefixInterface + propertyItem.Collection.TranslatedName,
-                                 'ItemInterface',       PrefixInterface + propertyItem.TranslatedName,
-                                 'ItemSourceName',      propertyItem.Name]);
-      end;
-    end else if (propertyItem.PropertyType = ptItem) and
-                ((not AItem.IsCollection) or
-                 (propertyItem <> AItem.CollectionItem)) then
-    begin
-      { Item property }
       itemProperty  := TXMLDataBindingItemProperty(propertyItem);
 
-      if Assigned(itemProperty.Item) and
-         (itemProperty.Item.ItemType = itInterface) then
+      if (not AItem.IsCollection) and Assigned(propertyItem.Collection) then
       begin
-        case ASection of
-          dxsClass:
-            WritePrototype;
-              
-          dxsImplementation:
-            begin
+        WritePrototype;
+
+        { Inline collection }
+        if ASection = dxsImplementation then
+        begin
+          AStream.WriteLnNamedFmt('  RegisterChildNode(''%<ItemSourceName>:s'', %<ItemClass>:s);',
+                                  ['ItemSourceName',      propertyItem.Name,
+                                   'ItemClass',           PrefixClass + itemProperty.Item.TranslatedName]);
+
+          AStream.WriteLnNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'') as %<CollectionInterface>:s;',
+                                  ['FieldName',           PrefixField + propertyItem.TranslatedName,
+                                   'CollectionClass',     PrefixClass + propertyItem.Collection.TranslatedName,
+                                   'CollectionInterface', PrefixInterface + propertyItem.Collection.TranslatedName,
+                                   'ItemInterface',       PrefixInterface + itemProperty.Item.TranslatedName,
+                                   'ItemSourceName',      propertyItem.Name]);
+        end;
+      end else if ((not AItem.IsCollection) or
+                   (propertyItem <> AItem.CollectionItem)) then
+      begin
+        { Item property }
+        if Assigned(itemProperty.Item) and
+           (itemProperty.Item.ItemType = itInterface) then
+        begin
+          case ASection of
+            dxsClass:
               WritePrototype;
-              AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s);',
-                                      ['SourceName', propertyItem.Name,
-                                       'Name',       itemProperty.Item.TranslatedName]);
-            end;
+
+            dxsImplementation:
+              begin
+                WritePrototype;
+                AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s);',
+                                        ['SourceName', propertyItem.Name,
+                                         'Name',       itemProperty.Item.TranslatedName]);
+              end;
+          end;
         end;
       end;
     end;
