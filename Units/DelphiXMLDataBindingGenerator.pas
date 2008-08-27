@@ -700,7 +700,7 @@ begin
         WriteDocumentation(AStream, AItem);
         AStream.WriteLnNamedFmt(InterfaceItemInterface,
                                 ['Name',        AItem.TranslatedName,
-                                 'ParentName',  parent]);                                 
+                                 'ParentName',  parent]);
         AStream.WriteLn('    ' + CreateNewGUID());
 
         WriteSchemaInterfaceProperties(AStream, AItem, ASection);

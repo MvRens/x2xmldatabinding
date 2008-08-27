@@ -1004,6 +1004,7 @@ var
   item:               TXMLDataBindingItem;
   complexAliasItem:   TXMLDataBindingComplexTypeAliasItem;
   simpleAliasItem:    TXMLDataBindingSimpleTypeAliasItem;
+  interfaceItem:      TXMLDataBindingInterface;
 
 begin
   for itemIndex := Pred(ASchema.ItemCount) downto 0 do
@@ -1017,7 +1018,16 @@ begin
           complexAliasItem  := TXMLDataBindingComplexTypeAliasItem(item);
           if Assigned(complexAliasItem.Item) then
           begin
-            ReplaceItem(complexAliasItem, complexAliasItem.Item);
+            // (MvR) 27-8-2008: instead, we allow the generation of an alias in
+            //                  code, so it can be used as a document element
+            // ReplaceItem(complexAliasItem, complexAliasItem.Item);
+
+            interfaceItem           := TXMLDataBindingInterface.Create(Self, complexAliasItem.SchemaItem, complexAliasItem.Name);
+            interfaceItem.BaseItem  := (complexAliasItem.Item as TXMLDataBindingInterface);
+            interfaceItem.BaseName  := complexAliasItem.Item.Name;
+            ASchema.AddItem(interfaceItem);
+
+            ReplaceItem(complexAliasItem, interfaceItem);
             FreeAndNil(complexAliasItem);
           end;
         end;

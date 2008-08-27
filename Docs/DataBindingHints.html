@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+<title>X&#178;XMLDataBinding - Het gebruik van Hints</title>
+<style type="text/css">
+body
+{
+  background-color: white;
+  color:            black;
+  font-family:      tahoma, verdana, arial, sans-serif;
+  font-size:        10pt;
+}
+
+h1
+{
+  font-size:        16pt;
+}
+
+h2
+{
+  font-size:        12pt;
+}
+
+p.todo
+{
+  background-color: transparent;
+  color:            gray;
+}
+
+p.example
+{
+  background-color: #f0f0f0;
+  border-color:     gray;
+  border-style:     solid;
+  border-width:     1px;
+  font-family:      monospace;
+  font-size:        8pt;
+  margin-left:      20px;
+  margin-right:     20px;
+  padding:          8px;
+  white-space:      pre;
+}
+
+ol.level1
+{
+  margin-bottom:    20px;
+}
+
+ol.level2
+{
+  list-style-type:  lower-alpha;
+  margin-left:      2em;
+}
+</style>
+</head>
+<body>
+
+<h1>Inhoudsopgave</h1>
+<ol class="level1">
+  <li>
+    <a href="#introduction">Introductie</a>
+  </li>
+  <li>
+    <a href="#general">Algemeen</a>
+    <ol class="level2">
+      <li><a href="#general-xpath">XPath</a></li>
+    </ol>
+  </li>
+  <li>
+    <a href="#elements">Elementen</a>
+    <ol class="level2">
+      <li><a href="#elements-enumerations">Enumerations</a></li>
+    </ol>
+  </li>
+</ol>
+
+<a name="introduction" /><h1>Introductie</h1>
+<p>
+  Bij het genereren van een XML Data Binding zijn er situaties waarin de geproduceerde code een paar kleine wijzigingen nodig heeft om er lekker mee te kunnen werken. Om te voorkomen dat deze wijzigingen na elke vertaling handmatig gedaan moeten worden is er ondersteuning voor een Hints bestand. Als het bronbestand "Input.xsd" heet moet het Hints bestand "Input.hints.xml" heten. Middels de knop "Generate blank Hints file" in de applicatie wordt er een kaal Hints bestand gegenereerd met de juiste target namespace.
+</p>
+
+<p>
+  De technische specificaties van het Hints bestand zijn beschreven in <a href="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd">DataBindingHints.xsd</a>.
+</p>
+
+<a name="general" /><h1>Algemeen</h1>
+<a name="general-xpath" /><h2>Gebruik van XPath</h2>
+<p>
+  Om te bepalen op welk element de hint van toepassing is wordt gebruik gemaakt van XPath. Tevens kan worden opgegeven op welke Schema deze XPath moet worden toegepast indien gebruik wordt gemaakt van includes of imports.
+</p>
+
+<p class="todo">
+  ToDo: uitzoeken en omschrijven hoe het Schema attribute ingevuld dient te worden. Volledig pad, bestandsnaam, excl. extensie, enz.
+</p>
+
+<p>
+  We nemen de volgende XSD als voorbeeld:
+</p>
+
+<p class="example">
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;xs:schema elementFormDefault=&quot;qualified&quot; xmlns:xs=&quot;http://www.w3.org/2001/XMLSchema&quot;&gt;
+  &lt;xs:simpleType name=&quot;Status&quot;&gt;
+    &lt;xs:restriction base=&quot;xs:string&quot;&gt;
+      &lt;xs:enumeration value=&quot;&quot; /&gt;
+      &lt;xs:enumeration value=&quot;De gegevens zijn verwerkt&quot; /&gt;
+      &lt;xs:enumeration value=&quot;Er was een probleem bij de verwerking&quot; /&gt;
+    &lt;/xs:restriction&gt;
+  &lt;/xs:simpleType&gt;
+&lt;/xs:schema&gt;
+</p>
+
+<p>
+  Een geldige XPath om het Status element te benoemen zou zijn:
+</p>
+
+<p class="example">
+//xs:simpleType[@name='Status']
+</p>
+
+<a name="elements" /><h1>Elementen</h1>
+
+</body>
+</html>
