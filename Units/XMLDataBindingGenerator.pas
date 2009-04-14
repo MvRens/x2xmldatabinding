@@ -603,6 +603,7 @@ var
   complexType:          IXMLComplexTypeDef;
   interfaceItem:        TXMLDataBindingInterface;
   elementIndex:         Integer;
+  attributeIndex:       Integer;
 
 begin
   schemaDef := ASchema.SchemaDef;
@@ -620,6 +621,9 @@ begin
 
     for elementIndex := 0 to Pred(complexType.ElementDefList.Count) do
       ProcessChildElement(ASchema, complexType.ElementDefList[elementIndex], interfaceItem);
+
+    for attributeIndex := 0 to Pred(complexType.AttributeDefs.Count) do
+      ProcessAttribute(ASchema, complexType.AttributeDefs[attributeIndex], interfaceItem);
   end;
 end;
 
