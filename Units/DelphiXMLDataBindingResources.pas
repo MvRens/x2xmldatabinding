@@ -92,11 +92,18 @@ const
                                   'end;'                                                                    + CrLf +
                                   ''                                                                        + CrLf;
 
+  PropertyImplMethodGetOptionalAttr = 'function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;'                + CrLf +
+                                      'begin'                                                                   + CrLf +
+                                      '  Result := Assigned(AttributeNodes.FindNode(''%<PropertySourceName>:s''));' + CrLf +
+                                      'end;'                                                                    + CrLf +
+                                      ''                                                                        + CrLf;
+
   PropertyImplMethodGetNil      = 'function TXML%<Name>:s.Get%<PropertyName>:sIsNil: Boolean;'                                + CrLf +
                                   'begin'                                                                                     + CrLf +
                                   '  Result := GetNodeIsNil(ChildNodes[''%<PropertySourceName>:s'']);'                        + CrLf +
                                   'end;'                                                                                      + CrLf +
                                   ''                                                                                          + CrLf;
+
   PropertyImplMethodSetNil      = 'procedure TXML%<Name>:s.Set%<PropertyName>:sIsNil(const Value: Boolean);'    + CrLf +
                                   'begin'                                                                       + CrLf +
                                   '  SetNodeIsNil(ChildNodes[''%<PropertySourceName>:s''], Value);'             + CrLf +

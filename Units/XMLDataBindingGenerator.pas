@@ -1272,7 +1272,7 @@ begin
               ASchema.InsertItem(collectionItem, interfaceItem);
             end;
 
-            propertyItem.Collection       := collectionItem;
+            propertyItem.Collection := collectionItem;
           end;
         end;
       end;

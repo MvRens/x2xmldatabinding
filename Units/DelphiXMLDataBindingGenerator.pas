@@ -289,7 +289,14 @@ var
 begin
   case AProperty.PropertyType of
     ptSimple:
-      Result := TranslateDataType(TXMLDataBindingSimpleProperty(AProperty).DataType);
+      if Assigned(AProperty.Collection) then
+      begin
+        if AInterfaceName then
+          Result := ItemInterface
+        else
+          Result := ItemClass;
+      end else
+        Result := TranslateDataType(TXMLDataBindingSimpleProperty(AProperty).DataType);
     ptItem:
       begin
         item  := TXMLDataBindingItemProperty(AProperty).Item;
@@ -785,30 +792,33 @@ begin
   begin
     propertyItem  := AItem.Properties[propertyIndex];
 
+    if (not AItem.IsCollection) and Assigned(propertyItem.Collection) then
+    begin
+      WritePrototype;
+
+      { Inline collection }
+      if ASection = dxsImplementation then
+      begin
+        if propertyItem.PropertyType = ptItem then
+          AStream.WriteLnNamedFmt('  RegisterChildNode(''%<ItemSourceName>:s'', %<ItemClass>:s);',
+                                  ['ItemSourceName',      propertyItem.Name,
+                                   'ItemClass',           GetDataTypeName(propertyItem, False)]);
+
+        AStream.WriteLnNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'') as %<CollectionInterface>:s;',
+                                ['FieldName',           PrefixField + propertyItem.TranslatedName,
+                                 'CollectionClass',     PrefixClass + propertyItem.Collection.TranslatedName,
+                                 'CollectionInterface', PrefixInterface + propertyItem.Collection.TranslatedName,
+                                 'ItemInterface',       GetDataTypeName(propertyItem, True),
+                                 'ItemSourceName',      propertyItem.Name]);
+      end;
+    end;
+
     if propertyItem.PropertyType = ptItem then
     begin
       itemProperty  := TXMLDataBindingItemProperty(propertyItem);
 
-      if (not AItem.IsCollection) and Assigned(propertyItem.Collection) then
-      begin
-        WritePrototype;
-
-        { Inline collection }
-        if ASection = dxsImplementation then
-        begin
-          AStream.WriteLnNamedFmt('  RegisterChildNode(''%<ItemSourceName>:s'', %<ItemClass>:s);',
-                                  ['ItemSourceName',      propertyItem.Name,
-                                   'ItemClass',           PrefixClass + itemProperty.Item.TranslatedName]);
-
-          AStream.WriteLnNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'') as %<CollectionInterface>:s;',
-                                  ['FieldName',           PrefixField + propertyItem.TranslatedName,
-                                   'CollectionClass',     PrefixClass + propertyItem.Collection.TranslatedName,
-                                   'CollectionInterface', PrefixInterface + propertyItem.Collection.TranslatedName,
-                                   'ItemInterface',       PrefixInterface + itemProperty.Item.TranslatedName,
-                                   'ItemSourceName',      propertyItem.Name]);
-        end;
-      end else if ((not AItem.IsCollection) or
-                   (propertyItem <> AItem.CollectionItem)) then
+      if (not AItem.IsCollection) or
+         (propertyItem <> AItem.CollectionItem) then
       begin
         { Item property }
         if Assigned(itemProperty.Item) and
@@ -945,8 +955,8 @@ begin
     ptSimple:
       begin
         dataTypeName  := TranslateDataType(TXMLDataBindingSimpleProperty(AItem.CollectionItem).DataType);
-        dataClassName := 'TXMLNode';
-        dataIntfName  := 'IXMLNode';
+        dataClassName := ItemClass;
+        dataIntfName  := ItemInterface;
       end;
     ptItem:
       begin
@@ -1215,9 +1225,11 @@ begin
               begin
                 WriteNewLine;
 
-                // #ToDo1 (MvR) 21-4-2008: optional attributes!
                 if writeOptional then
-                  sourceCode.Add(PropertyImplMethodGetOptional);
+                  if AProperty.IsAttribute then
+                    sourceCode.Add(PropertyImplMethodGetOptionalAttr)
+                  else
+                    sourceCode.Add(PropertyImplMethodGetOptional);
 
                 if writeNil then
                   sourceCode.Add(PropertyImplMethodGetNil);
@@ -1229,10 +1241,16 @@ begin
 
                 case AProperty.PropertyType of
                   ptSimple:
-                    sourceCode.Add(XMLToNativeDataType('Result',
-                                                       '%<PropertySourceName>:s',
-                                                       TXMLDataBindingSimpleProperty(AProperty).DataType,
-                                                       GetDelphiNodeType(AProperty)));
+                    if Assigned(AProperty.Collection) then
+                    begin
+                      sourceCode.Add('begin');
+                      sourceCode.Add('  Result := %<FieldName>:s;');
+                      sourceCode.Add('end;');
+                    end else
+                      sourceCode.Add(XMLToNativeDataType('Result',
+                                                         '%<PropertySourceName>:s',
+                                                         TXMLDataBindingSimpleProperty(AProperty).DataType,
+                                                         GetDelphiNodeType(AProperty)));
 
                   ptItem:
                     begin
