@@ -1,7 +1,7 @@
 {
   X2Software XML Data Binding
 
-    Generated on:   14-5-2008 11:21:00
+    Generated on:   29-9-2009 14:31:13
     Generated from: P:\test\XMLDataBinding\XSD\DataBindingHints.xsd
 }
 unit DataBindingHintsXML;
@@ -22,19 +22,23 @@ type
   IXMLDocumentElement = interface;
   IXMLInterfaces = interface;
   IXMLInterfaceName = interface;
+  IXMLProperties = interface;
+  IXMLPropertyName = interface;
 
   { Interfaces for DataBindingHints }
   {
     Contains hints and mappings for the data binding output
   }
   IXMLDataBindingHints = interface(IXMLNode)
-    ['{D2B7C152-7F8F-4B0F-9270-7330351B8D4E}']
+    ['{434CBC09-8E33-4970-9C4A-535B4C898185}']
     function GetHasEnumerations: Boolean;
     function GetEnumerations: IXMLEnumerations;
     function GetHasDocumentElements: Boolean;
     function GetDocumentElements: IXMLDocumentElements;
     function GetHasInterfaces: Boolean;
     function GetInterfaces: IXMLInterfaces;
+    function GetHasProperties: Boolean;
+    function GetProperties: IXMLProperties;
 
     property HasEnumerations: Boolean read GetHasEnumerations;
     property Enumerations: IXMLEnumerations read GetEnumerations;
@@ -42,10 +46,12 @@ type
     property DocumentElements: IXMLDocumentElements read GetDocumentElements;
     property HasInterfaces: Boolean read GetHasInterfaces;
     property Interfaces: IXMLInterfaces read GetInterfaces;
+    property HasProperties: Boolean read GetHasProperties;
+    property Properties: IXMLProperties read GetProperties;
   end;
 
   IXMLEnumerations = interface(IXMLNodeCollection)
-    ['{1D5E90E0-06DD-4476-BA73-0753D35B6193}']
+    ['{115ECCB0-407B-476E-AA99-63F584F883F7}']
     function Get_Enumeration(Index: Integer): IXMLEnumeration;
     function Add: IXMLEnumeration;
     function Insert(Index: Integer): IXMLEnumeration;
@@ -54,7 +60,7 @@ type
   end;
 
   IXMLEnumeration = interface(IXMLNodeCollection)
-    ['{07097378-D346-4809-B0A2-86C4BA09C124}']
+    ['{4B776A26-325C-4589-8F5B-88E2EE86DEC6}']
     function Get_Member(Index: Integer): IXMLMember;
     function Add: IXMLMember;
     function Insert(Index: Integer): IXMLMember;
@@ -72,7 +78,7 @@ type
   end;
 
   IXMLMember = interface(IXMLNode)
-    ['{A5C711D5-FEC5-4490-A36B-A2687AB39748}']
+    ['{2575F0F6-EDCA-4CC6-B532-94833BCFAB64}']
     function GetName: WideString;
 
     procedure SetName(const Value: WideString);
@@ -85,7 +91,7 @@ type
     a Document Element.
   }
   IXMLDocumentElements = interface(IXMLNodeCollection)
-    ['{E6C9CBB2-7457-4597-939D-AAE9B1C5F42B}']
+    ['{8D3A5543-68FF-4101-9874-639A39E33950}']
     function Get_DocumentElement(Index: Integer): IXMLDocumentElement;
     function Add: IXMLDocumentElement;
     function Insert(Index: Integer): IXMLDocumentElement;
@@ -94,7 +100,7 @@ type
   end;
 
   IXMLDocumentElement = interface(IXMLNode)
-    ['{93F6182F-4E03-420A-8E84-49F33DC29FA3}']
+    ['{3DFD0655-26DA-4237-ACEC-BB7CB3354DD2}']
     function GetSchema: WideString;
     function GetXPath: WideString;
 
@@ -106,7 +112,7 @@ type
   end;
 
   IXMLInterfaces = interface(IXMLNodeCollection)
-    ['{A18D3AFF-24FC-45FD-9583-15D9292249D2}']
+    ['{E70E67E3-C108-4015-B996-962D800BE555}']
     function Get_InterfaceName(Index: Integer): IXMLInterfaceName;
     function Add: IXMLInterfaceName;
     function Insert(Index: Integer): IXMLInterfaceName;
@@ -115,15 +121,34 @@ type
   end;
 
   IXMLInterfaceName = interface(IXMLNode)
-    ['{EB24ED8F-0D81-48D5-A420-438CAE003A23}']
-    function GetHasSchema: Boolean;
+    ['{2B8126E7-2F89-4E5D-89E3-4F5F7AEE35E9}']
     function GetSchema: WideString;
     function GetXPath: WideString;
 
     procedure SetSchema(const Value: WideString);
     procedure SetXPath(const Value: WideString);
 
-    property HasSchema: Boolean read GetHasSchema;
+    property Schema: WideString read GetSchema write SetSchema;
+    property XPath: WideString read GetXPath write SetXPath;
+  end;
+
+  IXMLProperties = interface(IXMLNodeCollection)
+    ['{88260AE1-1C40-4F0F-AA44-C61EDAA53B38}']
+    function Get_PropertyName(Index: Integer): IXMLPropertyName;
+    function Add: IXMLPropertyName;
+    function Insert(Index: Integer): IXMLPropertyName;
+
+    property PropertyName[Index: Integer]: IXMLPropertyName read Get_PropertyName; default;
+  end;
+
+  IXMLPropertyName = interface(IXMLNode)
+    ['{DB714E5D-E62B-44C4-B7D4-0623887BCDF6}']
+    function GetSchema: WideString;
+    function GetXPath: WideString;
+
+    procedure SetSchema(const Value: WideString);
+    procedure SetXPath(const Value: WideString);
+
     property Schema: WideString read GetSchema write SetSchema;
     property XPath: WideString read GetXPath write SetXPath;
   end;
@@ -140,6 +165,8 @@ type
     function GetDocumentElements: IXMLDocumentElements;
     function GetHasInterfaces: Boolean;
     function GetInterfaces: IXMLInterfaces;
+    function GetHasProperties: Boolean;
+    function GetProperties: IXMLProperties;
   end;
 
   TXMLEnumerations = class(TXMLNodeCollection, IXMLEnumerations)
@@ -202,7 +229,24 @@ type
 
   TXMLInterfaceName = class(TXMLNode, IXMLInterfaceName)
   protected
-    function GetHasSchema: Boolean;
+    function GetSchema: WideString;
+    function GetXPath: WideString;
+
+    procedure SetSchema(const Value: WideString);
+    procedure SetXPath(const Value: WideString);
+  end;
+
+  TXMLProperties = class(TXMLNodeCollection, IXMLProperties)
+  public
+    procedure AfterConstruction; override;
+  protected
+    function Get_PropertyName(Index: Integer): IXMLPropertyName;
+    function Add: IXMLPropertyName;
+    function Insert(Index: Integer): IXMLPropertyName;
+  end;
+
+  TXMLPropertyName = class(TXMLNode, IXMLPropertyName)
+  protected
     function GetSchema: WideString;
     function GetXPath: WideString;
 
@@ -212,7 +256,7 @@ type
 
 
   { Document functions }
-  function GetDataBindingHints(ADocument: IXMLDocument): IXMLDataBindingHints;
+  function GetDataBindingHints(ADocument: XMLIntf.IXMLDocument): IXMLDataBindingHints;
   function LoadDataBindingHints(const AFileName: String): IXMLDataBindingHints;
   function LoadDataBindingHintsFromStream(AStream: TStream): IXMLDataBindingHints;
   function NewDataBindingHints: IXMLDataBindingHints;
@@ -227,7 +271,7 @@ uses
   SysUtils;
 
 { Document functions }
-function GetDataBindingHints(ADocument: IXMLDocument): IXMLDataBindingHints;
+function GetDataBindingHints(ADocument: XMLIntf.IXMLDocument): IXMLDataBindingHints;
 begin
   Result := ADocument.GetDocBinding('DataBindingHints', TXMLDataBindingHints, TargetNamespace) as IXMLDataBindingHints
 end;
@@ -239,7 +283,7 @@ end;
 
 function LoadDataBindingHintsFromStream(AStream: TStream): IXMLDataBindingHints;
 var
-  doc: IXMLDocument;
+  doc: XMLIntf.IXMLDocument;
 
 begin
   doc := NewXMLDocument;
@@ -260,6 +304,7 @@ begin
   RegisterChildNode('Enumerations', TXMLEnumerations);
   RegisterChildNode('DocumentElements', TXMLDocumentElements);
   RegisterChildNode('Interfaces', TXMLInterfaces);
+  RegisterChildNode('Properties', TXMLProperties);
   inherited;
 end;
 
@@ -294,6 +339,17 @@ end;
 function TXMLDataBindingHints.GetInterfaces: IXMLInterfaces;
 begin
   Result := (ChildNodes['Interfaces'] as IXMLInterfaces);
+end;
+
+function TXMLDataBindingHints.GetHasProperties: Boolean;
+begin
+  Result := Assigned(ChildNodes.FindNode('Properties'));
+end;
+
+
+function TXMLDataBindingHints.GetProperties: IXMLProperties;
+begin
+  Result := (ChildNodes['Properties'] as IXMLProperties);
 end;
 
 procedure TXMLEnumerations.AfterConstruction;
@@ -446,12 +502,6 @@ begin
   Result := (AddItem(Index) as IXMLInterfaceName);
 end;
 
-function TXMLInterfaceName.GetHasSchema: Boolean;
-begin
-  Result := Assigned(ChildNodes.FindNode('Schema'));
-end;
-
-
 function TXMLInterfaceName.GetSchema: WideString;
 begin
   Result := AttributeNodes['Schema'].Text;
@@ -468,6 +518,51 @@ begin
 end;
 
 procedure TXMLInterfaceName.SetXPath(const Value: WideString);
+begin
+  SetAttribute('XPath', Value);
+end;
+
+procedure TXMLProperties.AfterConstruction;
+begin
+  RegisterChildNode('PropertyName', TXMLPropertyName);
+
+  ItemTag := 'PropertyName';
+  ItemInterface := IXMLPropertyName;
+
+  inherited;
+end;
+
+function TXMLProperties.Get_PropertyName(Index: Integer): IXMLPropertyName;
+begin
+  Result := (List[Index] as IXMLPropertyName);
+end;
+
+function TXMLProperties.Add: IXMLPropertyName;
+begin
+  Result := (AddItem(-1) as IXMLPropertyName);
+end;
+
+function TXMLProperties.Insert(Index: Integer): IXMLPropertyName;
+begin
+  Result := (AddItem(Index) as IXMLPropertyName);
+end;
+
+function TXMLPropertyName.GetSchema: WideString;
+begin
+  Result := AttributeNodes['Schema'].Text;
+end;
+
+function TXMLPropertyName.GetXPath: WideString;
+begin
+  Result := AttributeNodes['XPath'].Text;
+end;
+
+procedure TXMLPropertyName.SetSchema(const Value: WideString);
+begin
+  SetAttribute('Schema', Value);
+end;
+
+procedure TXMLPropertyName.SetXPath(const Value: WideString);
 begin
   SetAttribute('XPath', Value);
 end;

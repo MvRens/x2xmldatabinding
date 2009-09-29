@@ -82,6 +82,10 @@ object MainForm: TMainForm
       TabOrder = 2
       object spFile: TTabSheet
         TabVisible = False
+        ExplicitLeft = 0
+        ExplicitTop = 0
+        ExplicitWidth = 0
+        ExplicitHeight = 0
         object lblFile: TLabel
           Left = 8
           Top = 7
@@ -103,6 +107,10 @@ object MainForm: TMainForm
       end
       object spFolder: TTabSheet
         TabVisible = False
+        ExplicitLeft = 0
+        ExplicitTop = 0
+        ExplicitWidth = 0
+        ExplicitHeight = 0
         DesignSize = (
           408
           85)

@@ -89,7 +89,8 @@ uses
 
 
 type
-  TProtectedXMLDataBindingItem  = class(TXMLDataBindingItem);
+  TProtectedXMLDataBindingItem      = class(TXMLDataBindingItem);
+  TProtectedXMLDataBindingProperty  = class(TXMLDataBindingProperty);
 
   THintsDelphiXMLDataBindingGenerator = class(TDelphiXMLDataBindingGenerator)
   private
@@ -102,6 +103,7 @@ type
     procedure ProcessEnumerations;
     procedure ProcessDocumentElements;
     procedure ProcessInterfaces;
+    procedure ProcessProperties;
 
     function FindSchema(const ASchemaName: String; out ASchema: TXMLDataBindingSchema): Boolean;
     function FindNode(const ASchemaName, AXPath: String; out AItem: TXMLDataBindingItem): Boolean;
@@ -391,6 +393,9 @@ begin
 
   if Hints.HasInterfaces then
     ProcessInterfaces;
+
+  if Hints.HasProperties then
+    ProcessProperties;
 end;
 
 
@@ -482,6 +487,26 @@ begin
 end;
 
 
+procedure THintsDelphiXMLDataBindingGenerator.ProcessProperties;
+var
+  itemIndex:    Integer;
+  propertyName: IXMLPropertyName;
+  schemaItem:   TXMLDataBindingItem;
+
+begin
+  for itemIndex := 0 to Pred(Hints.Properties.Count) do
+  begin
+    propertyName := Hints.Properties[itemIndex];
+
+    if FindNode(propertyName.Schema, propertyName.XPath, schemaItem) then
+    begin
+      if schemaItem.ItemType = itProperty then
+        schemaItem.TranslatedName := propertyName.Text;
+    end;
+  end;
+end;
+
+
 function THintsDelphiXMLDataBindingGenerator.FindSchema(const ASchemaName: String; out ASchema: TXMLDataBindingSchema): Boolean;
 var
   schemaIndex:  Integer;
@@ -557,11 +582,14 @@ function THintsDelphiXMLDataBindingGenerator.FindNode(const ASchemaName, AXPath:
 
 
 var
-  schema:       TXMLDataBindingSchema;
-  schemaItem:   IDOMNode;
-  item:         TProtectedXMLDataBindingItem;
-  itemIndex:    Integer;
-  domDocument:  IXMLDOMDocument2;
+  schema:         TXMLDataBindingSchema;
+  schemaItem:     IDOMNode;
+  item:           TProtectedXMLDataBindingItem;
+  itemIndex:      Integer;
+  domDocument:    IXMLDOMDocument2;
+  interfaceItem:  TXMLDataBindingInterface;
+  propertyIndex:  Integer;
+  propertyItem:   TProtectedXMLDataBindingProperty;
 
 begin
   Result  := False;
@@ -584,8 +612,25 @@ begin
         begin
           AItem   := schema.Items[itemIndex];
           Result  := True;
-          Break;
+        end else if item.ItemType = itInterface then
+        begin
+          interfaceItem := TXMLDataBindingInterface(item);
+
+          for propertyIndex := 0 to Pred(interfaceItem.PropertyCount) do
+          begin
+            propertyItem  := TProtectedXMLDataBindingProperty(interfaceItem.Properties[propertyIndex]);
+
+            if Assigned(propertyItem.SchemaItem) and SameNode(propertyItem.SchemaItem.DOMNode, schemaItem) then
+            begin
+              AItem   := propertyItem;
+              Result  := True;
+              Break;
+            end;
+          end;
         end;
+
+        if Result then
+          Break;
       end;
     end;
   end;

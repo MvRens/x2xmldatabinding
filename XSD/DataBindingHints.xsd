@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema targetNamespace="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<!-- edited with XML Spy v4.3 U (http://www.xmlspy.com) by J.A. Goos (Uname IT we build it) -->
+<xs:schema targetNamespace="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd" xmlns:tns="http://www.x2software.net/xsd/databinding/DataBindingHints.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:element name="DataBindingHints">
 		<xs:annotation>
 			<xs:documentation>Contains hints and mappings for the data binding output</xs:documentation>
@@ -51,10 +52,22 @@
 								<xs:complexType>
 									<xs:simpleContent>
 										<xs:extension base="xs:string">
-											<xs:attribute name="Schema" type="xs:string" use="optional"/>
+											<xs:attribute name="Schema" type="xs:string" use="required"/>
 											<xs:attribute name="XPath" type="xs:string" use="required"/>
 										</xs:extension>
 									</xs:simpleContent>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="Properties" minOccurs="0">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="PropertyName" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:attribute name="Schema" type="xs:string" use="required"/>
+									<xs:attribute name="XPath" type="xs:string" use="required"/>
 								</xs:complexType>
 							</xs:element>
 						</xs:sequence>
