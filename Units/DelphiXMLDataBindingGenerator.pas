@@ -675,9 +675,6 @@ var
   parent:     String;
 
 begin
-  if AItem.Name = 'KeyStrokesType' then
-    asm int 3 end;
-
   if ASection in [dxsInterface, dxsClass] then
   begin
     { Ensure the base item is completely defined first, Delphi doesn't allow
