@@ -23,7 +23,7 @@ uses
   cxTextEdit,
 
   DataBindingHintsXML,
-  XMLDataBindingGenerator;
+  XMLDataBindingGenerator, cxGraphics, cxLookAndFeelPainters;
 
 
 type
@@ -472,6 +472,7 @@ var
   itemIndex:        Integer;
   interfaceName:    IXMLInterfaceName;
   schemaItem:       TXMLDataBindingItem;
+  propertyItem: TXMLDataBindingProperty;
 
 begin
   for itemIndex := 0 to Pred(Hints.Interfaces.Count) do
@@ -480,8 +481,18 @@ begin
 
     if FindNode(interfaceName.Schema, interfaceName.XPath, schemaItem) then
     begin
-      if schemaItem.ItemType in [itInterface, itEnumeration] then
-        schemaItem.TranslatedName := interfaceName.Text;
+      case schemaItem.ItemType of
+        itInterface,
+        itEnumeration:
+          schemaItem.TranslatedName := interfaceName.Text;
+
+        itProperty:
+          begin
+            propertyItem := TXMLDataBindingProperty(schemaItem);
+            if propertyItem.PropertyType = ptItem then
+              TXMLDataBindingItemProperty(propertyItem).Item.TranslatedName := interfaceName.Text;
+          end;
+      end;
     end;
   end;
 end;
