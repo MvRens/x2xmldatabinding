@@ -11,12 +11,12 @@ type
     FStream:      TStream;
   public
     constructor Create(AStream: TStream; AOwnership: TStreamOwnership = soReference);
-    destructor Destroy(); override;
+    destructor Destroy; override;
 
     function ReadString(ASize: Integer = -1): String;
-    function ReadInteger(): Integer;
-    function ReadDateTime(): TDateTime;
-    function ReadBoolean(): Boolean;
+    function ReadInteger: Integer;
+    function ReadDateTime: TDateTime;
+    function ReadBoolean: Boolean;
 
     procedure Write(const ASource: String);
     procedure WriteLn(const ASource: String = '');
@@ -47,11 +47,11 @@ begin
   FOwnership  := AOwnership;
   FStream     := AStream;
 
-  inherited Create();
+  inherited Create;
 end;
 
 
-destructor TStreamHelper.Destroy();
+destructor TStreamHelper.Destroy;
 begin
   if FOwnership = soOwned then
     FreeAndNil(FStream);
@@ -66,7 +66,7 @@ var
 
 begin
   if ASize = -1 then
-    iSize := ReadInteger()
+    iSize := ReadInteger
   else
     iSize := ASize;
 
@@ -75,19 +75,19 @@ begin
 end;
 
 
-function TStreamHelper.ReadInteger(): Integer;
+function TStreamHelper.ReadInteger: Integer;
 begin
   FStream.Read(Result, SizeOf(Integer));
 end;
 
 
-function TStreamHelper.ReadDateTime(): TDateTime;
+function TStreamHelper.ReadDateTime: TDateTime;
 begin
   FStream.Read(Result, SizeOf(TDateTime));
 end;
 
 
-function TStreamHelper.ReadBoolean(): Boolean;
+function TStreamHelper.ReadBoolean: Boolean;
 begin
   FStream.Read(Result, SizeOf(Boolean));
 end;
@@ -158,5 +158,4 @@ begin
 end;
 
 end.
-
 

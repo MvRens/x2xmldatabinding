@@ -62,7 +62,7 @@ type
     procedure feSchemaPropertiesChange(Sender: TObject);
     procedure btnHintsClick(Sender: TObject);
   private
-    function CheckValidSchemaFile(): Boolean;
+    function CheckValidSchemaFile: Boolean;
     function CheckReadOnly(const AFileName: String): Boolean;
 
     procedure GetFileName(Sender: TObject; const SchemaName: String; var Path, FileName: String);
@@ -123,7 +123,7 @@ var
 begin
   plOutput.ActivePageIndex := 0;
 
-  if ParamCount() > 0 then
+  if ParamCount > 0 then
   begin
     schemaFile  := ParamStr(1);
 
@@ -156,7 +156,7 @@ var
   generator:      THintsDelphiXMLDataBindingGenerator;
 
 begin
-  if not CheckValidSchemaFile() then
+  if not CheckValidSchemaFile then
     Exit;
 
   hintsFile := ChangeFileExt(feSchema.Text, '.hints.xml');
@@ -164,7 +164,7 @@ begin
     hints := LoadDataBindingHints(hintsFile);
 
   try
-    generator := THintsDelphiXMLDataBindingGenerator.Create();
+    generator := THintsDelphiXMLDataBindingGenerator.Create;
     try
       generator.Hints := hints;
 
@@ -198,7 +198,7 @@ end;
 
 procedure TMainForm.btnCloseClick(Sender: TObject);
 begin
-  Close();
+  Close;
 end;
 
 
@@ -212,7 +212,7 @@ end;
 
 procedure TMainForm.feFilePropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
 begin
-  if dlgOutputFile.Execute() then
+  if dlgOutputFile.Execute then
     feFile.Text := dlgOutputFile.FileName;
 end;
 
@@ -229,7 +229,7 @@ end;
 
 procedure TMainForm.feSchemaPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
 begin
-  if dlgSchema.Execute() then
+  if dlgSchema.Execute then
     feSchema.Text := dlgSchema.FileName;
 end;
 
@@ -296,7 +296,7 @@ begin
   if FileExists(fileName) then
     settings  := LoadDataBindingSettings(fileName)
   else
-    settings  := NewDataBindingSettings();
+    settings  := NewDataBindingSettings;
 
   settings.Output.ChildNodes.Clear;
 
@@ -318,7 +318,7 @@ begin
 end;
 
 
-function TMainForm.CheckValidSchemaFile(): Boolean;
+function TMainForm.CheckValidSchemaFile: Boolean;
 begin
   Result := FileExists(feSchema.Text);
 
@@ -356,7 +356,7 @@ var
   hints:      IXMLDataBindingHints;
 
 begin
-  if CheckValidSchemaFile() then
+  if CheckValidSchemaFile then
   begin
     hintsFile := ChangeFileExt(feSchema.Text, '.hints.xml');
     if FileExists(hintsFile) then
@@ -366,7 +366,7 @@ begin
         Exit;
     end;
 
-    hints := NewDataBindingHints();
+    hints := NewDataBindingHints;
     hints.OwnerDocument.SaveToFile(hintsFile);
     ShowMessage('The hints file has been generated.');
   end;
@@ -648,5 +648,4 @@ begin
 end;
 
 end.
-
 

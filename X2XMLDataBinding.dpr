@@ -3,6 +3,7 @@ program X2XMLDataBinding;
 {$WARN SYMBOL_PLATFORM OFF}
 
 uses
+  VistaManAsInvoker,
   Forms,
   MainFrm in 'Forms\MainFrm.pas' {MainForm},
   XMLDataBindingGenerator in 'Units\XMLDataBindingGenerator.pas',

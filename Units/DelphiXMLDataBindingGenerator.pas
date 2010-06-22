@@ -22,7 +22,7 @@ type
     function GetItem(Index: Integer): TXMLDataBindingSchema;
     procedure SetItem(Index: Integer; const Value: TXMLDataBindingSchema);
   public
-    constructor Create();
+    constructor Create;
 
     property Items[Index: Integer]: TXMLDataBindingSchema read GetItem  write SetItem; default;
   end;
@@ -35,7 +35,7 @@ type
 
     FOnGetFileName:   TGetFileNameEvent;
   protected
-    procedure GenerateDataBinding(); override;
+    procedure GenerateDataBinding; override;
     procedure GenerateOutputFile(ASchemaList: TXMLSchemaList; const ASourceFileName, AUnitName: String);
     function GenerateUsesClause(ASchemaList: TXMLSchemaList): String;
 
@@ -48,7 +48,7 @@ type
     function GetDataTypeMapping(ADataType: IXMLTypeDef; out ATypeMapping: TTypeMapping): Boolean;
     function GetDataTypeName(AProperty: TXMLDataBindingProperty; AInterfaceName: Boolean): String;
     function TranslateDataType(ADataType: IXMLTypeDef): String;
-    function CreateNewGUID(): String;
+    function CreateNewGUID: String;
 
     procedure WriteUnitHeader(AStream: TStreamHelper; const ASourceFileName, AFileName: String);
     procedure WriteSection(AStream: TStreamHelper; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
@@ -88,7 +88,7 @@ uses
 
 
 { TDelphiXMLDataBindingGenerator }
-procedure TDelphiXMLDataBindingGenerator.GenerateDataBinding();
+procedure TDelphiXMLDataBindingGenerator.GenerateDataBinding;
 var
   schemaList:   TXMLSchemaList;
   schemaIndex:  Integer;
@@ -96,7 +96,7 @@ var
   unitName:     String;
   
 begin
-  schemaList  := TXMLSchemaList.Create();
+  schemaList  := TXMLSchemaList.Create;
   try
     case OutputType of
       otSingle:
@@ -110,7 +110,7 @@ begin
 
       otMultiple:
         begin
-          FUnitNames  := TX2OSHash.Create();
+          FUnitNames  := TX2OSHash.Create;
           try
             for schemaIndex := 0 to Pred(SchemaCount) do
             begin
@@ -122,7 +122,7 @@ begin
             begin
               schema  := Schemas[schemaIndex];
 
-              schemaList.Clear();
+              schemaList.Clear;
               schemaList.Add(schema);
 
               unitName  := FUnitNames[schema];
@@ -158,12 +158,12 @@ begin
                              ['UsesClause', usesClause]);
     WriteSection(unitStream, dxsForward, ASchemaList);
 
-    FProcessedItems := TX2OIHash.Create();
+    FProcessedItems := TX2OIHash.Create;
     try
-      FProcessedItems.Clear();
+      FProcessedItems.Clear;
       WriteSection(unitStream, dxsInterface, ASchemaList);
 
-      FProcessedItems.Clear();
+      FProcessedItems.Clear;
       WriteSection(unitStream, dxsClass, ASchemaList);
     finally
       FreeAndNil(FProcessedItems);
@@ -441,7 +441,7 @@ begin
             hasItem := True;
           end;
 
-          with TNamedFormatStringList.Create() do
+          with TNamedFormatStringList.Create do
           try
             case ASection of
               dxsInterface:         Add(DocumentFunctionsInterface);
@@ -451,10 +451,10 @@ begin
             AStream.Write(Format(['SourceName', interfaceItem.Name,
                                   'Name',       interfaceItem.TranslatedName]));
           finally
-            Free();
+            Free;
           end;
 
-          AStream.WriteLn();
+          AStream.WriteLn;
         end;
       end;
     end;
@@ -464,8 +464,8 @@ begin
   begin
     AStream.WriteLn('const');
     AStream.WriteLnFmt('  TargetNamespace = ''%s'';', [nameSpace]);
-    AStream.WriteLn();
-    AStream.WriteLn();
+    AStream.WriteLn;
+    AStream.WriteLn;
   end;
 end;
 
@@ -529,7 +529,7 @@ begin
         if ASection = dxsInterface then
           indent  := '  ';
 
-        sourceCode  := TNamedFormatStringList.Create();
+        sourceCode  := TNamedFormatStringList.Create;
         try
           sourceCode.Add(indent + 'function StringTo%<ItemName>:s(const AValue: WideString): %<DataType>:s;');
 
@@ -640,7 +640,7 @@ begin
   if not AItem.HasDocumentation then
     exit;
 
-  lines := TStringList.Create();
+  lines := TStringList.Create;
   try
     documentation := AItem.Documentation;
 
@@ -708,12 +708,12 @@ begin
         AStream.WriteLnNamedFmt(InterfaceItemInterface,
                                 ['Name',        AItem.TranslatedName,
                                  'ParentName',  parent]);
-        AStream.WriteLn('    ' + CreateNewGUID());
+        AStream.WriteLn('    ' + CreateNewGUID);
 
         WriteSchemaInterfaceProperties(AStream, AItem, ASection);
 
         AStream.WriteLn('  end;');
-        AStream.WriteLn();
+        AStream.WriteLn;
       end;
 
     dxsClass:
@@ -733,7 +733,7 @@ begin
         WriteSchemaInterfaceProperties(AStream, AItem, ASection);
 
         AStream.WriteLn('  end;');
-        AStream.WriteLn();
+        AStream.WriteLn;
       end;
 
     dxsImplementation:
@@ -749,7 +749,7 @@ var
   hasPrototype:       Boolean;
 
 
-  procedure WritePrototype();
+  procedure WritePrototype;
   begin
     if not hasPrototype then
     begin
@@ -977,7 +977,7 @@ begin
       end;
   end;
 
-  sourceCode    := TNamedFormatStringList.Create();
+  sourceCode    := TNamedFormatStringList.Create;
   try
     case ASection of
       dxsInterface,
@@ -1149,7 +1149,7 @@ begin
     Exit;
 
 
-  sourceCode  := TNamedFormatStringList.Create();
+  sourceCode  := TNamedFormatStringList.Create;
   try
     case ASection of
       dxsInterface,
@@ -1235,7 +1235,10 @@ begin
                   sourceCode.Add(PropertyImplMethodGetNil);
 
                 if writeTextProp then
-                  sourceCode.Add(PropertyImplMethodGetText);
+                  if AProperty.IsAttribute then
+                    sourceCode.Add(PropertyImplMethodGetTextAttr)
+                  else
+                    sourceCode.Add(PropertyImplMethodGetText);
 
                 sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:s: %<DataType>:s;');
 
@@ -1294,7 +1297,10 @@ begin
                   sourceCode.Add(PropertyImplMethodSetNil);
 
                 if writeTextProp then
-                  sourceCode.Add(PropertyImplMethodSetText);
+                  if AProperty.IsAttribute then
+                    sourceCode.Add(PropertyImplMethodSetTextAttr)
+                  else
+                    sourceCode.Add(PropertyImplMethodSetText);
 
                 sourceCode.Add('procedure TXML%<Name>:s.Set%<PropertyName>:s(const Value: %<DataType>:s);');
                 value := '%<PropertySourceName>:s';
@@ -1394,11 +1400,11 @@ begin
     if memberIndex < Pred(AItem.MemberCount) then
       AStream.WriteLn(',')
     else
-      AStream.WriteLn();
+      AStream.WriteLn;
   end;
 
   AStream.WriteLn(lineIndent + ');');
-  AStream.WriteLn();
+  AStream.WriteLn;
 end;
 
 
@@ -1406,6 +1412,8 @@ function TDelphiXMLDataBindingGenerator.GetDelphiNodeType(AProperty: TXMLDataBin
 begin
   if AProperty.IsAttribute then
     Result := dntAttribute
+  else if AProperty.IsNodeValue then
+    Result := dntNodeValue
   else
     Result := dntElement;
 end;
@@ -1417,7 +1425,7 @@ var
   conversion:   String;
 
 begin
-  with TNamedFormatStringList.Create() do
+  with TNamedFormatStringList.Create do
   try
     if not (Assigned(ADataType) and GetDataTypeMapping(ADataType, typeMapping)) then
       typeMapping.Conversion  := tcNone;
@@ -1440,7 +1448,7 @@ begin
     Result := Trim(Format(['Destination', ADestination,
                            'Source',      ASource]));
   finally
-    Free();
+    Free;
   end;
 end;
 
@@ -1457,7 +1465,7 @@ begin
 end;
 
 
-function TDelphiXMLDataBindingGenerator.CreateNewGUID(): String;
+function TDelphiXMLDataBindingGenerator.CreateNewGUID: String;
 var
   guid: TGUID;
 
@@ -1489,7 +1497,7 @@ end;
 
 
 { TXMLSchemaList }
-constructor TXMLSchemaList.Create();
+constructor TXMLSchemaList.Create;
 begin
   inherited Create(False);
 end;
@@ -1507,6 +1515,5 @@ begin
 end;
 
 end.
-
 
 

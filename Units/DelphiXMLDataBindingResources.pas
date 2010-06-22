@@ -5,7 +5,7 @@ type
   TDelphiXMLSection = (dxsForward, dxsInterface, dxsClass, dxsImplementation);
   TDelphiXMLMember = (dxmPropertyGet, dxmPropertySet, dxmPropertyDeclaration);
   TDelphiAccessor = (daGet, daSet);
-  TDelphiNodeType = (dntElement, dntAttribute, dntCustom);
+  TDelphiNodeType = (dntElement, dntAttribute, dntNodeValue, dntCustom);
 
 
 const
@@ -116,9 +116,21 @@ const
                                   'end;'                                                                    + CrLf +
                                   ''                                                                        + CrLf;
 
+  PropertyImplMethodGetTextAttr = 'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'            + CrLf +
+                                  'begin'                                                                   + CrLf +
+                                  '  Result := AttributeNodes[''%<PropertySourceName>:s''].Text;'               + CrLf +
+                                  'end;'                                                                    + CrLf +
+                                  ''                                                                        + CrLf;
+
   PropertyImplMethodSetText     = 'procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);'  + CrLf +
                                   'begin'                                                                       + CrLf +
                                   '  ChildNodes[''%<PropertySourceName>:s''].NodeValue := Value;'               + CrLf +
+                                  'end;'                                                                        + CrLf +
+                                  ''                                                                            + CrLf;
+
+  PropertyImplMethodSetTextAttr = 'procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);'  + CrLf +
+                                  'begin'                                                                       + CrLf +
+                                  '  AttributeNodes[''%<PropertySourceName>:s''].NodeValue := Value;'               + CrLf +
                                   'end;'                                                                        + CrLf +
                                   ''                                                                            + CrLf;
 
@@ -236,12 +248,14 @@ const
                               (
                                 { dntElement }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].NodeValue;',
                                 { dntAttribute }  '  %<Destination>:s := AttributeNodes[''%<Source>:s''].NodeValue;',
+                                { dntNodeValue }  '  %<Destination>:s := NodeValue;',
                                 { dntCustom }     '  %<Destination>:s := %<Source>:s;'
                               ),
                               { daSet }
                               (
                                 { dntElement }    '  ChildNodes[''%<Destination>:s''].NodeValue := %<Source>:s;',
                                 { dntAttribute }  '  SetAttribute(''%<Destination>:s'', %<Source>:s);',
+                                { dntNodeValue }  '  NodeValue := %<Source>:s;',
                                 { dntCustom }     '  %<Destination>:s := %<Source>:s;'
                               )
                             );
@@ -272,6 +286,17 @@ const
                                   { tcTime }      '  %<Destination>:s := XMLToDateTime(AttributeNodes[''%<Source>:s''].NodeValue, xdtTime);',
                                   { tcString }    '  %<Destination>:s := AttributeNodes[''%<Source>:s''].Text;',
                                   { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(AttributeNodes[''%<Source>:s''].Text));'
+                                ),
+                                { dntNodeValue }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(NodeValue);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(NodeValue, xdtDateTime);',
+                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(NodeValue, xdtDate);',
+                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(NodeValue, xdtTime);',
+                                  { tcString }    '  %<Destination>:s := NodeValue;',
+                                  { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(NodeValue));'
                                 ),
                                 { dntCustom}
                                 (
@@ -308,6 +333,17 @@ const
                                   { tcTime }      '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtTime));',
                                   { tcString }    '',
                                   { tcBase64 }    '  SetAttribute(''%<Destination>:s'', Base64Encode(%<Source>:s));'
+                                ),
+                                { dntNodeValue }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '  NodeValue := BoolToXML(%<Source>:s);',
+                                  { tcFloat }     '  NodeValue := FloatToXML(%<Source>:s);',
+                                  { tcDateTime }  '  NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
+                                  { tcDate }      '  NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
+                                  { tcTime }      '  NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
+                                  { tcString }    '',
+                                  { tcBase64 }    '  NodeValue := Base64Encode(%<Source>:s);'
                                 ),
                                 { dntCustom}
                                 (
