@@ -166,14 +166,14 @@ const
 
   // #ToDo1 (MvR) 9-3-2008: document / node / etc
   // #ToDo1 (MvR) 9-3-2008: WideString etc ?
-  ReservedWords:  array[0..106] of String =
+  ReservedWords:  array[0..107] of String =
                   (
                     'absolute', 'abstract', 'and', 'array', 'as', 'asm',
                     'assembler', {'automated', }'begin', 'case', 'cdecl', 'class',
                     'const', 'constructor', {'contains', }'default', 'deprecated',
                     'destructor', 'dispid', 'dispinterface', 'div', 'do',
                     'downto', 'dynamic', 'else', 'end', 'except', 'export',
-                    'exports', 'external', 'far', {'file', 'final', }'finalization',
+                    'exports', 'external', 'far', 'file', {'final', }'finalization',
                     'finally', 'for', 'forward', 'function', 'goto', 'if',
                     'implementation', 'implements', 'in', 'index', 'inherited',
                     'initialization', 'inline', 'interface', 'is', 'label',
@@ -190,7 +190,7 @@ const
                     'virtual', 'while', 'with', 'write', 'writeonly', 'xor'
                   );
 
-  SafeChars = ['A'..'Z', 'a'..'z', '0'..'9', '_', '-'];
+  SafeChars = ['A'..'Z', 'a'..'z', '0'..'9', '_'];
 
 
 type
