@@ -22,6 +22,12 @@ type
   TXMLTimeFragments   = set of TXMLTimeFragment;
 
 
+  IXSDValidate  = interface
+    ['{3BFDC851-7459-403B-87B3-A52E9E85BC8C}']
+    procedure XSDValidate;
+  end;
+
+
 const
   AllTimeFragments    = [Low(TXMLTimeFragment)..High(TXMLTimeFragment)];
 
@@ -41,6 +47,11 @@ const
 
   function GetNodeIsNil(ANode: IXMLNode): Boolean;
   procedure SetNodeIsNil(ANode: IXMLNode; ASetNil: Boolean);
+
+  procedure XSDValidate(AParent: IXMLNode; ARecurse: Boolean = True; AValidateParent: Boolean = True);
+  procedure CreateRequiredElements(AParent: IXMLNode; ANodes: array of string);
+  procedure CreateRequiredAttributes(AParent: IXMLNode; ANodes: array of string);
+  procedure SortChildNodes(AParent: IXMLNode; ASortOrder: array of string);
   
 
 const
@@ -78,7 +89,18 @@ const
 implementation
 uses
   DateUtils,
+  Math,
+  Types,
   Windows;
+
+
+type
+  PSortNodeInfo = ^TSortNodeInfo;
+  TSortNodeInfo = record
+    Node: IXMLNode;
+    SortIndex: Integer;
+    OriginalIndex: Integer;
+  end;
 
 
 function DateTimeToXML(ADate: TDateTime; AFormat: TXMLDateTimeFormat; ATimeFragments: TXMLTimeFragments): string;
@@ -415,6 +437,126 @@ begin
     ANode.SetAttributeNS(XMLIsNilAttribute, XMLSchemaInstanceURI, BoolToXML(True));
   end else
     ANode.AttributeNodes.Delete(XMLIsNilAttribute, XMLSchemaInstanceURI);
+end;
+
+
+function DoSortNodes(Item1, Item2: Pointer): Integer;
+var
+  nodeInfo1: PSortNodeInfo;
+  nodeInfo2: PSortNodeInfo;
+
+begin
+  nodeInfo1 := Item1;
+  nodeInfo2 := Item2;
+
+  if (nodeInfo1^.SortIndex > -1) and (nodeInfo2^.SortIndex = -1) then
+    Result := GreaterThanValue
+
+  else if (nodeInfo1^.SortIndex = -1) and (nodeInfo2^.SortIndex > -1) then
+    Result := LessThanValue
+
+  else if (nodeInfo1^.SortIndex = -1) and (nodeInfo2^.SortIndex = -1) then
+    Result := CompareValue(nodeInfo1^.OriginalIndex, nodeInfo2^.OriginalIndex)
+
+  else
+    Result := CompareValue(nodeInfo1^.SortIndex, nodeInfo2^.SortIndex);
+end;
+
+
+procedure XSDValidate(AParent: IXMLNode; ARecurse, AValidateParent: Boolean);
+var
+  validate: IXSDValidate;
+  childIndex: Integer;
+
+begin
+  if AValidateParent and Supports(AParent, IXSDValidate, validate) then
+    validate.XSDValidate;
+
+  if ARecurse then
+  begin
+    for childIndex := 0 to Pred(AParent.ChildNodes.Count) do
+      XSDValidate(AParent.ChildNodes[childIndex], ARecurse, True);
+  end;
+end;
+
+
+procedure CreateRequiredElements(AParent: IXMLNode; ANodes: array of string);
+var
+  nodeIndex: Integer;
+  node: IXMLNode;
+
+begin
+  for nodeIndex := Low(ANodes) to High(ANodes) do
+  begin
+    if not Assigned(AParent.ChildNodes.FindNode(ANodes[nodeIndex])) then
+    begin
+      node := AParent.OwnerDocument.CreateElement(ANodes[nodeIndex], AParent.NamespaceURI);
+      AParent.ChildNodes.Add(node);
+    end;
+  end;
+end;
+
+
+procedure CreateRequiredAttributes(AParent: IXMLNode; ANodes: array of string);
+var
+  nodeIndex: Integer;
+
+begin
+  for nodeIndex := Low(ANodes) to High(ANodes) do
+  begin
+    if not Assigned(AParent.AttributeNodes.FindNode(ANodes[nodeIndex])) then
+      AParent.Attributes[ANodes[nodeIndex]] := '';
+  end;
+end;
+
+
+procedure SortChildNodes(AParent: IXMLNode; ASortOrder: array of string);
+var
+  sortList: TList;
+  nodeInfo: PSortNodeInfo;
+  childIndex: Integer;
+  sortIndex: Integer;
+  node: IXMLNode;
+
+begin
+  sortList := TList.Create;
+  try
+    { Build a list of the child nodes, with their original index and the
+      index in the ASortOrder array. }
+    for childIndex := 0 to Pred(AParent.ChildNodes.Count) do
+    begin
+      New(nodeInfo);
+      nodeInfo^.Node := AParent.ChildNodes[childIndex];
+      nodeInfo^.OriginalIndex := childIndex;
+
+      for sortIndex := Low(ASortOrder) to High(ASortOrder) do
+      begin
+        if ASortOrder[sortIndex] = nodeInfo^.Node.NodeName then
+        begin
+          nodeInfo^.SortIndex := sortIndex;
+          Break;
+        end;
+      end;
+
+      sortList.Add(nodeInfo);
+    end;
+
+    sortList.Sort(DoSortNodes);
+
+    { Rebuild the ChildNodes list }
+    for childIndex := 0 to Pred(sortList.Count) do
+    begin
+      node := PSortNodeInfo(sortList[childIndex])^.Node;
+
+      AParent.ChildNodes.Remove(node);
+      AParent.ChildNodes.Insert(childIndex, node);
+    end;
+  finally
+    for sortIndex := 0 to Pred(sortList.Count) do
+      Dispose(PSortNodeInfo(sortList[sortIndex]));
+
+    FreeAndNil(sortList);
+  end;
 end;
 
 end.

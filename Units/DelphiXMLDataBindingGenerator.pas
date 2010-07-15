@@ -67,6 +67,8 @@ type
     procedure WriteSchemaEnumeration(AStream: TStreamHelper; AItem: TXMLDataBindingEnumeration; ASection: TDelphiXMLSection);
     procedure WriteSchemaEnumerationArray(AStream: TStreamHelper; AItem: TXMLDataBindingEnumeration);
 
+    procedure WriteValidate(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+
     function GetDelphiNodeType(AProperty: TXMLDataBindingProperty): TDelphiNodeType;
     function DataTypeConversion(const ADestination, ASource: String; ADataType: IXMLTypeDef; AAccessor: TDelphiAccessor; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
     function XMLToNativeDataType(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
@@ -366,7 +368,7 @@ begin
 
   case AItem.ItemType of
     itEnumerationMember:
-      Result := TXMLDataBindingEnumerationMember(AItem).Enumeration.TranslatedName + '_' + Result;
+      Result := DelphiSafeName(TXMLDataBindingEnumerationMember(AItem).Enumeration.TranslatedName) + '_' + Result;
   end;
 end;
 
@@ -566,66 +568,11 @@ end;
 
 
 procedure TDelphiXMLDataBindingGenerator.WriteImplementationUses(AStream: TStreamHelper; ASchemaList: TXMLSchemaList);
-var
-  needsUtils:       Boolean;
-  schemaIndex:      Integer;
-  schema:           TXMLDataBindingSchema;
-  itemIndex:        Integer;
-  interfaceItem:    TXMLDataBindingInterface;
-  propertyIndex:    Integer;
-  propertyItem:     TXMLDataBindingSimpleProperty;
-  typeMapping:      TTypeMapping;
-
 begin
-  needsUtils  := False;
-
-  { Determine if any helper functions are used }
-  for schemaIndex := Pred(ASchemaList.Count) downto 0 do
-  begin
-    schema  := ASchemaList[schemaIndex];
-
-    for itemIndex := Pred(schema.ItemCount) downto 0 do
-    begin
-      if schema.Items[itemIndex].ItemType = itInterface then
-      begin
-        interfaceItem := TXMLDataBindingInterface(schema.Items[itemIndex]);
-
-        for propertyIndex := Pred(interfaceItem.PropertyCount) downto 0 do
-        begin
-          if interfaceItem.Properties[propertyIndex].PropertyType = ptSimple then
-          begin
-            propertyItem  := TXMLDataBindingSimpleProperty(interfaceItem.Properties[propertyIndex]);
-
-            if propertyItem.IsNillable then
-            begin
-              needsUtils  := True;
-              Break;
-            end;
-
-            if GetDataTypeMapping(propertyItem.DataType, typeMapping) then
-            begin
-              if TypeConversionReqUtils[typeMapping.Conversion] then
-              begin
-                needsUtils  := True;
-                Break;
-              end;
-            end;
-          end;
-        end;
-      end;
-    end;
-  end;
-
-
+  { In ye olde days this is where we checked if XMLDataBindingUtils was required. With the
+    introduction of the IXSDValidate, this is practically always the case. }
   AStream.WriteLn('uses');
-
-  if needsUtils then
-  begin
-    AStream.WriteLn('  SysUtils,');
-    AStream.WriteLn('  XMLDataBindingUtils;');
-  end else
-    AStream.WriteLn('  SysUtils;');
-
+  AStream.WriteLn('  SysUtils;');
   AStream.WriteLn;
 end;
 
@@ -725,6 +672,10 @@ begin
         else
           parent  := ItemClass;
 
+
+        if AItem.CanValidate then
+          parent := parent + ', ' + XSDValidateInterface;
+          
 
         AStream.WriteLnNamedFmt(InterfaceItemClass,
                                 ['Name',        AItem.TranslatedName,
@@ -914,6 +865,7 @@ begin
   if ASection = dxsClass then
     AStream.WriteLn('  protected');
 
+  WriteValidate(AStream, AItem, ASection);
   hasMembers  := WriteSchemaInterfaceCollectionProperties(AStream, AItem, ASection);
 
   for member := Low(TDelphiXMLMember) to High(TDelphiXMLMember) do
@@ -1405,6 +1357,122 @@ begin
 
   AStream.WriteLn(lineIndent + ');');
   AStream.WriteLn;
+end;
+
+
+procedure TDelphiXMLDataBindingGenerator.WriteValidate(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+var
+  propertyIndex: Integer;
+  propertyItem: TXMLDataBindingProperty;
+  elementSortOrder: string;
+  elementSortCount: Integer;
+  elementRequired: string;
+  elementRequiredCount: Integer;
+  attributeRequired: string;
+  attributeRequiredCount: Integer;
+
+begin
+  if AItem.DocumentElement then
+  begin
+    case ASection of
+      dxsInterface,
+      dxsClass:
+        AStream.WriteLn(XSDValidateDocumentMethodInterface);
+
+      dxsImplementation:
+        AStream.WriteLnNamedFmt(XSDValidateDocumentMethodImplementation,
+                                ['Name', AItem.TranslatedName]);
+    end;
+  end;
+
+  if AItem.CanValidate then
+  begin
+    case ASection of
+      dxsInterface,
+      dxsClass:
+        begin
+          AStream.WriteLn(XSDValidateMethodInterface);
+          AStream.WriteLn('');
+        end;
+
+      dxsImplementation:
+        begin
+          AStream.WriteLnNamedFmt(XSDValidateMethodImplementationBegin,
+                                  ['Name', AItem.TranslatedName]);
+
+          elementSortOrder := '';
+          elementSortCount := 0;
+
+          elementRequired := '';
+          elementRequiredCount := 0;
+
+          attributeRequired := '';
+          attributeRequiredCount := 0;
+
+
+          for propertyIndex := 0 to Pred(AItem.PropertyCount) do
+          begin
+            propertyItem := AItem.Properties[propertyIndex];
+
+            if propertyItem.IsAttribute then
+            begin
+              if not propertyItem.IsOptional then
+              begin
+                attributeRequired := attributeRequired + ', ' + QuotedStr(propertyItem.Name);
+                Inc(attributeRequiredCount);
+              end;
+            end else if not propertyItem.IsNodeValue then
+            begin
+              elementSortOrder := elementSortOrder + ', ' + QuotedStr(propertyItem.Name);
+              Inc(elementSortCount);
+
+              if (not propertyItem.IsOptional) and (not propertyItem.IsRepeating) then
+              begin
+                case propertyItem.PropertyType of
+                  ptSimple:
+                    begin
+                      elementRequired := elementRequired + ', ' + QuotedStr(propertyItem.Name);
+                      Inc(elementRequiredCount);
+                    end;
+
+                  ptItem:
+                    { For Item properties, we call our getter property. This ensures the child element exists,
+                      but also that it is created using our binding implementation. Otherwise there will be no
+                      IXSDValidate interface to call on the newly created node. }
+                    AStream.WriteLnNamedFmt(XSDValidateMethodImplementationComplex,
+                                            ['Name', propertyItem.TranslatedName]);
+                end;
+              end;
+            end;
+          end;
+
+
+          if elementRequiredCount > 0 then
+          begin
+            Delete(elementRequired, 1, 2);
+            AStream.WriteLnNamedFmt(XSDValidateMethodImplementationRequired,
+                                    ['RequiredElements', elementRequired]);
+          end;
+
+
+          if attributeRequiredCount > 0 then
+          begin
+            Delete(attributeRequired, 1, 2);
+            AStream.WriteLnNamedFmt(XSDValidateMethodImplementationAttrib,
+                                    ['RequiredAttributes', attributeRequired]);
+          end;
+
+          if elementSortCount > 1 then
+          begin
+            Delete(elementSortOrder, 1, 2);
+            AStream.WriteLnNamedFmt(XSDValidateMethodImplementationSort,
+                                    ['SortOrder', elementSortOrder]);
+          end;
+
+          AStream.WriteLn(XSDValidateMethodImplementationEnd);
+        end;
+    end;
+  end;
 end;
 
 

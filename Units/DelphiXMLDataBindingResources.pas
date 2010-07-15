@@ -25,7 +25,8 @@ const
                         '%<UsesClause>:s'                                       +
                         '  Classes,'                                            + CrLf +
                         '  XMLDoc,'                                             + CrLf +
-                        '  XMLIntf;'                                            + CrLf +
+                        '  XMLIntf,'                                            + CrLf +
+                        '  XMLDataBindingUtils;'                                + CrLf +
                         ''                                                      + CrLf +
                         'type'                                                  + CrLf;
 
@@ -68,6 +69,30 @@ const
                                     '  Result := NewXMLDocument.' + DocumentBinding                           + CrLf +
                                     'end;'                                                                    + CrLf +
                                     ''                                                                        + CrLf;
+
+
+
+  XSDValidateInterface                    = 'IXSDValidate';
+
+  XSDValidateDocumentMethodInterface      = '    procedure XSDValidateDocument;';
+
+  XSDValidateDocumentMethodImplementation = 'procedure TXML%<Name>:s.XSDValidateDocument;'                  + CrLf +
+                                            'begin'                                                         + CrLf +
+                                            '  XMLDataBindingUtils.XSDValidate(Self);'                      + CrLf +
+                                            'end;'                                                          + CrLf;
+
+
+  XSDValidateMethodInterface              = '    procedure XSDValidate;';
+
+  XSDValidateMethodImplementationBegin    = 'procedure TXML%<Name>:s.XSDValidate;'                          + CrLf +
+                                            'begin';
+
+  XSDValidateMethodImplementationRequired = '  CreateRequiredElements(Self, [%<RequiredElements>:s]);';
+  XSDValidateMethodImplementationComplex  = '  Get%<Name>:s;';
+  XSDValidateMethodImplementationAttrib   = '  CreateRequiredAttributes(Self, [%<RequiredAttributes>:s]);';
+  XSDValidateMethodImplementationSort     = '  SortChildNodes(Self, [%<SortOrder>:s]);';
+
+  XSDValidateMethodImplementationEnd      = 'end;' + CrLf;
 
 
   PropertyIntfMethodGetOptional = '    function GetHas%<PropertyName>:s: Boolean;';
@@ -248,14 +273,14 @@ const
                               (
                                 { dntElement }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].NodeValue;',
                                 { dntAttribute }  '  %<Destination>:s := AttributeNodes[''%<Source>:s''].NodeValue;',
-                                { dntNodeValue }  '  %<Destination>:s := NodeValue;',
+                                { dntNodeValue }  '  %<Destination>:s := GetNodeValue;',
                                 { dntCustom }     '  %<Destination>:s := %<Source>:s;'
                               ),
                               { daSet }
                               (
                                 { dntElement }    '  ChildNodes[''%<Destination>:s''].NodeValue := %<Source>:s;',
                                 { dntAttribute }  '  SetAttribute(''%<Destination>:s'', %<Source>:s);',
-                                { dntNodeValue }  '  NodeValue := %<Source>:s;',
+                                { dntNodeValue }  '  SetNodeValue(%<Source>:s);',
                                 { dntCustom }     '  %<Destination>:s := %<Source>:s;'
                               )
                             );
@@ -291,12 +316,12 @@ const
                                 (
                                   { tcNone }      '',
                                   { tcBoolean }   '',
-                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(NodeValue);',
-                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(NodeValue, xdtDateTime);',
-                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(NodeValue, xdtDate);',
-                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(NodeValue, xdtTime);',
-                                  { tcString }    '  %<Destination>:s := NodeValue;',
-                                  { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(NodeValue));'
+                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(GetNodeValue);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(GetNodeValue, xdtDateTime);',
+                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(GetNodeValue, xdtDate);',
+                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(GetNodeValue, xdtTime);',
+                                  { tcString }    '  %<Destination>:s := GetNodeValue;',
+                                  { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(GetNodeValue));'
                                 ),
                                 { dntCustom}
                                 (
@@ -337,13 +362,13 @@ const
                                 { dntNodeValue }
                                 (
                                   { tcNone }      '',
-                                  { tcBoolean }   '  NodeValue := BoolToXML(%<Source>:s);',
-                                  { tcFloat }     '  NodeValue := FloatToXML(%<Source>:s);',
-                                  { tcDateTime }  '  NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
-                                  { tcDate }      '  NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
-                                  { tcTime }      '  NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
+                                  { tcBoolean }   '  SetNodeValue(BoolToXML(%<Source>:s));',
+                                  { tcFloat }     '  SetNodeValue(FloatToXML(%<Source>:s));',
+                                  { tcDateTime }  '  SetNodeValue(DateTimeToXML(%<Source>:s, xdtDateTime));',
+                                  { tcDate }      '  SetNodeValue(DateTimeToXML(%<Source>:s, xdtDate));',
+                                  { tcTime }      '  SetNodeValue(DateTimeToXML(%<Source>:s, xdtTime));',
                                   { tcString }    '',
-                                  { tcBase64 }    '  NodeValue := Base64Encode(%<Source>:s);'
+                                  { tcBase64 }    '  SetNodeValue(Base64Encode(%<Source>:s));'
                                 ),
                                 { dntCustom}
                                 (
