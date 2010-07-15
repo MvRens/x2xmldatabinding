@@ -361,7 +361,7 @@ uses
 
 const
   MaxOccursUnbounded  = 'unbounded';
-  UseOptional         = 'optional';
+  UseRequired         = 'required';
   CollectionPostfix   = 'List';
   AttributeNillable   = 'nillable';
 
@@ -1026,7 +1026,7 @@ begin
                                                           AAttribute.Name,
                                                           AAttribute.DataType);
 
-  propertyItem.IsOptional   := (AAttribute.Use = UseOptional);
+  propertyItem.IsOptional   := (AAttribute.Use <> UseRequired);
   propertyItem.IsAttribute  := True;
   
   AInterface.AddProperty(propertyItem);
