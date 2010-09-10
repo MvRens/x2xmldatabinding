@@ -389,6 +389,8 @@ begin
     CaseSensitive := False;
     Duplicates    := dupIgnore;
   end;
+
+  IncludePaths.Add('');
 end;
 
 
@@ -539,7 +541,9 @@ begin
 
   for includeIndex := 0 to Pred(IncludePaths.Count) do
   begin
-    includePath := IncludeTrailingPathDelimiter(IncludePaths[includeIndex]);
+    includePath := IncludePaths[includeIndex];
+    if Length(includePath) > 0 then
+      includePath := IncludeTrailingPathDelimiter(includePath);
 
     if FileExists(includePath + ALocation) then
     begin
