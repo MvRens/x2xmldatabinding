@@ -82,10 +82,6 @@ object MainForm: TMainForm
       TabOrder = 2
       object spFile: TTabSheet
         TabVisible = False
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object lblFile: TLabel
           Left = 8
           Top = 7
@@ -200,10 +196,10 @@ object MainForm: TMainForm
     Style.HotTrack = False
     Left = 264
     Top = 60
+    PixelsPerInch = 96
   end
   object LookAndFeel: TcxLookAndFeelController
     Kind = lfFlat
-    NativeStyle = True
     Left = 368
     Top = 60
   end

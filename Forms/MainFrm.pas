@@ -23,7 +23,7 @@ uses
   cxTextEdit,
 
   DataBindingHintsXML,
-  XMLDataBindingGenerator, cxGraphics, cxLookAndFeelPainters;
+  XMLDataBindingGenerator, cxGraphics, cxLookAndFeelPainters, cxClasses;
 
 
 type

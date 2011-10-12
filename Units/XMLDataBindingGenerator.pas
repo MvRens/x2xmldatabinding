@@ -812,46 +812,49 @@ begin
         enumerationObject := TXMLDataBindingEnumeration.Create(Self, AElement, AElement.DataType.Enumerations, AElement.Name, False);
         ASchema.AddItem(enumerationObject);
         Result := enumerationObject;
-      end else if AElement.DataType.IsComplex then
+      end else
       begin
-        { Interface }
-        interfaceObject := TXMLDataBindingInterface.Create(Self, AElement, AElement.Name);
-        if Assigned(AElement.DataType.BaseType) then
-          interfaceObject.BaseName := AElement.DataType.BaseTypeName;
-
-        ASchema.AddItem(interfaceObject);
-        Result := interfaceObject;
-      end;
-
-      if Assigned(interfaceObject) then
-      begin
-        for elementIndex := 0 to Pred(AElement.ChildElements.Count) do
-          ProcessChildElement(ASchema, AElement.ChildElements[elementIndex], interfaceObject);
-
-        for attributeIndex := 0 to Pred(AElement.AttributeDefs.Count) do
-          ProcessAttribute(ASchema, AElement.AttributeDefs[attributeIndex], interfaceObject);
-      end else if AElement.IsGlobal then
-      begin
-        { Non-anonymous non-complex type. Assume somewhere in there is a
-          built-in type.
-
-          This code probably isn't correct, but it works for the files I got. }
-        typeDef := AElement.DataType;
-
-        while Assigned(typeDef) do
+        if AElement.DataType.IsComplex then
         begin
-          if Supports(typeDef, IXMLSimpleTypeDef, simpleTypeDef) and (simpleTypeDef.IsBuiltInType) then
+          { Interface }
+          interfaceObject := TXMLDataBindingInterface.Create(Self, AElement, AElement.Name);
+          if Assigned(AElement.DataType.BaseType) then
+            interfaceObject.BaseName := AElement.DataType.BaseTypeName;
+
+          ASchema.AddItem(interfaceObject);
+          Result := interfaceObject;
+        end;
+
+        if Assigned(interfaceObject) then
+        begin
+          for elementIndex := 0 to Pred(AElement.ChildElements.Count) do
+            ProcessChildElement(ASchema, AElement.ChildElements[elementIndex], interfaceObject);
+
+          for attributeIndex := 0 to Pred(AElement.AttributeDefs.Count) do
+            ProcessAttribute(ASchema, AElement.AttributeDefs[attributeIndex], interfaceObject);
+        end else if AElement.IsGlobal then
+        begin
+          { Non-anonymous non-complex type. Assume somewhere in there is a
+            built-in type.
+
+            This code probably isn't correct, but it works for the files I got. }
+          typeDef := AElement.DataType;
+
+          while Assigned(typeDef) do
           begin
-            { The element is global, but only references a simple type. }
-            simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AElement, AElement.Name);
-            simpleAliasItem.DataType  := typeDef;
-            ASchema.AddItem(simpleAliasItem);
+            if Supports(typeDef, IXMLSimpleTypeDef, simpleTypeDef) and (simpleTypeDef.IsBuiltInType) then
+            begin
+              { The element is global, but only references a simple type. }
+              simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AElement, AElement.Name);
+              simpleAliasItem.DataType  := typeDef;
+              ASchema.AddItem(simpleAliasItem);
 
-            Result  := simpleAliasItem;
-            Break;
+              Result  := simpleAliasItem;
+              Break;
+            end;
+
+            typeDef := typeDef.BaseType;
           end;
-
-          typeDef := typeDef.BaseType;
         end;
       end;
     end;
@@ -1177,7 +1180,10 @@ begin
         end;
 
       itUnresolved:
-        ResolveItem(ASchema, TXMLDataBindingUnresolvedItem(item));
+        begin
+          ResolveItem(ASchema, TXMLDataBindingUnresolvedItem(item));
+          FreeAndNil(item);
+        end;
     end;
   end;
 end;
