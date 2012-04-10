@@ -1,11 +1,14 @@
 unit DelphiXMLDataBindingResources;
 
+// #ToDo1 -oMvR: 6-4-2012: namespace support voor attributes
+
 interface
 type
   TDelphiXMLSection = (dxsForward, dxsInterface, dxsClass, dxsImplementation);
   TDelphiXMLMember = (dxmPropertyGet, dxmPropertySet, dxmPropertyDeclaration);
   TDelphiAccessor = (daGet, daSet);
-  TDelphiNodeType = (dntElement, dntAttribute, dntNodeValue, dntCustom);
+  TDelphiNodeType = (dntElement, dntElementNS, dntAttribute, dntNodeValue, dntCustom);
+  TDelphiElementType = dntElement..dntElementNS;
 
 
 const
@@ -111,11 +114,22 @@ const
   PropertyInterfaceText         = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText write Set%<PropertyName>:sText;';
   PropertyInterface             = '    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s write Set%<PropertyName>:s;';
 
-  PropertyImplMethodGetOptional = 'function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;'                + CrLf +
-                                  'begin'                                                                   + CrLf +
-                                  '  Result := Assigned(ChildNodes.FindNode(''%<PropertySourceName>:s''));' + CrLf +
-                                  'end;'                                                                    + CrLf +
-                                  ''                                                                        + CrLf;
+  PropertyImplMethodGetOptional: array[TDelphiElementType] of string =
+                                 (
+                                   { dntElement }
+                                   'function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;'                + CrLf +
+                                   'begin'                                                                   + CrLf +
+                                   '  Result := Assigned(ChildNodes.FindNode(''%<PropertySourceName>:s''));' + CrLf +
+                                   'end;'                                                                    + CrLf +
+                                   ''                                                                        + CrLf,
+
+                                   { dntElementNS }
+                                   'function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;'                                     + CrLf +
+                                   'begin'                                                                                        + CrLf +
+                                   '  Result := Assigned(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s''));'  + CrLf +
+                                   'end;'                                                                                         + CrLf +
+                                   ''                                                                                             + CrLf
+                                 );
 
   PropertyImplMethodGetOptionalAttr = 'function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;'                + CrLf +
                                       'begin'                                                                   + CrLf +
@@ -123,23 +137,56 @@ const
                                       'end;'                                                                    + CrLf +
                                       ''                                                                        + CrLf;
 
-  PropertyImplMethodGetNil      = 'function TXML%<Name>:s.Get%<PropertyName>:sIsNil: Boolean;'                                + CrLf +
-                                  'begin'                                                                                     + CrLf +
-                                  '  Result := GetNodeIsNil(ChildNodes[''%<PropertySourceName>:s'']);'                        + CrLf +
-                                  'end;'                                                                                      + CrLf +
-                                  ''                                                                                          + CrLf;
+  PropertyImplMethodGetNil: array[TDelphiElementType] of string =
+                            (
+                              { dntElement }
+                              'function TXML%<Name>:s.Get%<PropertyName>:sIsNil: Boolean;'                                + CrLf +
+                              'begin'                                                                                     + CrLf +
+                              '  Result := GetNodeIsNil(ChildNodes[''%<PropertySourceName>:s'']);'                        + CrLf +
+                              'end;'                                                                                      + CrLf +
+                              ''                                                                                          + CrLf,
 
-  PropertyImplMethodSetNil      = 'procedure TXML%<Name>:s.Set%<PropertyName>:sIsNil(const Value: Boolean);'    + CrLf +
-                                  'begin'                                                                       + CrLf +
-                                  '  SetNodeIsNil(ChildNodes[''%<PropertySourceName>:s''], Value);'             + CrLf +
-                                  'end;'                                                                        + CrLf +
-                                  ''                                                                            + CrLf;
+                              { dntElementNS }
+                              'function TXML%<Name>:s.Get%<PropertyName>:sIsNil: Boolean;'                                      + CrLf +
+                              'begin'                                                                                           + CrLf +
+                              '  Result := GetNodeIsNil(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s''));' + CrLf +
+                              'end;'                                                                                            + CrLf +
+                              ''                                                                                                + CrLf
+                            );
 
-  PropertyImplMethodGetText     = 'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'            + CrLf +
-                                  'begin'                                                                   + CrLf +
-                                  '  Result := ChildNodes[''%<PropertySourceName>:s''].Text;'               + CrLf +
-                                  'end;'                                                                    + CrLf +
-                                  ''                                                                        + CrLf;
+  PropertyImplMethodSetNil: array[TDelphiElementType] of string =
+                            (
+                              { dntElement }
+                              'procedure TXML%<Name>:s.Set%<PropertyName>:sIsNil(const Value: Boolean);'    + CrLf +
+                              'begin'                                                                       + CrLf +
+                              '  SetNodeIsNil(ChildNodes[''%<PropertySourceName>:s''], Value);'             + CrLf +
+                              'end;'                                                                        + CrLf +
+                              ''                                                                            + CrLf,
+
+                              { dntElementNS }
+                              'procedure TXML%<Name>:s.Set%<PropertyName>:sIsNil(const Value: Boolean);'                      + CrLf +
+                              'begin'                                                                                         + CrLf +
+                              '  SetNodeIsNil(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s''), Value);'  + CrLf +
+                              'end;'                                                                                          + CrLf +
+                              ''                                                                                              + CrLf
+                            );
+
+  PropertyImplMethodGetText: array[TDelphiElementType] of string =
+                             (
+                               { dntElement }
+                               'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'            + CrLf +
+                               'begin'                                                                   + CrLf +
+                               '  Result := ChildNodes[''%<PropertySourceName>:s''].Text;'               + CrLf +
+                               'end;'                                                                    + CrLf +
+                               ''                                                                        + CrLf,
+
+                               { dntElement }
+                               'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'                           + CrLf +
+                               'begin'                                                                                  + CrLf +
+                               '  Result := ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'').Text;' + CrLf +
+                               'end;'                                                                                   + CrLf +
+                               ''                                                                                       + CrLf
+                             );
 
   PropertyImplMethodGetTextAttr = 'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'            + CrLf +
                                   'begin'                                                                   + CrLf +
@@ -147,11 +194,22 @@ const
                                   'end;'                                                                    + CrLf +
                                   ''                                                                        + CrLf;
 
-  PropertyImplMethodSetText     = 'procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);'  + CrLf +
-                                  'begin'                                                                       + CrLf +
-                                  '  ChildNodes[''%<PropertySourceName>:s''].NodeValue := Value;'               + CrLf +
-                                  'end;'                                                                        + CrLf +
-                                  ''                                                                            + CrLf;
+  PropertyImplMethodSetText: array[TDelphiElementType] of string =
+                             (
+                               { dntElement }
+                               'procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);'  + CrLf +
+                               'begin'                                                                       + CrLf +
+                               '  ChildNodes[''%<PropertySourceName>:s''].NodeValue := Value;'               + CrLf +
+                               'end;'                                                                        + CrLf +
+                               ''                                                                            + CrLf,
+
+                               { dntElementNS }
+                               'procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);'                 + CrLf +
+                               'begin'                                                                                      + CrLf +
+                               '  ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'').NodeValue := Value;' + CrLf +
+                               'end;'                                                                                       + CrLf +
+                               ''                                                                                           + CrLf
+                             );
 
   PropertyImplMethodSetTextAttr = 'procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);'  + CrLf +
                                   'begin'                                                                       + CrLf +
@@ -272,6 +330,7 @@ const
                               { daGet }
                               (
                                 { dntElement }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].NodeValue;',
+                                { dntElementNS }  '  %<Destination>:s := ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue;',
                                 { dntAttribute }  '  %<Destination>:s := AttributeNodes[''%<Source>:s''].NodeValue;',
                                 { dntNodeValue }  '  %<Destination>:s := GetNodeValue;',
                                 { dntCustom }     '  %<Destination>:s := %<Source>:s;'
@@ -279,6 +338,7 @@ const
                               { daSet }
                               (
                                 { dntElement }    '  ChildNodes[''%<Destination>:s''].NodeValue := %<Source>:s;',
+                                { dntElementNS }  '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := %<Source>:s;',
                                 { dntAttribute }  '  SetAttribute(''%<Destination>:s'', %<Source>:s);',
                                 { dntNodeValue }  '  SetNodeValue(%<Source>:s);',
                                 { dntCustom }     '  %<Destination>:s := %<Source>:s;'
@@ -300,6 +360,17 @@ const
                                   { tcTime }      '  %<Destination>:s := XMLToDateTime(ChildNodes[''%<Source>:s''].NodeValue, xdtTime);',
                                   { tcString }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].Text;',
                                   { tcBas64 }     '  %<Destination>:s := Base64Decode(Trim(ChildNodes[''%<Source>:s''].Text));'
+                                ),
+                                { dntElementNS }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '',
+                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue, xdtDateTime);',
+                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue, xdtDate);',
+                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue, xdtTime);',
+                                  { tcString }    '  %<Destination>:s := ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').Text;',
+                                  { tcBas64 }     '  %<Destination>:s := Base64Decode(Trim(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').Text));'
                                 ),
                                 { dntAttribute }
                                 (
@@ -347,6 +418,17 @@ const
                                   { tcTime }      '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
                                   { tcString }    '',
                                   { tcBase64 }    '  ChildNodes[''%<Destination>:s''].NodeValue := Base64Encode(%<Source>:s);'
+                                ),
+                                { dntElementNS }
+                                (
+                                  { tcNone }      '',
+                                  { tcBoolean }   '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := BoolToXML(%<Source>:s);',
+                                  { tcFloat }     '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := FloatToXML(%<Source>:s);',
+                                  { tcDateTime }  '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
+                                  { tcDate }      '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
+                                  { tcTime }      '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
+                                  { tcString }    '',
+                                  { tcBase64 }    '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := Base64Encode(%<Source>:s);'
                                 ),
                                 { dntAttribute }
                                 (

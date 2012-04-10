@@ -258,27 +258,32 @@ type
 
   TXMLDataBindingProperty = class(TXMLDataBindingItem)
   private
-    FIsAttribute:   Boolean;
-    FIsOptional:    Boolean;
-    FIsNillable:    Boolean;
-    FIsRepeating:   Boolean;
-    FIsNodeValue:   Boolean;
-    FCollection:    TXMLDataBindingInterface;
+    FTargetNamespace: string;
+    FIsAttribute:     Boolean;
+    FIsOptional:      Boolean;
+    FIsNillable:      Boolean;
+    FIsRepeating:     Boolean;
+    FIsNodeValue:     Boolean;
+    FCollection:      TXMLDataBindingInterface;
+    function GetHasTargetNamespace: Boolean;
   protected
     function GetIsReadOnly: Boolean; virtual; abstract;
 
     function GetItemType: TXMLDataBindingItemType; override;
     function GetPropertyType: TXMLDataBindingPropertyType; virtual; abstract;
   public
-    property IsAttribute:   Boolean                     read FIsAttribute   write FIsAttribute;
-    property IsOptional:    Boolean                     read FIsOptional    write FIsOptional;
-    property IsNillable:    Boolean                     read FIsNillable    write FIsNillable;
-    property IsReadOnly:    Boolean                     read GetIsReadOnly;
-    property IsRepeating:   Boolean                     read FIsRepeating   write FIsRepeating;
-    property IsNodeValue:   Boolean                     read FIsNodeValue   write FIsNodeValue;
-    property PropertyType:  TXMLDataBindingPropertyType read GetPropertyType;
+    property TargetNamespace: string                      read FTargetNamespace write FTargetNamespace;
+    property IsAttribute:     Boolean                     read FIsAttribute     write FIsAttribute;
+    property IsOptional:      Boolean                     read FIsOptional      write FIsOptional;
+    property IsNillable:      Boolean                     read FIsNillable      write FIsNillable;
+    property IsReadOnly:      Boolean                     read GetIsReadOnly;
+    property IsRepeating:     Boolean                     read FIsRepeating     write FIsRepeating;
+    property IsNodeValue:     Boolean                     read FIsNodeValue     write FIsNodeValue;
+    property PropertyType:    TXMLDataBindingPropertyType read GetPropertyType;
 
-    property Collection:    TXMLDataBindingInterface    read FCollection    write FCollection;
+    property Collection:      TXMLDataBindingInterface    read FCollection      write FCollection;
+
+    property HasTargetNamespace: Boolean read GetHasTargetNamespace;
   end;
 
 
@@ -982,6 +987,7 @@ var
   actualElement:        IXMLElementDef;
   propertyType:         TXMLDataBindingItem;
   propertyItem:         TXMLDataBindingProperty;
+  namespace:            string;
 
 begin
   propertyType      := ProcessElement(ASchema, AElement);
@@ -996,6 +1002,10 @@ begin
       propertyItem  := TXMLDataBindingSimpleProperty.Create(Self, AElement,
                                                             AElement.Name,
                                                             AElement.DataType);
+
+    namespace := AElement.SchemaDef.TargetNamespace;
+    if namespace <> Schemas[0].TargetNamespace then
+      propertyItem.TargetNamespace := namespace;
 
     propertyItem.IsOptional   := IsElementOptional(AElement) or
                                  IsChoice(AElement);
@@ -1020,6 +1030,7 @@ procedure TXMLDataBindingGenerator.ProcessAttribute(ASchema: TXMLDataBindingSche
 var
   propertyItem:   TXMLDataBindingProperty;
   propertyType:   TXMLDataBindingItem;
+  namespace:      string;
 
 begin
   propertyType  := ProcessElement(ASchema, AAttribute);
@@ -1032,6 +1043,10 @@ begin
     propertyItem  := TXMLDataBindingSimpleProperty.Create(Self, AAttribute,
                                                           AAttribute.Name,
                                                           AAttribute.DataType);
+
+  namespace := AAttribute.SchemaDef.TargetNamespace;
+  if namespace <> ASchema.TargetNamespace then
+    propertyItem.TargetNamespace := namespace;
 
   propertyItem.IsOptional   := (AAttribute.Use <> UseRequired);
   propertyItem.IsAttribute  := True;
@@ -1891,6 +1906,12 @@ end;
 
 
 { TXMLDataBindingProperty }
+function TXMLDataBindingProperty.GetHasTargetNamespace: Boolean;
+begin
+  Result := (Length(TargetNamespace) > 0);
+end;
+
+
 function TXMLDataBindingProperty.GetItemType: TXMLDataBindingItemType;
 begin
   Result := itProperty;
@@ -1910,6 +1931,7 @@ constructor TXMLDataBindingSimpleProperty.CreateFromAlias(AOwner: TXMLDataBindin
 begin
   Create(AOwner, AProperty.SchemaItem, AProperty.Name, ADataType);
 
+  // #ToDo1 -oMvR: 6-4-2012: iets met TargetNamespace??
   IsAttribute := AProperty.IsAttribute;
   IsOptional  := AProperty.IsOptional;
   IsNillable  := AProperty.IsNillable;

@@ -70,9 +70,10 @@ type
     procedure WriteValidate(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
 
     function GetDelphiNodeType(AProperty: TXMLDataBindingProperty): TDelphiNodeType;
-    function DataTypeConversion(const ADestination, ASource: String; ADataType: IXMLTypeDef; AAccessor: TDelphiAccessor; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
-    function XMLToNativeDataType(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
-    function NativeDataTypeToXML(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
+    function GetDelphiElementType(AProperty: TXMLDataBindingProperty): TDelphiElementType;
+    function DataTypeConversion(const ADestination, ASource: String; ADataType: IXMLTypeDef; AAccessor: TDelphiAccessor; ANodeType: TDelphiNodeType; const ATargetNamespace: string; const ALinesBefore: String = ''): String;
+    function XMLToNativeDataType(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ATargetNamespace: string; const ALinesBefore: String = ''): String;
+    function NativeDataTypeToXML(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ATargetNamespace: string; const ALinesBefore: String = ''): String;
 
     property ProcessedItems:  TX2OIHash read FProcessedItems;
     property UnitNames:       TX2OSHash read FUnitNames;
@@ -417,6 +418,7 @@ begin
   hasItem   := False;
   nameSpace := '';
 
+  // #ToDo1 -oMvR: 6-4-2012: bij de Hyundai XSD's wordt hiermee TargetNamespace incorrect de laatste schema namespace
   for schemaIndex := 0 to Pred(ASchemaList.Count) do
   begin
     schema := ASchemaList[schemaIndex];
@@ -751,9 +753,17 @@ begin
       if ASection = dxsImplementation then
       begin
         if propertyItem.PropertyType = ptItem then
-          AStream.WriteLnNamedFmt('  RegisterChildNode(''%<ItemSourceName>:s'', %<ItemClass>:s);',
-                                  ['ItemSourceName',      propertyItem.Name,
-                                   'ItemClass',           GetDataTypeName(propertyItem, False)]);
+        begin
+          if propertyItem.HasTargetNamespace then
+            AStream.WriteLnNamedFmt('  RegisterChildNode(''%<ItemSourceName>:s'', %<ItemClass>:s, ''%<Namespace>:s'');',
+                                    ['ItemSourceName',      propertyItem.Name,
+                                     'ItemClass',           GetDataTypeName(propertyItem, False),
+                                     'Namespace',           propertyItem.TargetNamespace])
+          else
+            AStream.WriteLnNamedFmt('  RegisterChildNode(''%<ItemSourceName>:s'', %<ItemClass>:s);',
+                                    ['ItemSourceName',      propertyItem.Name,
+                                     'ItemClass',           GetDataTypeName(propertyItem, False)]);
+        end;
 
         AStream.WriteLnNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'') as %<CollectionInterface>:s;',
                                 ['FieldName',           PrefixField + propertyItem.TranslatedName,
@@ -782,9 +792,16 @@ begin
             dxsImplementation:
               begin
                 WritePrototype;
-                AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s);',
-                                        ['SourceName', propertyItem.Name,
-                                         'Name',       itemProperty.Item.TranslatedName]);
+
+                if propertyItem.HasTargetNamespace then
+                  AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s, ''%<Namespace>:s'');',
+                                          ['SourceName', propertyItem.Name,
+                                           'Name',       itemProperty.Item.TranslatedName,
+                                           'Namespace',  propertyItem.TargetNamespace])
+                else
+                  AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', TXML%<Name>:s);',
+                                          ['SourceName', propertyItem.Name,
+                                           'Name',       itemProperty.Item.TranslatedName]);
               end;
           end;
         end;
@@ -799,9 +816,16 @@ begin
     if ASection = dxsImplementation then
     begin
       WritePrototype;
-      AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', %<DataClass>:s);',
-                              ['SourceName',  AItem.CollectionItem.Name,
-                               'DataClass',  GetDataTypeName(AItem.CollectionItem, False)]);
+      if AItem.CollectionItem.HasTargetNamespace then
+        AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', %<DataClass>:s, ''%<Namespace>:s'');',
+                                ['SourceName',  AItem.CollectionItem.Name,
+                                 'DataClass',   GetDataTypeName(AItem.CollectionItem, False),
+                                 'Namespace',   AItem.CollectionItem.TargetNamespace])
+      else
+        AStream.WriteLnNamedFmt('  RegisterChildNode(''%<SourceName>:s'', %<DataClass>:s);',
+                                ['SourceName',  AItem.CollectionItem.Name,
+                                 'DataClass',   GetDataTypeName(AItem.CollectionItem, False)]);
+
       AStream.WriteLn;
       AStream.WriteLnFmt('  ItemTag := ''%s'';', [AItem.CollectionItem.Name]);
       AStream.WriteLnFmt('  ItemInterface := %s;', [GetDataTypeName(AItem.CollectionItem, True)]);
@@ -962,9 +986,9 @@ begin
                 sourceCode.Add('function TXML%<Name>:s.Get_%<ItemName>:s(Index: Integer): %<DataType>:s;');
 
                 if GetDataTypeMapping(typeDef, typeMapping) and (typeMapping.Conversion = tcString) then
-                  sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].Text', typeDef, dntCustom))
+                  sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].Text', typeDef, dntCustom, AItem.CollectionItem.TargetNamespace))
                 else
-                  sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].NodeValue', typeDef, dntCustom));
+                  sourceCode.Add(XMLToNativeDataType('Result', 'List[Index].NodeValue', typeDef, dntCustom, AItem.CollectionItem.TargetNamespace));
 
                 sourceCode.AddLn;
 
@@ -1181,16 +1205,16 @@ begin
                   if AProperty.IsAttribute then
                     sourceCode.Add(PropertyImplMethodGetOptionalAttr)
                   else
-                    sourceCode.Add(PropertyImplMethodGetOptional);
+                    sourceCode.Add(PropertyImplMethodGetOptional[GetDelphiElementType(AProperty)]);
 
                 if writeNil then
-                  sourceCode.Add(PropertyImplMethodGetNil);
+                  sourceCode.Add(PropertyImplMethodGetNil[GetDelphiElementType(AProperty)]);
 
                 if writeTextProp then
                   if AProperty.IsAttribute then
                     sourceCode.Add(PropertyImplMethodGetTextAttr)
                   else
-                    sourceCode.Add(PropertyImplMethodGetText);
+                    sourceCode.Add(PropertyImplMethodGetText[GetDelphiElementType(AProperty)]);
 
                 sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:s: %<DataType>:s;');
 
@@ -1205,7 +1229,8 @@ begin
                       sourceCode.Add(XMLToNativeDataType('Result',
                                                          '%<PropertySourceName>:s',
                                                          TXMLDataBindingSimpleProperty(AProperty).DataType,
-                                                         GetDelphiNodeType(AProperty)));
+                                                         GetDelphiNodeType(AProperty),
+                                                         AProperty.TargetNamespace));
 
                   ptItem:
                     begin
@@ -1222,7 +1247,12 @@ begin
                             itInterface:
                               begin
                                 sourceCode.Add('begin');
-                                sourceCode.Add('  Result := (ChildNodes[''%<PropertySourceName>:s''] as IXML%<PropertyItemName>:s);');
+
+                                if AProperty.HasTargetNamespace then
+                                  sourceCode.Add('  Result := (ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'') as IXML%<PropertyItemName>:s);')
+                                else
+                                  sourceCode.Add('  Result := (ChildNodes[''%<PropertySourceName>:s''] as IXML%<PropertyItemName>:s);');
+
                                 sourceCode.Add('end;');
                               end;
 
@@ -1246,13 +1276,13 @@ begin
                 WriteNewLine;
 
                 if writeNil then
-                  sourceCode.Add(PropertyImplMethodSetNil);
+                  sourceCode.Add(PropertyImplMethodSetNil[GetDelphiElementType(AProperty)]);
 
                 if writeTextProp then
                   if AProperty.IsAttribute then
                     sourceCode.Add(PropertyImplMethodSetTextAttr)
                   else
-                    sourceCode.Add(PropertyImplMethodSetText);
+                    sourceCode.Add(PropertyImplMethodSetText[GetDelphiElementType(AProperty)]);
 
                 sourceCode.Add('procedure TXML%<Name>:s.Set%<PropertyName>:s(const Value: %<DataType>:s);');
                 value := '%<PropertySourceName>:s';
@@ -1260,7 +1290,8 @@ begin
                 if Assigned(propertyItem) and (propertyItem.ItemType = itEnumeration) then
                 begin
                   sourceCode.Add(NativeDataTypeToXML(value, '%<PropertyItemName>:sValues[Value]', nil,
-                                                     GetDelphiNodeType(AProperty))); 
+                                                     GetDelphiNodeType(AProperty),
+                                                     AProperty.TargetNamespace)); 
                 end else
                 begin
                   if AProperty.PropertyType <> ptSimple then
@@ -1268,7 +1299,8 @@ begin
 
                   sourceCode.Add(NativeDataTypeToXML(value, 'Value',
                                                      TXMLDataBindingSimpleProperty(AProperty).DataType,
-                                                     GetDelphiNodeType(AProperty)));
+                                                     GetDelphiNodeType(AProperty),
+                                                     AProperty.TargetNamespace));
                 end;
 
                 sourceCode.AddLn;
@@ -1288,7 +1320,8 @@ begin
                                        'PropertyName',        AProperty.TranslatedName,
                                        'PropertyItemName',    propertyItemName,
                                        'DataType',            dataTypeName,
-                                       'FieldName',           fieldName]));
+                                       'FieldName',           fieldName,
+                                       'Namespace',           AProperty.TargetNamespace]));
   finally
     FreeAndNil(sourceCode);
   end;
@@ -1482,12 +1515,24 @@ begin
     Result := dntAttribute
   else if AProperty.IsNodeValue then
     Result := dntNodeValue
+  else if AProperty.HasTargetNamespace then
+    Result := dntElementNS
   else
     Result := dntElement;
 end;
 
 
-function TDelphiXMLDataBindingGenerator.DataTypeConversion(const ADestination, ASource: String; ADataType: IXMLTypeDef; AAccessor: TDelphiAccessor; ANodeType: TDelphiNodeType; const ALinesBefore: String = ''): String;
+function TDelphiXMLDataBindingGenerator.GetDelphiElementType(AProperty: TXMLDataBindingProperty): TDelphiElementType;
+begin
+  Result := GetDelphiNodeType(AProperty);
+  if Result <> dntElementNS then
+    Result := dntElement;
+end;
+
+
+function TDelphiXMLDataBindingGenerator.DataTypeConversion(const ADestination, ASource: String; ADataType: IXMLTypeDef;
+                                                           AAccessor: TDelphiAccessor; ANodeType: TDelphiNodeType;
+                                                           const ATargetNamespace: string; const ALinesBefore: String = ''): String;
 var
   typeMapping:  TTypeMapping;
   conversion:   String;
@@ -1513,23 +1558,29 @@ begin
     Add(conversion);
     Add('end;');
 
+    // #ToDo1 -oMvR: 6-4-2012: Namespace
     Result := Trim(Format(['Destination', ADestination,
-                           'Source',      ASource]));
+                           'Source',      ASource,
+                           'Namespace',   ATargetNamespace]));
   finally
     Free;
   end;
 end;
 
 
-function TDelphiXMLDataBindingGenerator.XMLToNativeDataType(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String): String;
+function TDelphiXMLDataBindingGenerator.XMLToNativeDataType(const ADestination, ASource: String; ADataType: IXMLTypeDef;
+                                                            ANodeType: TDelphiNodeType; const ATargetNamespace: string;
+                                                            const ALinesBefore: String): String;
 begin
-  Result := DataTypeConversion(ADestination, ASource, ADataType, daGet, ANodeType, ALinesBefore);
+  Result := DataTypeConversion(ADestination, ASource, ADataType, daGet, ANodeType, ATargetNamespace, ALinesBefore);
 end;
 
 
-function TDelphiXMLDataBindingGenerator.NativeDataTypeToXML(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ALinesBefore: String): String;
+function TDelphiXMLDataBindingGenerator.NativeDataTypeToXML(const ADestination, ASource: String; ADataType: IXMLTypeDef;
+                                                            ANodeType: TDelphiNodeType; const ATargetNamespace: string;
+                                                            const ALinesBefore: String): String;
 begin
-  Result := DataTypeConversion(ADestination, ASource, ADataType, daSet, ANodeType, ALinesBefore);
+  Result := DataTypeConversion(ADestination, ASource, ADataType, daSet, ANodeType, ATargetNamespace, ALinesBefore);
 end;
 
 
