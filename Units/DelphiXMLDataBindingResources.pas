@@ -105,6 +105,7 @@ const
   PropertyIntfMethodSetNil      = '    procedure Set%<PropertyName>:sIsNil(const Value: Boolean);';
   PropertyIntfMethodSetText     = '    procedure Set%<PropertyName>:sText(const Value: WideString);';
   PropertyIntfMethodSet         = '    procedure Set%<PropertyName>:s(const Value: %<DataType>:s);';
+  PropertyIntfMethodStream      = '    procedure Save%<PropertyName>:sToStream(AStream: TStream);';
 
   PropertyInterfaceOptional     = '    property Has%<PropertyName>:s: Boolean read GetHas%<PropertyName>:s;';
   PropertyInterfaceNilReadOnly  = '    property %<PropertyName>:sIsNil: Boolean read Get%<PropertyName>:sIsNil;';
@@ -213,9 +214,26 @@ const
 
   PropertyImplMethodSetTextAttr = 'procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);'  + CrLf +
                                   'begin'                                                                       + CrLf +
-                                  '  AttributeNodes[''%<PropertySourceName>:s''].NodeValue := Value;'               + CrLf +
+                                  '  AttributeNodes[''%<PropertySourceName>:s''].NodeValue := Value;'           + CrLf +
                                   'end;'                                                                        + CrLf +
                                   ''                                                                            + CrLf;
+
+  PropertyImplMethodStream: array[TDelphiElementType] of string =
+                            (
+                              { dntElement }
+                              'procedure TXML%<Name>:s.Save%<PropertyName>:sToStream(AStream: TStream);'             + CrLf +
+                              'begin'                                                                                + CrLf +
+                              '  Base64DecodeToStream(Trim(ChildNodes[''%<PropertySourceName>:s''].Text), AStream);' + CrLf +
+                              'end;'                                                                                 + CrLf +
+                              ''                                                                                     + CrLf,
+
+                              { dntElementNS }
+                              'procedure TXML%<Name>:s.Save%<PropertyName>:sToStream(AStream: TStream);'                                          + CrLf +
+                              'begin'                                                                                                             + CrLf +
+                              '  Base64DecodeToStream(Trim(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'').Text), AStream);' + CrLf +
+                              'end;'                                                                                                              + CrLf +
+                              ''                                                                                                                  + CrLf
+                            );
 
 
   SectionComments:  array[TDelphiXMLSection] of String =

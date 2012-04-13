@@ -1068,6 +1068,8 @@ var
   value:            String;
   propertyItemName: String;
   fieldName:        String;
+  writeStream:      Boolean;
+  typeMapping:      TTypeMapping;
 
 begin
   Result  := False;
@@ -1083,6 +1085,15 @@ begin
   if AMember in [dxmPropertyGet, dxmPropertyDeclaration] then
     writeOptional := not Assigned(AProperty.Collection) and
                      AProperty.IsOptional;
+
+  writeStream   := False;
+  if (AMember = dxmPropertyGet) and (AProperty.PropertyType = ptSimple) then
+  begin
+    if GetDataTypeMapping(TXMLDataBindingSimpleProperty(AProperty).DataType, typeMapping) then
+      writeStream := (typeMapping.Conversion = tcBase64);
+  end;
+
+
 
 
   dataTypeName  := '';
@@ -1145,6 +1156,9 @@ begin
 
                 if writeTextProp then
                   sourceCode.Add(PropertyIntfMethodGetText);
+
+                if writeStream then
+                  sourceCode.Add(PropertyIntfMethodStream);
 
                 sourceCode.Add(PropertyIntfMethodGet);
               end;
@@ -1215,6 +1229,9 @@ begin
                     sourceCode.Add(PropertyImplMethodGetTextAttr)
                   else
                     sourceCode.Add(PropertyImplMethodGetText[GetDelphiElementType(AProperty)]);
+
+                if writeStream then
+                  sourceCode.Add(PropertyImplMethodStream[GetDelphiElementType(AProperty)]);
 
                 sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:s: %<DataType>:s;');
 

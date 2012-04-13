@@ -657,7 +657,8 @@ var
   schemaDef:            IXMLSchemaDef;
   simpleTypeIndex:      Integer;
   simpleType:           IXMLSimpleTypeDef;
-  enumerationObject:    TXMLDataBindingEnumeration; 
+  enumerationObject:    TXMLDataBindingEnumeration;
+  baseType:             IXMLTypeDef;
 
 begin
   schemaDef := ASchema.SchemaDef;
@@ -670,6 +671,15 @@ begin
     begin
       enumerationObject := TXMLDataBindingEnumeration.Create(Self, simpleType, simpleType.Enumerations, simpleType.Name, False);
       ASchema.AddItem(enumerationObject);
+    end else if simpleType.DerivationMethod = sdmRestriction then
+    begin
+      baseType := simpleType.BaseType;
+
+      while Assigned(baseType.BaseType) do
+        baseType := baseType.BaseType;
+
+      if not baseType.IsComplex then
+        ASchema.AddItem(TXMLDataBindingSimpleTypeAliasItem.Create(Self, baseType, simpleType.Name));
     end;
   end;
 end;
@@ -837,7 +847,7 @@ begin
 
           for attributeIndex := 0 to Pred(AElement.AttributeDefs.Count) do
             ProcessAttribute(ASchema, AElement.AttributeDefs[attributeIndex], interfaceObject);
-        end else if AElement.IsGlobal then
+        end else {if AElement.IsGlobal then}
         begin
           { Non-anonymous non-complex type. Assume somewhere in there is a
             built-in type.
