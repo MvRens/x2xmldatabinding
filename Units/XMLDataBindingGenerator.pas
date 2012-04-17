@@ -166,6 +166,7 @@ type
     FSchema:          TXMLDataBindingSchema;
     FSchemaItem:      IXMLSchemaItem;
     FTranslatedName:  String;
+    FTargetNamespace: String;
 
     function GetDocumentation: String;
     function GetHasDocumentation: Boolean;
@@ -179,6 +180,7 @@ type
     constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String);
 
     property Schema:              TXMLDataBindingSchema     read FSchema          write FSchema;
+    property TargetNamespace:     String                    read FTargetNamespace write FTargetNamespace;
 
     property DocumentElement:     Boolean                   read FDocumentElement write FDocumentElement;
     property Documentation:       String                    read GetDocumentation;
@@ -258,7 +260,6 @@ type
 
   TXMLDataBindingProperty = class(TXMLDataBindingItem)
   private
-    FTargetNamespace: string;
     FIsAttribute:     Boolean;
     FIsOptional:      Boolean;
     FIsNillable:      Boolean;
@@ -272,7 +273,6 @@ type
     function GetItemType: TXMLDataBindingItemType; override;
     function GetPropertyType: TXMLDataBindingPropertyType; virtual; abstract;
   public
-    property TargetNamespace: string                      read FTargetNamespace write FTargetNamespace;
     property IsAttribute:     Boolean                     read FIsAttribute     write FIsAttribute;
     property IsOptional:      Boolean                     read FIsOptional      write FIsOptional;
     property IsNillable:      Boolean                     read FIsNillable      write FIsNillable;
@@ -659,6 +659,8 @@ var
   simpleType:           IXMLSimpleTypeDef;
   enumerationObject:    TXMLDataBindingEnumeration;
   baseType:             IXMLTypeDef;
+  namespace:            String;
+  simpleTypeAlias:      TXMLDataBindingSimpleTypeAliasItem;
 
 begin
   schemaDef := ASchema.SchemaDef;
@@ -679,7 +681,15 @@ begin
         baseType := baseType.BaseType;
 
       if not baseType.IsComplex then
-        ASchema.AddItem(TXMLDataBindingSimpleTypeAliasItem.Create(Self, baseType, simpleType.Name));
+      begin
+        namespace := simpleType.SchemaDef.TargetNamespace;
+        if namespace = Schemas[0].TargetNamespace then
+          namespace := '';
+
+        simpleTypeAlias := TXMLDataBindingSimpleTypeAliasItem.Create(Self, baseType, simpleType.Name);
+        simpleTypeAlias.TargetNamespace := namespace;
+        ASchema.AddItem(simpleTypeAlias);
+      end;
     end;
   end;
 end;
@@ -811,6 +821,7 @@ begin
         begin
           { The element is global, but only references a simple type. }
           simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AElement, AElement.Name);
+          // #ToDo1 -oMvR: 17-4-2012: TargetNamespace!
           simpleAliasItem.DataType  := AElement.DataType;
           ASchema.AddItem(simpleAliasItem);
 
@@ -861,6 +872,7 @@ begin
             begin
               { The element is global, but only references a simple type. }
               simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AElement, AElement.Name);
+              // #ToDo1 -oMvR: 17-4-2012: TargetNamespace!
               simpleAliasItem.DataType  := typeDef;
               ASchema.AddItem(simpleAliasItem);
 
@@ -938,6 +950,7 @@ begin
         begin
           { The element is global, but only references a simple type. }
           simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AAttribute, AAttribute.Name);
+          // #ToDo1 -oMvR: 17-4-2012: TargetNamespace!
           simpleAliasItem.DataType  := AAttribute.DataType;
           ASchema.AddItem(simpleAliasItem);
 
@@ -977,6 +990,7 @@ begin
           begin
             { The element is global, but only references a simple type. }
             simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AAttribute, AAttribute.Name);
+            // #ToDo1 -oMvR: 17-4-2012: TargetNamespace!
             simpleAliasItem.DataType  := typeDef;
             ASchema.AddItem(simpleAliasItem);
 
@@ -1941,7 +1955,8 @@ constructor TXMLDataBindingSimpleProperty.CreateFromAlias(AOwner: TXMLDataBindin
 begin
   Create(AOwner, AProperty.SchemaItem, AProperty.Name, ADataType);
 
-  // #ToDo1 -oMvR: 6-4-2012: iets met TargetNamespace??
+  TargetNamespace := AProperty.TargetNamespace;
+
   IsAttribute := AProperty.IsAttribute;
   IsOptional  := AProperty.IsOptional;
   IsNillable  := AProperty.IsNillable;
