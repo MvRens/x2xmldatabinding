@@ -106,6 +106,7 @@ const
   PropertyIntfMethodSetText     = '    procedure Set%<PropertyName>:sText(const Value: WideString);';
   PropertyIntfMethodSet         = '    procedure Set%<PropertyName>:s(const Value: %<DataType>:s);';
   PropertyIntfMethodStream      = '    procedure Save%<PropertyName>:sToStream(AStream: TStream);';
+  PropertyIntfMethodFile        = '    procedure Save%<PropertyName>:sToFile(const AFileName: string);';
 
   PropertyInterfaceOptional     = '    property Has%<PropertyName>:s: Boolean read GetHas%<PropertyName>:s;';
   PropertyInterfaceNilReadOnly  = '    property %<PropertyName>:sIsNil: Boolean read Get%<PropertyName>:sIsNil;';
@@ -235,6 +236,22 @@ const
                               ''                                                                                                                  + CrLf
                             );
 
+  PropertyImplMethodFile: array[TDelphiElementType] of string =
+                          (
+                            { dntElement }
+                            'procedure TXML%<Name>:s.Save%<PropertyName>:sToFile(const AFileName: string);'        + CrLf +
+                            'begin'                                                                                + CrLf +
+                            '  Base64DecodeToFile(Trim(ChildNodes[''%<PropertySourceName>:s''].Text), AFileName);' + CrLf +
+                            'end;'                                                                                 + CrLf +
+                            ''                                                                                     + CrLf,
+
+                            { dntElementNS }
+                            'procedure TXML%<Name>:s.Save%<PropertyName>:sToFile(const AFileName: string);'                                     + CrLf +
+                            'begin'                                                                                                             + CrLf +
+                            '  Base64DecodeToFile(Trim(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'').Text), AFileName);' + CrLf +
+                            'end;'                                                                                                              + CrLf +
+                            ''                                                                                                                  + CrLf
+                          );
 
   SectionComments:  array[TDelphiXMLSection] of String =
                     (

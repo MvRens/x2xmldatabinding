@@ -57,6 +57,7 @@ const
   function Base64Encode(AValue: String): String;
   function Base64Decode(AValue: String): String;
   procedure Base64DecodeToStream(AValue: String; AStream: TStream);
+  procedure Base64DecodeToFile(AValue: String; const AFileName: String);
 
 const
   XMLSchemaInstanceURI = 'http://www.w3.org/2001/XMLSchema-instance';
@@ -334,6 +335,26 @@ begin
   input := TStringStream.Create(AValue);
   try
     MimeDecodeStream(input, AStream);
+  finally
+    FreeAndNil(input);
+  end;
+end;
+
+
+procedure Base64DecodeToFile(AValue: String; const AFileName: String);
+var
+  input: TStringStream;
+  output: TFileStream;
+
+begin
+  input := TStringStream.Create(AValue);
+  try
+    output := TFileStream.Create(AFileName, fmCreate or fmShareDenyWrite);
+    try
+      MimeDecodeStream(input, output);
+    finally
+      FreeAndNil(output);
+    end;
   finally
     FreeAndNil(input);
   end;

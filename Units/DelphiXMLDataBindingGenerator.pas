@@ -1158,7 +1158,10 @@ begin
                   sourceCode.Add(PropertyIntfMethodGetText);
 
                 if writeStream then
+                begin
                   sourceCode.Add(PropertyIntfMethodStream);
+                  sourceCode.Add(PropertyIntfMethodFile);
+                end;
 
                 sourceCode.Add(PropertyIntfMethodGet);
               end;
@@ -1231,7 +1234,10 @@ begin
                     sourceCode.Add(PropertyImplMethodGetText[GetDelphiElementType(AProperty)]);
 
                 if writeStream then
+                begin
                   sourceCode.Add(PropertyImplMethodStream[GetDelphiElementType(AProperty)]);
+                  sourceCode.Add(PropertyImplMethodFile[GetDelphiElementType(AProperty)]);
+                end;
 
                 sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:s: %<DataType>:s;');
 
