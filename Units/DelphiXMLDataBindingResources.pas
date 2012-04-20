@@ -331,7 +331,7 @@ type
 
 
 const
-  SimpleTypeMapping:  array[0..11] of TTypeMapping =
+  SimpleTypeMapping:  array[0..12] of TTypeMapping =
                       (
                         (SchemaName:  'int';          DelphiName:  'Integer';     Conversion:    tcNone),
                         (SchemaName:  'integer';      DelphiName:  'Integer';     Conversion:    tcNone),
@@ -339,6 +339,7 @@ const
                         (SchemaName:  'date';         DelphiName:  'TDateTime';   Conversion:    tcDate),
                         (SchemaName:  'time';         DelphiName:  'TDateTime';   Conversion:    tcTime),
                         (SchemaName:  'dateTime';     DelphiName:  'TDateTime';   Conversion:    tcDateTime),
+                        (SchemaName:  'decimal';      DelphiName:  'Double';      Conversion:    tcFloat),
                         (SchemaName:  'float';        DelphiName:  'Double';      Conversion:    tcFloat),
                         (SchemaName:  'double';       DelphiName:  'Double';      Conversion:    tcFloat),
                         (SchemaName:  'boolean';      DelphiName:  'Boolean';     Conversion:    tcBoolean),
