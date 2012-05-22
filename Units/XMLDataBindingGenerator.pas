@@ -65,6 +65,7 @@ type
     function ProcessElement(ASchema: TXMLDataBindingSchema; AAttribute: IXMLAttributeDef): TXMLDataBindingItem; overload;
     procedure ProcessChildElement(ASchema: TXMLDataBindingSchema; AElement: IXMLElementDef; AInterface: TXMLDataBindingInterface);
     procedure ProcessAttribute(ASchema: TXMLDataBindingSchema; AAttribute: IXMLAttributeDef; AInterface: TXMLDataBindingInterface);
+    function ProcessSimpleTypeReference(ASchema: TXMLDataBindingSchema; AItem: IXMLSchemaItem; ADataType: IXMLTypeDef): TXMLDataBindingItem;
 
     function IterateSchemaItems(ASchema: TXMLDataBindingSchema; AIterateProc: TXMLDataBindingIterateItemsProc; AData: Pointer): TXMLDataBindingItem;
 
@@ -79,11 +80,11 @@ type
     procedure ResolveSchema(ASchema: TXMLDataBindingSchema);
     procedure ResolveAlias(ASchema: TXMLDataBindingSchema);
     procedure ResolveItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingUnresolvedItem);
-    procedure ResolveNameConflicts;
+    procedure ResolveNameConflicts; virtual;
 
 
     procedure PostProcessSchema(ASchema: TXMLDataBindingSchema);
-    procedure PostProcessItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem);
+    procedure PostProcessItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem); virtual;
     function TranslateItemName(AItem: TXMLDataBindingItem): String; virtual;
 
     procedure GenerateDataBinding; virtual; abstract;
@@ -682,9 +683,12 @@ begin
 
       if not baseType.IsComplex then
       begin
-        namespace := simpleType.SchemaDef.TargetNamespace;
-        if namespace = Schemas[0].TargetNamespace then
-          namespace := '';
+        if not VarIsNull(simpleType.SchemaDef.TargetNamespace) then
+        begin
+          namespace := simpleType.SchemaDef.TargetNamespace;
+          if namespace = Schemas[0].TargetNamespace then
+            namespace := '';
+        end;
 
         simpleTypeAlias := TXMLDataBindingSimpleTypeAliasItem.Create(Self, baseType, simpleType.Name);
         simpleTypeAlias.TargetNamespace := namespace;
@@ -766,7 +770,6 @@ var
   simpleAliasItem:      TXMLDataBindingSimpleTypeAliasItem;
   elementIndex:         Integer;
   simpleTypeDef:        IXMLSimpleTypeDef;
-  typeDef: IXMLTypeDef;
 
 begin
   Result := nil;
@@ -858,30 +861,11 @@ begin
 
           for attributeIndex := 0 to Pred(AElement.AttributeDefs.Count) do
             ProcessAttribute(ASchema, AElement.AttributeDefs[attributeIndex], interfaceObject);
-        end else {if AElement.IsGlobal then}
+        end else //if AElement.IsGlobal then
         begin
           { Non-anonymous non-complex type. Assume somewhere in there is a
-            built-in type.
-
-            This code probably isn't correct, but it works for the files I got. }
-          typeDef := AElement.DataType;
-
-          while Assigned(typeDef) do
-          begin
-            if Supports(typeDef, IXMLSimpleTypeDef, simpleTypeDef) and (simpleTypeDef.IsBuiltInType) then
-            begin
-              { The element is global, but only references a simple type. }
-              simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AElement, AElement.Name);
-              // #ToDo1 -oMvR: 17-4-2012: TargetNamespace!
-              simpleAliasItem.DataType  := typeDef;
-              ASchema.AddItem(simpleAliasItem);
-
-              Result  := simpleAliasItem;
-              Break;
-            end;
-
-            typeDef := typeDef.BaseType;
-          end;
+            built-in type. }
+          Result := ProcessSimpleTypeReference(ASchema, AElement, AElement.DataType);
         end;
       end;
     end;
@@ -891,12 +875,11 @@ end;
 
 function TXMLDataBindingGenerator.ProcessElement(ASchema: TXMLDataBindingSchema; AAttribute: IXMLAttributeDef): TXMLDataBindingItem;
 var
-  enumerationObject: TXMLDataBindingEnumeration;
-  interfaceObject: TXMLDataBindingInterface;
-  complexAliasItem: TXMLDataBindingComplexTypeAliasItem;
-  simpleAliasItem: TXMLDataBindingSimpleTypeAliasItem;
-  simpleTypeDef: IXMLSimpleTypeDef;
-  typeDef: IXMLTypeDef;
+  enumerationObject:  TXMLDataBindingEnumeration;
+  interfaceObject:    TXMLDataBindingInterface;
+  complexAliasItem:   TXMLDataBindingComplexTypeAliasItem;
+  simpleAliasItem:    TXMLDataBindingSimpleTypeAliasItem;
+  simpleTypeDef:      IXMLSimpleTypeDef;
 
 begin
   Result := nil;
@@ -976,30 +959,11 @@ begin
 
         ASchema.AddItem(interfaceObject);
         Result := interfaceObject;
-      end else if AAttribute.IsGlobal then
+      end else //if AAttribute.IsGlobal then
       begin
         { Non-anonymous non-complex type. Assume somewhere in there is a
-          built-in type.
-
-          This code probably isn't correct, but it works for the files I got. }
-        typeDef := AAttribute.DataType;
-
-        while Assigned(typeDef) do
-        begin
-          if Supports(typeDef, IXMLSimpleTypeDef, simpleTypeDef) and (simpleTypeDef.IsBuiltInType) then
-          begin
-            { The element is global, but only references a simple type. }
-            simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AAttribute, AAttribute.Name);
-            // #ToDo1 -oMvR: 17-4-2012: TargetNamespace!
-            simpleAliasItem.DataType  := typeDef;
-            ASchema.AddItem(simpleAliasItem);
-
-            Result  := simpleAliasItem;
-            Break;
-          end;
-
-          typeDef := typeDef.BaseType;
-        end;
+          built-in type. }
+        Result := ProcessSimpleTypeReference(ASchema, AAttribute, AAttribute.DataType);
       end;
     end;
   end;
@@ -1027,9 +991,12 @@ begin
                                                             AElement.Name,
                                                             AElement.DataType);
 
-    namespace := AElement.SchemaDef.TargetNamespace;
-    if namespace <> Schemas[0].TargetNamespace then
-      propertyItem.TargetNamespace := namespace;
+    if not VarIsNull(AElement.SchemaDef.TargetNamespace) then
+    begin
+      namespace := AElement.SchemaDef.TargetNamespace;
+      if namespace <> Schemas[0].TargetNamespace then
+        propertyItem.TargetNamespace := namespace;
+    end;
 
     propertyItem.IsOptional   := IsElementOptional(AElement) or
                                  IsChoice(AElement);
@@ -1068,14 +1035,77 @@ begin
                                                           AAttribute.Name,
                                                           AAttribute.DataType);
 
-  namespace := AAttribute.SchemaDef.TargetNamespace;
-  if namespace <> ASchema.TargetNamespace then
-    propertyItem.TargetNamespace := namespace;
+  if not VarIsNull(AAttribute.SchemaDef.TargetNamespace) then
+  begin
+    namespace := AAttribute.SchemaDef.TargetNamespace;
+    if namespace <> ASchema.TargetNamespace then
+      propertyItem.TargetNamespace := namespace;
+  end;
 
   propertyItem.IsOptional   := (AAttribute.Use <> UseRequired);
   propertyItem.IsAttribute  := True;
   
   AInterface.AddProperty(propertyItem);
+end;
+
+
+function TXMLDataBindingGenerator.ProcessSimpleTypeReference(ASchema: TXMLDataBindingSchema; AItem: IXMLSchemaItem; ADataType: IXMLTypeDef): TXMLDataBindingItem;
+var
+  typeDef:          IXMLTypeDef;
+  simpleTypeDef:    IXMLSimpleTypeDef;
+  simpleAliasItem:  TXMLDataBindingSimpleTypeAliasItem;
+  
+begin
+  Result := nil;
+  
+  { This code is a fine bit of trial-and-error. It works for the files
+    I've seen so far, but has been modified enough times to say for sure
+    there'll be another unsupported way of referencing simple types. }
+  typeDef := ADataType;
+
+  while Assigned(typeDef) do
+  begin
+    if Supports(typeDef, IXMLSimpleTypeDef, simpleTypeDef) then
+    begin
+      if simpleTypeDef.IsBuiltInType then
+      begin
+        { The element is global, but only references a simple type. }
+        simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AItem, AItem.Name);
+        simpleAliasItem.DataType  := typeDef;
+        ASchema.AddItem(simpleAliasItem);
+
+        Result  := simpleAliasItem;
+        Break;
+      end else
+      begin
+        case simpleTypeDef.DerivationMethod of
+          sdmRestriction:
+            typeDef := typeDef.BaseType;
+
+          sdmUnion:
+            begin
+              simpleAliasItem           := TXMLDataBindingSimpleTypeAliasItem.Create(Self, AItem, AItem.Name);
+              simpleAliasItem.DataType  := typeDef;
+
+              // #ToDo1 -oMvR: set type "union"
+
+              ASchema.AddItem(simpleAliasItem);
+            end
+        else
+          typeDef := nil;
+        end;
+
+
+      end;
+    end;
+  end;
+
+//        if not VarIsNull(typeDef.SchemaDef.TargetNamespace) then
+//        begin
+//          namespace := typeDef.SchemaDef.TargetNamespace;
+//          if namespace <> ASchema.TargetNamespace then
+//            propertyItem.TargetNamespace := namespace;
+//        end;
 end;
 
 
@@ -1310,7 +1340,8 @@ var
     items:          TObjectList;
 
   begin
-    hashName  := AItem.Name;
+    { LowerCase because XML is case-sensitive, but Delphi isn't. }
+    hashName  := LowerCase(AItem.Name);
     
     if not itemNames.Exists(hashName) then
     begin
@@ -1776,6 +1807,8 @@ var
 
 begin
   inherited;
+
+  // #ToDo1 -oMvR: replacing a simpletypealias with nil doesn't quite work. not sure yet why.
 
   for propertyIndex := Pred(PropertyCount) downto 0 do
   begin

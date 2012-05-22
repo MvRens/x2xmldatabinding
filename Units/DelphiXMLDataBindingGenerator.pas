@@ -41,9 +41,10 @@ type
 
     function DelphiSafeName(const AName: String): String;
     function TranslateItemName(AItem: TXMLDataBindingItem): String; override;
+    procedure PostProcessItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem); override;
+    procedure ResolvePropertyNameConflicts(AItem: TXMLDataBindingInterface);
 
     function DoGetFileName(const ASchemaName: String): String;
-
 
     function GetDataTypeMapping(ADataType: IXMLTypeDef; out ATypeMapping: TTypeMapping): Boolean;
     function GetDataTypeName(AProperty: TXMLDataBindingProperty; AInterfaceName: Boolean): String;
@@ -374,6 +375,53 @@ begin
 end;
 
 
+procedure TDelphiXMLDataBindingGenerator.PostProcessItem(ASchema: TXMLDataBindingSchema; AItem: TXMLDataBindingItem);
+begin
+  inherited PostProcessItem(ASchema, AItem);
+
+  if AItem.ItemType = itInterface then
+  begin
+    { Resolve conflicts in case only for properties }
+    ResolvePropertyNameConflicts(TXMLDataBindingInterface(AItem));
+  end;
+end;
+
+
+procedure TDelphiXMLDataBindingGenerator.ResolvePropertyNameConflicts(AItem: TXMLDataBindingInterface);
+var
+  propertyNames:  TStringList;
+  propertyItem:   TXMLDataBindingProperty;
+  propertyIndex:  Integer;
+  baseName:       String;
+  counter:        Integer;
+
+begin
+  propertyNames := TStringList.Create;
+  try
+    propertyNames.CaseSensitive := False;
+
+    for propertyIndex := 0 to Pred(AItem.PropertyCount) do
+    begin
+      propertyItem := AItem.Properties[propertyIndex];
+
+      baseName := propertyItem.TranslatedName;
+      counter := 1;
+
+      while propertyNames.IndexOf(propertyItem.TranslatedName) > -1 do
+      begin
+        { Unfortunately, the context is exactly the same, this is the best we can do }
+        Inc(counter);
+        propertyItem.TranslatedName := baseName + IntToStr(counter);
+      end;
+
+      propertyNames.Add(propertyItem.TranslatedName);
+    end;
+  finally
+    FreeAndNil(propertyNames);
+  end;
+end;
+
+
 procedure TDelphiXMLDataBindingGenerator.WriteUnitHeader(AStream: TStreamHelper; const ASourceFileName, AFileName: String);
 begin
   AStream.WriteNamedFmt(UnitHeader,
@@ -418,13 +466,9 @@ begin
   hasItem   := False;
   nameSpace := '';
 
-  // #ToDo1 -oMvR: 6-4-2012: bij de Hyundai XSD's wordt hiermee TargetNamespace incorrect de laatste schema namespace
   for schemaIndex := 0 to Pred(ASchemaList.Count) do
   begin
     schema := ASchemaList[schemaIndex];
-    
-    if Length(schema.TargetNamespace) > 0 then
-      nameSpace := schema.TargetNamespace;
 
     for itemIndex := 0 to Pred(schema.ItemCount) do
     begin
@@ -444,6 +488,9 @@ begin
             AStream.WriteLn('{ Document functions }');
             hasItem := True;
           end;
+
+          if Length(schema.TargetNamespace) > 0 then
+            nameSpace := schema.TargetNamespace;
 
           with TNamedFormatStringList.Create do
           try
