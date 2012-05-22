@@ -1105,6 +1105,21 @@ function TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceProperty(AStream: TS
   end;
 
 
+  function IsReadOnly(AProperty: TXMLDataBindingProperty): Boolean;
+  var
+    typeMapping: TTypeMapping;
+
+  begin
+    Result := AProperty.IsReadOnly;
+
+    if (not Result) and (AProperty.PropertyType = ptSimple) then
+    begin
+      if GetDataTypeMapping(TXMLDataBindingSimpleProperty(AProperty).DataType, typeMapping) then
+        Result := (typeMapping.Conversion = tcNode);
+    end;
+  end;
+
+
 var
   sourceCode:       TNamedFormatStringList;
   writeOptional:    Boolean;
@@ -1214,7 +1229,7 @@ begin
               end;
 
             dxmPropertySet:
-              if not AProperty.IsReadOnly then
+              if not IsReadOnly(AProperty) then
               begin
                 WriteNewLine;
 
@@ -1235,7 +1250,7 @@ begin
                 if writeOptional then
                   sourceCode.Add(PropertyInterfaceOptional);
 
-                if AProperty.IsReadOnly then
+                if IsReadOnly(AProperty) then
                 begin
                   if writeNil then
                     sourceCode.Add(PropertyInterfaceNilReadOnly);
@@ -1341,7 +1356,7 @@ begin
                 sourceCode.AddLn;
               end;
             dxmPropertySet:
-              if not AProperty.IsReadOnly then
+              if not IsReadOnly(AProperty) then
               begin
                 WriteNewLine;
 
