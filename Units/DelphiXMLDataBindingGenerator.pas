@@ -1040,12 +1040,12 @@ begin
                 sourceCode.AddLn;
 
                 sourceCode.Add('function TXML%<Name>:s.Add(%<ItemName>:s: %<DataType>:s): %<DataInterface>:s;');
-                sourceCode.Add(NativeDataTypeToXML('Result.NodeValue', '%<ItemName>:s', typeDef, dntCustom,
+                sourceCode.Add(NativeDataTypeToXML('Result.NodeValue', '%<ItemName>:s', typeDef, dntCustom, '',
                                                    '  Result := AddItem(-1);'));
                 sourceCode.AddLn;
 
                 sourceCode.Add('function TXML%<Name>:s.Insert(Index: Integer; %<ItemName>:s: %<DataType>:s): %<DataInterface>:s;');
-                sourceCode.Add(NativeDataTypeToXML('Result.NodeValue', '%<ItemName>:s', typeDef, dntCustom,
+                sourceCode.Add(NativeDataTypeToXML('Result.NodeValue', '%<ItemName>:s', typeDef, dntCustom, '',
                                                    '  Result := AddItem(Index);'));
                 sourceCode.AddLn;
               end;
