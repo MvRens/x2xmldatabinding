@@ -69,6 +69,8 @@ type
     procedure WriteSchemaEnumerationArray(AStream: TStreamHelper; AItem: TXMLDataBindingEnumeration);
 
     procedure WriteValidate(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+    procedure WriteEnumeratorMethod(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+    procedure WriteEnumerator(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
 
     function GetDelphiNodeType(AProperty: TXMLDataBindingProperty): TDelphiNodeType;
     function GetDelphiElementType(AProperty: TXMLDataBindingProperty): TDelphiElementType;
@@ -695,8 +697,10 @@ begin
         if Assigned(AItem.BaseItem) then
           parent  := PrefixInterface + AItem.BaseItem.TranslatedName
         else if AItem.IsCollection then
-          parent  := CollectionInterface
-        else
+        begin
+          parent  := CollectionInterface;
+          WriteEnumerator(AStream, AItem, ASection);
+        end else
           parent  := ItemInterface;
 
 
@@ -717,8 +721,10 @@ begin
         if Assigned(AItem.BaseItem) then
           parent  := PrefixClass + AItem.BaseItem.TranslatedName
         else if AItem.IsCollection then
-          parent  := CollectionClass
-        else
+        begin
+          parent  := CollectionClass;
+          WriteEnumerator(AStream, AItem, ASection);
+        end else
           parent  := ItemClass;
 
 
@@ -738,6 +744,7 @@ begin
 
     dxsImplementation:
       begin
+        WriteEnumerator(AStream, AItem, ASection);
         WriteSchemaInterfaceProperties(AStream, AItem, ASection);
       end;
   end;
@@ -937,6 +944,7 @@ begin
     AStream.WriteLn('  protected');
 
   WriteValidate(AStream, AItem, ASection);
+  WriteEnumeratorMethod(AStream, AItem, ASection);
   hasMembers  := WriteSchemaInterfaceCollectionProperties(AStream, AItem, ASection);
 
   for member := Low(TDelphiXMLMember) to High(TDelphiXMLMember) do
@@ -1590,6 +1598,63 @@ begin
           AStream.WriteLn(XSDValidateMethodImplementationEnd);
         end;
     end;
+  end;
+end;
+
+
+procedure TDelphiXMLDataBindingGenerator.WriteEnumeratorMethod(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+begin
+  if not AItem.IsCollection then
+    Exit;
+
+  case ASection of
+    dxsInterface,
+    dxsClass:
+      begin
+        AStream.WriteLnNamedFmt(EnumeratorMethodInterface,
+                                ['Name', AItem.TranslatedName]);
+        AStream.WriteLn('');
+      end;
+
+    dxsImplementation:
+      begin
+        AStream.WriteLnNamedFmt(EnumeratorMethodImplementation,
+                                ['Name', AItem.TranslatedName]);
+      end;
+  end;
+end;
+
+
+
+procedure TDelphiXMLDataBindingGenerator.WriteEnumerator(AStream: TStreamHelper; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+begin
+  if not AItem.IsCollection then
+    Exit;
+
+  case ASection of
+    dxsInterface:
+      begin
+        AStream.WriteLnNamedFmt(EnumeratorInterface,
+                                ['Name', AItem.TranslatedName,
+                                 'ItemName', AItem.CollectionItem.TranslatedName,
+                                 'GUID', CreateNewGUID]);
+        AStream.WriteLn('');
+      end;
+
+    dxsClass:
+      begin
+        AStream.WriteLnNamedFmt(EnumeratorClass,
+                                ['Name', AItem.TranslatedName,
+                                 'ItemName', AItem.CollectionItem.TranslatedName]);
+        AStream.WriteLn('');
+      end;
+
+    dxsImplementation:
+      begin
+        AStream.WriteLnNamedFmt(EnumeratorImplementation,
+                                ['Name', AItem.TranslatedName,
+                                 'ItemName', AItem.CollectionItem.TranslatedName]);
+      end;
   end;
 end;
 

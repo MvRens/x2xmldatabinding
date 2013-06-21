@@ -46,6 +46,21 @@ type
   end;
 
 
+  TXMLNodeCollectionEnumerator = class(TInterfacedObject)
+  private
+    FNodeCollection: IXMLNodeCollection;
+    FIndex: Integer;
+  public
+    constructor Create(ANodeCollection: IXMLNodeCollection);
+
+    function GetCurrent: IXMLNode;
+    function MoveNext: Boolean; virtual;
+
+    property Current: IXMLNode read GetCurrent;
+  end;
+
+
+
 const
   AllTimeFragments    = [Low(TXMLTimeFragment)..High(TXMLTimeFragment)];
 
@@ -156,6 +171,33 @@ begin
   Result := ChildNodes.FindNode(ANodeName, ANamespaceURI);
   if (not Assigned(Result)) and (doNodeAutoCreate in OwnerDocument.Options) then
     Result := AddChild(ANodeName, ANamespaceURI);  
+end;
+
+
+
+{ TXMLNodeCollectionEnumerator }
+constructor TXMLNodeCollectionEnumerator.Create(ANodeCollection: IXMLNodeCollection);
+begin
+  inherited Create;
+
+  FNodeCollection := ANodeCollection;
+  FIndex := -1;
+end;
+
+
+function TXMLNodeCollectionEnumerator.GetCurrent: IXMLNode;
+begin
+  if (FIndex >= 0) and (FIndex < FNodeCollection.Count) then
+    Result := FNodeCollection.Nodes[FIndex]
+  else
+    Result := nil;
+end;
+
+
+function TXMLNodeCollectionEnumerator.MoveNext: Boolean;
+begin
+  Inc(FIndex);
+  Result := (FIndex < FNodeCollection.Count);
 end;
 
 
