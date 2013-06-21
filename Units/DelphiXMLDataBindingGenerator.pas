@@ -1334,7 +1334,7 @@ begin
                                 sourceCode.Add('begin');
 
                                 if AProperty.HasTargetNamespace then
-                                  sourceCode.Add('  Result := (ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'') as IXML%<PropertyItemName>:s);')
+                                  sourceCode.Add('  Result := (ChildNodesNS[''%<PropertySourceName>:s'', ''%<Namespace>:s''] as IXML%<PropertyItemName>:s);')
                                 else
                                   sourceCode.Add('  Result := (ChildNodes[''%<PropertySourceName>:s''] as IXML%<PropertyItemName>:s);');
 

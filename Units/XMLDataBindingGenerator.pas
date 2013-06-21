@@ -976,6 +976,7 @@ var
   propertyType:         TXMLDataBindingItem;
   propertyItem:         TXMLDataBindingProperty;
   namespace:            string;
+  schemaDef:            IXMLSchemaDef;
 
 begin
   propertyType      := ProcessElement(ASchema, AElement);
@@ -991,9 +992,14 @@ begin
                                                             AElement.Name,
                                                             AElement.DataType);
 
-    if not VarIsNull(AElement.SchemaDef.TargetNamespace) then
+    if Assigned(AElement.Ref) then
+      schemaDef := AElement.Ref.SchemaDef
+    else
+      schemaDef := AElement.SchemaDef;
+
+    if Assigned(schemaDef) and (not VarIsNull(schemaDef.TargetNamespace)) then
     begin
-      namespace := AElement.SchemaDef.TargetNamespace;
+      namespace := schemaDef.TargetNamespace;
       if namespace <> Schemas[0].TargetNamespace then
         propertyItem.TargetNamespace := namespace;
     end;

@@ -151,7 +151,7 @@ const
                               { dntElementNS }
                               'function TXML%<Name>:s.Get%<PropertyName>:sIsNil: Boolean;'                                      + CrLf +
                               'begin'                                                                                           + CrLf +
-                              '  Result := GetNodeIsNil(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s''));' + CrLf +
+                              '  Result := GetNodeIsNil(ChildNodesNS[''%<PropertySourceName>:s'', ''%<Namespace>:s'']);'        + CrLf +
                               'end;'                                                                                            + CrLf +
                               ''                                                                                                + CrLf
                             );
@@ -168,7 +168,7 @@ const
                               { dntElementNS }
                               'procedure TXML%<Name>:s.Set%<PropertyName>:sIsNil(const Value: Boolean);'                      + CrLf +
                               'begin'                                                                                         + CrLf +
-                              '  SetNodeIsNil(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s''), Value);'  + CrLf +
+                              '  SetNodeIsNil(ChildNodesNS[''%<PropertySourceName>:s'', ''%<Namespace>:s''], Value);'         + CrLf +
                               'end;'                                                                                          + CrLf +
                               ''                                                                                              + CrLf
                             );
@@ -185,14 +185,14 @@ const
                                { dntElement }
                                'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'                           + CrLf +
                                'begin'                                                                                  + CrLf +
-                               '  Result := ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'').Text;' + CrLf +
+                               '  Result := ChildNodesNS[''%<PropertySourceName>:s'', ''%<Namespace>:s''].Text;'        + CrLf +
                                'end;'                                                                                   + CrLf +
                                ''                                                                                       + CrLf
                              );
 
   PropertyImplMethodGetTextAttr = 'function TXML%<Name>:s.Get%<PropertyName>:sText: WideString;'            + CrLf +
                                   'begin'                                                                   + CrLf +
-                                  '  Result := AttributeNodes[''%<PropertySourceName>:s''].Text;'               + CrLf +
+                                  '  Result := AttributeNodes[''%<PropertySourceName>:s''].Text;'           + CrLf +
                                   'end;'                                                                    + CrLf +
                                   ''                                                                        + CrLf;
 
@@ -208,7 +208,7 @@ const
                                { dntElementNS }
                                'procedure TXML%<Name>:s.Set%<PropertyName>:sText(const Value: WideString);'                 + CrLf +
                                'begin'                                                                                      + CrLf +
-                               '  ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'').NodeValue := Value;' + CrLf +
+                               '  ChildNodesNS[''%<PropertySourceName>:s'', ''%<Namespace>:s''].NodeValue := Value;'        + CrLf +
                                'end;'                                                                                       + CrLf +
                                ''                                                                                           + CrLf
                              );
@@ -231,7 +231,7 @@ const
                               { dntElementNS }
                               'procedure TXML%<Name>:s.Save%<PropertyName>:sToStream(AStream: TStream);'                                          + CrLf +
                               'begin'                                                                                                             + CrLf +
-                              '  Base64DecodeToStream(Trim(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'').Text), AStream);' + CrLf +
+                              '  Base64DecodeToStream(Trim(ChildNodesNS[''%<PropertySourceName>:s'', ''%<Namespace>:s''].Text), AStream);' + CrLf +
                               'end;'                                                                                                              + CrLf +
                               ''                                                                                                                  + CrLf
                             );
@@ -248,7 +248,7 @@ const
                             { dntElementNS }
                             'procedure TXML%<Name>:s.Save%<PropertyName>:sToFile(const AFileName: string);'                                     + CrLf +
                             'begin'                                                                                                             + CrLf +
-                            '  Base64DecodeToFile(Trim(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'').Text), AFileName);' + CrLf +
+                            '  Base64DecodeToFile(Trim(ChildNodesNS[''%<PropertySourceName>:s'', ''%<Namespace>:s''].Text), AFileName);' + CrLf +
                             'end;'                                                                                                              + CrLf +
                             ''                                                                                                                  + CrLf
                           );
@@ -275,10 +275,10 @@ const
 
 
   CollectionInterface     = 'IXMLNodeCollection';
-  CollectionClass         = 'TXMLNodeCollection';
+  CollectionClass         = 'TX2XMLNodeCollection';
 
   ItemInterface           = 'IXMLNode';
-  ItemClass               = 'TXMLNode';
+  ItemClass               = 'TX2XMLNode';
 
 
 
@@ -369,7 +369,7 @@ const
                               { daGet }
                               (
                                 { dntElement }    '  %<Destination>:s := ChildNodes[''%<Source>:s''].NodeValue;',
-                                { dntElementNS }  '  %<Destination>:s := ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue;',
+                                { dntElementNS }  '  %<Destination>:s := ChildNodesNS[''%<Source>:s'', ''%<Namespace>:s''].NodeValue;',
                                 { dntAttribute }  '  %<Destination>:s := AttributeNodes[''%<Source>:s''].NodeValue;',
                                 { dntNodeValue }  '  %<Destination>:s := GetNodeValue;',
                                 { dntCustom }     '  %<Destination>:s := %<Source>:s;'
@@ -377,7 +377,7 @@ const
                               { daSet }
                               (
                                 { dntElement }    '  ChildNodes[''%<Destination>:s''].NodeValue := %<Source>:s;',
-                                { dntElementNS }  '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := %<Source>:s;',
+                                { dntElementNS }  '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := %<Source>:s;',
                                 { dntAttribute }  '  SetAttribute(''%<Destination>:s'', %<Source>:s);',
                                 { dntNodeValue }  '  SetNodeValue(%<Source>:s);',
                                 { dntCustom }     '  %<Destination>:s := %<Source>:s;'
@@ -405,13 +405,13 @@ const
                                 (
                                   { tcNone }      '',
                                   { tcBoolean }   '',
-                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue);',
-                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue, xdtDateTime);',
-                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue, xdtDate);',
-                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').NodeValue, xdtTime);',
-                                  { tcString }    '  %<Destination>:s := ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').Text;',
-                                  { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'').Text));',
-                                  { tcNode }      '  %<Destination>:s := ChildNodes.FindNode(''%<Source>:s'', ''%<Namespace>:s'');'
+                                  { tcFloat }     '  %<Destination>:s := XMLToFloat(ChildNodesNS[''%<Source>:s'', ''%<Namespace>:s''].NodeValue);',
+                                  { tcDateTime }  '  %<Destination>:s := XMLToDateTime(ChildNodesNS[''%<Source>:s'', ''%<Namespace>:s''].NodeValue, xdtDateTime);',
+                                  { tcDate }      '  %<Destination>:s := XMLToDateTime(ChildNodesNS[''%<Source>:s'', ''%<Namespace>:s''].NodeValue, xdtDate);',
+                                  { tcTime }      '  %<Destination>:s := XMLToDateTime(ChildNodesNS[''%<Source>:s'', ''%<Namespace>:s''].NodeValue, xdtTime);',
+                                  { tcString }    '  %<Destination>:s := ChildNodesNS[''%<Source>:s'', ''%<Namespace>:s''].Text;',
+                                  { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(ChildNodesNS[''%<Source>:s'', ''%<Namespace>:s''].Text));',
+                                  { tcNode }      '  %<Destination>:s := ChildNodesNS[''%<Source>:s'', ''%<Namespace>:s''];'
                                 ),
                                 { dntAttribute }
                                 (
@@ -467,14 +467,14 @@ const
                                 { dntElementNS }
                                 (
                                   { tcNone }      '',
-                                  { tcBoolean }   '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := BoolToXML(%<Source>:s);',
-                                  { tcFloat }     '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := FloatToXML(%<Source>:s);',
-                                  { tcDateTime }  '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
-                                  { tcDate }      '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
-                                  { tcTime }      '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
+                                  { tcBoolean }   '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := BoolToXML(%<Source>:s);',
+                                  { tcFloat }     '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := FloatToXML(%<Source>:s);',
+                                  { tcDateTime }  '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
+                                  { tcDate }      '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
+                                  { tcTime }      '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
                                   { tcString }    '',
-                                  { tcBase64 }    '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'').NodeValue := Base64Encode(%<Source>:s);',
-                                  { tcNode }      '  ChildNodes.FindNode(''%<Destination>:s'', ''%<Namespace>:s'') := %<Source>:s;'
+                                  { tcBase64 }    '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := Base64Encode(%<Source>:s);',
+                                  { tcNode }      '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''] := %<Source>:s;'
                                 ),
                                 { dntAttribute }
                                 (

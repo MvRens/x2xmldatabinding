@@ -11,6 +11,8 @@ interface
 uses
   Classes,
   SysUtils,
+  XMLDoc,
+  xmldom,
   XMLIntf;
 
 
@@ -25,6 +27,22 @@ type
   IXSDValidate  = interface
     ['{3BFDC851-7459-403B-87B3-A52E9E85BC8C}']
     procedure XSDValidate;
+  end;
+
+
+  TX2XMLNode = class(TXMLNode)
+  private
+    function GetChildNodesNS(const ANodeName, ANamespaceURI: DOMString): IXMLNode;
+  protected
+    property ChildNodesNS[const ANodeName, ANamespaceURI: DOMString]: IXMLNode read GetChildNodesNS;
+  end;
+
+
+  TX2XMLNodeCollection = class(TXMLNodeCollection)
+  private
+    function GetChildNodesNS(const ANodeName, ANamespaceURI: DOMString): IXMLNode;
+  protected
+    property ChildNodesNS[const ANodeName, ANamespaceURI: DOMString]: IXMLNode read GetChildNodesNS;
   end;
 
 
@@ -119,6 +137,26 @@ type
   function MimeDecode(var InputBuffer; const InputBytesCount: Cardinal; var OutputBuffer): Cardinal; forward;
   function MimeDecodePartial(var InputBuffer; const InputBytesCount: Cardinal; var OutputBuffer; var ByteBuffer: Cardinal; var ByteBufferSpace: Cardinal): Cardinal; forward;
   function MimeDecodePartialEnd(var OutputBuffer; const ByteBuffer: Cardinal; const ByteBufferSpace: Cardinal): Cardinal; forward;
+
+
+
+{ TX2XMLNode }
+function TX2XMLNode.GetChildNodesNS(const ANodeName, ANamespaceURI: DOMString): IXMLNode;
+begin
+  Result := ChildNodes.FindNode(ANodeName, ANamespaceURI);
+  if (not Assigned(Result)) and (doNodeAutoCreate in OwnerDocument.Options) then
+    Result := AddChild(ANodeName, ANamespaceURI);  
+end;
+
+
+
+{ TX2XMLNodeCollection }
+function TX2XMLNodeCollection.GetChildNodesNS(const ANodeName, ANamespaceURI: DOMString): IXMLNode;
+begin
+  Result := ChildNodes.FindNode(ANodeName, ANamespaceURI);
+  if (not Assigned(Result)) and (doNodeAutoCreate in OwnerDocument.Options) then
+    Result := AddChild(ANodeName, ANamespaceURI);  
+end;
 
 
 
