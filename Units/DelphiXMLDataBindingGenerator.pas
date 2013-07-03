@@ -1631,12 +1631,14 @@ begin
   if not AItem.IsCollection then
     Exit;
 
+
+
   case ASection of
     dxsInterface:
       begin
         AStream.WriteLnNamedFmt(EnumeratorInterface,
                                 ['Name', AItem.TranslatedName,
-                                 'ItemName', AItem.CollectionItem.TranslatedName,
+                                 'DataType', GetDataTypeName(AItem.CollectionItem, True),
                                  'GUID', CreateNewGUID]);
         AStream.WriteLn('');
       end;
@@ -1645,7 +1647,7 @@ begin
       begin
         AStream.WriteLnNamedFmt(EnumeratorClass,
                                 ['Name', AItem.TranslatedName,
-                                 'ItemName', AItem.CollectionItem.TranslatedName]);
+                                 'DataType', GetDataTypeName(AItem.CollectionItem, True)]);
         AStream.WriteLn('');
       end;
 
@@ -1653,7 +1655,7 @@ begin
       begin
         AStream.WriteLnNamedFmt(EnumeratorImplementation,
                                 ['Name', AItem.TranslatedName,
-                                 'ItemName', AItem.CollectionItem.TranslatedName]);
+                                 'DataType', GetDataTypeName(AItem.CollectionItem, True)]);
       end;
   end;
 end;

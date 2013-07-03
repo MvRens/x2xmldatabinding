@@ -98,7 +98,7 @@ const
   XSDValidateMethodImplementationEnd      = 'end;' + CrLf;
 
 
-  EnumeratorMethodInterface       = '    function GetEnumerator: IXML%<Name>:sEnumerator;';
+  EnumeratorMethodInterface       = '    function GetEnumerator: %<Name>:sEnumerator;';
   EnumeratorMethodImplementation  = 'function TXML%<Name>:s.GetEnumerator: IXML%<Name>:sEnumerator;' + CrLf +
                                     'begin' + CrLf +
                                     '  Result := TXML%<Name>:sEnumerator.Create(Self);' + CrLf +
@@ -107,20 +107,20 @@ const
 
   EnumeratorInterface = '  IXML%<Name>:sEnumerator = interface' + CrLf +
                         '    %<GUID>:s' + CrLf +
-                        '    function GetCurrent: IXML%<ItemName>:s;' + CrLf +
+                        '    function GetCurrent: %<DataType>:s;' + CrLf +
                         '    function MoveNext: Boolean;' + CrLf +
-                        '    property Current: IXML%<ItemName>:s read GetCurrent;' + CrLf +
+                        '    property Current: %<DataType>:s read GetCurrent;' + CrLf +
                         '  end;' + CrLf;
 
 
   EnumeratorClass     = '  TXML%<Name>:sEnumerator = class(TXMLNodeCollectionEnumerator, IXML%<Name>:sEnumerator)' + CrLf +
                         '  protected' + CrLf +
-                        '    function GetCurrent: IXML%<ItemName>:s;' + CrLf +
+                        '    function GetCurrent: %<DataType>:s;' + CrLf +
                         '  end;' + CrLf;
 
-  EnumeratorImplementation = 'function TXML%<Name>:sEnumerator.GetCurrent: IXML%<ItemName>:s;' + CrLf +
+  EnumeratorImplementation = 'function TXML%<Name>:sEnumerator.GetCurrent: %<DataType>:s;' + CrLf +
                              'begin' + CrLf +
-                             '  Result := (inherited GetCurrent as IXML%<ItemName>:s);' + CrLf +
+                             '  Result := (inherited GetCurrent as %<DataType>:s);' + CrLf +
                              'end;' + CrLf;
 
   PropertyIntfMethodGetOptional = '    function GetHas%<PropertyName>:s: Boolean;';
