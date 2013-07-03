@@ -98,7 +98,7 @@ const
   XSDValidateMethodImplementationEnd      = 'end;' + CrLf;
 
 
-  EnumeratorMethodInterface       = '    function GetEnumerator: %<Name>:sEnumerator;';
+  EnumeratorMethodInterface       = '    function GetEnumerator: IXML%<Name>:sEnumerator;';
   EnumeratorMethodImplementation  = 'function TXML%<Name>:s.GetEnumerator: IXML%<Name>:sEnumerator;' + CrLf +
                                     'begin' + CrLf +
                                     '  Result := TXML%<Name>:sEnumerator.Create(Self);' + CrLf +
