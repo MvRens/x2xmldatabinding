@@ -45,6 +45,7 @@ const
   DocumentFunctionsInterface      = '  function Get%<Name>:s(ADocument: XMLIntf.IXMLDocument): IXML%<Name>:s;'  + CrLf +
                                     '  function Load%<Name>:s(const AFileName: String): IXML%<Name>:s;'         + CrLf +
                                     '  function Load%<Name>:sFromStream(AStream: TStream): IXML%<Name>:s;'      + CrLf +
+                                    '  function Load%<Name>:sFromString(const AString: String): IXML%<Name>:s;' + CrLf +
                                     '  function New%<Name>:s: IXML%<Name>:s;'                                   + CrLf;
 
   DocumentFunctionsImplementation = 'function Get%<Name>:s(ADocument: XMLIntf.IXMLDocument): IXML%<Name>:s;'  + CrLf +
@@ -65,6 +66,19 @@ const
                                     '  doc := NewXMLDocument;'                                                + CrLf +
                                     '  doc.LoadFromStream(AStream);'                                          + CrLf +
                                     '  Result  := Get%<Name>:s(doc);'                                         + CrLf +
+                                    'end;'                                                                    + CrLf +
+                                    ''                                                                        + CrLf +
+                                    'function Load%<Name>:sFromString(const AString: String): IXML%<Name>:s;' + CrLf +
+                                    'var'                                                                     + CrLf +
+                                    '  stream: TStringStream;'                                                + CrLf +
+                                    ''                                                                        + CrLf +
+                                    'begin'                                                                   + CrLf +
+                                    '  stream := TStringStream.Create(AString);'                              + CrLf +
+                                    '  try'                                                                   + CrLf +
+                                    '    Result  := Load%<Name>:sFromStream(stream);'                         + CrLf +
+                                    '  finally'                                                               + CrLf +
+                                    '    FreeAndNil(stream);'                                                 + CrLf +
+                                    '  end;'                                                                  + CrLf +
                                     'end;'                                                                    + CrLf +
                                     ''                                                                        + CrLf +
                                     'function New%<Name>:s: IXML%<Name>:s;'                                   + CrLf +
