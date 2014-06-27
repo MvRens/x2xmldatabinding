@@ -398,7 +398,7 @@ const
                               { tcDateTime }  True,
                               { tcDate }      True,
                               { tcTime }      True,
-                              { tcString }    False,
+                              { tcString }    True,
                               { tcBase64 }    True,
                               { tcNone }      False
                             );
@@ -499,7 +499,7 @@ const
                                   { tcDateTime }  '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
                                   { tcDate }      '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
                                   { tcTime }      '  ChildNodes[''%<Destination>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
-                                  { tcString }    '',
+                                  { tcString }    '  ChildNodes[''%<Destination>:s''].NodeValue := GetValidXMLText(%<Source>:s);',
                                   { tcBase64 }    '  ChildNodes[''%<Destination>:s''].NodeValue := Base64Encode(%<Source>:s);',
                                   { tcNode }      '  ChildNodes[''%<Destination>:s''] := %<Source>:s;'
                                 ),
@@ -511,7 +511,7 @@ const
                                   { tcDateTime }  '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDateTime);',
                                   { tcDate }      '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtDate);',
                                   { tcTime }      '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := DateTimeToXML(%<Source>:s, xdtTime);',
-                                  { tcString }    '',
+                                  { tcString }    '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := GetValidXMLText(%<Source>:s);',
                                   { tcBase64 }    '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''].NodeValue := Base64Encode(%<Source>:s);',
                                   { tcNode }      '  ChildNodesNS[''%<Destination>:s'', ''%<Namespace>:s''] := %<Source>:s;'
                                 ),
@@ -523,7 +523,7 @@ const
                                   { tcDateTime }  '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtDateTime));',
                                   { tcDate }      '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtDate));',
                                   { tcTime }      '  SetAttribute(''%<Destination>:s'', DateTimeToXML(%<Source>:s, xdtTime));',
-                                  { tcString }    '',
+                                  { tcString }    '  SetAttribute(''%<Destination>:s'', GetValidXMLText(%<Source>:s));',
                                   { tcBase64 }    '  SetAttribute(''%<Destination>:s'', Base64Encode(%<Source>:s));',
                                   { tcNode }      ''
                                 ),
@@ -535,7 +535,7 @@ const
                                   { tcDateTime }  '  SetNodeValue(DateTimeToXML(%<Source>:s, xdtDateTime));',
                                   { tcDate }      '  SetNodeValue(DateTimeToXML(%<Source>:s, xdtDate));',
                                   { tcTime }      '  SetNodeValue(DateTimeToXML(%<Source>:s, xdtTime));',
-                                  { tcString }    '',
+                                  { tcString }    '  SetNodeValue(GetValidXMLText(%<Source>:s));',
                                   { tcBase64 }    '  SetNodeValue(Base64Encode(%<Source>:s));',
                                   { tcNode }      ''
                                 ),
@@ -547,7 +547,7 @@ const
                                   { tcDateTime }  '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtDateTime);',
                                   { tcDate }      '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtDate);',
                                   { tcTime }      '  %<Destination>:s := DateTimeToXML(%<Source>:s, xdtTime);',
-                                  { tcString }    '',
+                                  { tcString }    '  %<Destination>:s := GetValidXMLText(%<Source>:s);',
                                   { tcBase64 }    '  %<Destination>:s := Base64Encode(%<Source>:s);',
                                   { tcNode }      ''
                                 )
