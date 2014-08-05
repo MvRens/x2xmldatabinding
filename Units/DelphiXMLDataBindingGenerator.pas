@@ -1549,7 +1549,13 @@ begin
               end;
             end else if not propertyItem.IsNodeValue then
             begin
-              elementSortOrder := elementSortOrder + ', ' + QuotedStr(propertyItem.Name);
+              elementSortOrder := elementSortOrder + ', ';
+
+              { Prevent "Line too long" on large elements }
+              if (elementSortCount > 0) and (elementSortCount mod 5 = 0) then
+                elementSortOrder := elementSortOrder + XSDValidateMethodImplementationSortNewLine;
+
+              elementSortOrder := elementSortOrder + QuotedStr(propertyItem.Name);
               Inc(elementSortCount);
 
               if (not propertyItem.IsOptional) and (not propertyItem.IsRepeating) then

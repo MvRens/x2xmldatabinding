@@ -104,10 +104,11 @@ const
   XSDValidateMethodImplementationBegin    = 'procedure TXML%<Name>:s.XSDValidate;'                          + CrLf +
                                             'begin';
 
-  XSDValidateMethodImplementationRequired = '  CreateRequiredElements(Self, [%<RequiredElements>:s]);';
-  XSDValidateMethodImplementationComplex  = '  Get%<Name>:s;';
-  XSDValidateMethodImplementationAttrib   = '  CreateRequiredAttributes(Self, [%<RequiredAttributes>:s]);';
-  XSDValidateMethodImplementationSort     = '  SortChildNodes(Self, [%<SortOrder>:s]);';
+  XSDValidateMethodImplementationRequired     = '  CreateRequiredElements(Self, [%<RequiredElements>:s]);';
+  XSDValidateMethodImplementationComplex      = '  Get%<Name>:s;';
+  XSDValidateMethodImplementationAttrib       = '  CreateRequiredAttributes(Self, [%<RequiredAttributes>:s]);';
+  XSDValidateMethodImplementationSort         = '  SortChildNodes(Self, [%<SortOrder>:s]);';
+  XSDValidateMethodImplementationSortNewLine  = #13#10 + '    ';
 
   XSDValidateMethodImplementationEnd      = 'end;' + CrLf;
 
