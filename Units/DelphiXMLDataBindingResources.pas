@@ -509,7 +509,7 @@ const
                                   { tcDateTime }  '  %<Destination>:s := XMLToDateTime(GetNodeValue, xdtDateTime);',
                                   { tcDate }      '  %<Destination>:s := XMLToDateTime(GetNodeValue, xdtDate);',
                                   { tcTime }      '  %<Destination>:s := XMLToDateTime(GetNodeValue, xdtTime);',
-                                  { tcString }    '  %<Destination>:s := GetNodeValue;',
+                                  { tcString }    '  %<Destination>:s := VarToStr(GetNodeValue);',
                                   { tcBase64 }    '  %<Destination>:s := Base64Decode(Trim(GetNodeValue));',
                                   { tcNode }      ''
                                 ),

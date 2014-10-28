@@ -4,9 +4,9 @@ unit XMLDataBindingGenerator;
 
 interface
 uses
-  Classes,
-  Contnrs,
-  XMLSchema;
+  System.Classes,
+  System.Generics.Collections,
+  Xml.XMLSchema;
 
 type
   TXMLDataBindingSchema = class;
@@ -40,7 +40,7 @@ type
     FOutputType:        TXMLDataBindingOutputType;
     FSourceFileName:    String;
 
-    FSchemas:           TObjectList;
+    FSchemas:           TObjectList<TXMLDataBindingSchema>;
 
     FOnPostProcessItem: TXMLDataBindingPostProcessItemEvent;
 
@@ -121,8 +121,8 @@ type
 
   TXMLDataBindingSchema = class(TXMLDataBindingGeneratorItem)
   private
-    FIncludes:            TObjectList;
-    FItems:               TObjectList;
+    FIncludes:            TObjectList<TXMLDataBindingSchema>;
+    FItems:               TObjectList<TXMLDataBindingItem>;
     FItemsGenerated:      Boolean;
     FSchemaDef:           IXMLSchemaDef;
     FSchemaName:          String;
@@ -199,7 +199,7 @@ type
   private
     FInterfaceType:   TXMLDataBindingInterfaceType;
     FIsSequence:      Boolean;
-    FProperties:      TObjectList;
+    FProperties:      TObjectList<TXMLDataBindingProperty>;
     FBaseName:        String;
     FBaseItem:        TXMLDataBindingInterface;
 
@@ -242,7 +242,7 @@ type
 
   TXMLDataBindingEnumeration = class(TXMLDataBindingItem)
   private
-    FMembers:       TObjectList;
+    FMembers:       TObjectList<TXMLDataBindingEnumerationMember>;
     FIsAttribute:   Boolean;
 
     function GetMemberCount: Integer;
@@ -355,14 +355,12 @@ type
 
 implementation
 uses
-  SysUtils,
-  Variants,
-  Windows,
-  XMLDoc,
-  XMLIntf,
-  XMLSchemaTags,
-
-  X2UtHashes;
+  System.SysUtils,
+  System.Variants,
+  Winapi.Windows,
+  Xml.XMLDoc,
+  Xml.XMLIntf,
+  Xml.XMLSchemaTags;
 
 
 const
@@ -388,7 +386,7 @@ begin
   inherited Create;
 
   FIncludePaths := TStringList.Create;
-  FSchemas      := TObjectList.Create(True);
+  FSchemas      := TObjectList<TXMLDataBindingSchema>.Create(True);
 
   with TStringList(FIncludePaths) do
   begin
@@ -1336,25 +1334,28 @@ end;
 
 
 procedure TXMLDataBindingGenerator.ResolveNameConflicts;
+type
+  TItemNamesDictionary = TObjectDictionary<String, TObjectList<TXMLDataBindingItem>>;
+
 var
-  itemNames:      TX2SOHash;
+  itemNames:  TItemNamesDictionary;
 
 
   procedure AddItem(AItem: TXMLDataBindingItem);
   var
     hashName:       String;
-    items:          TObjectList;
+    items:          TObjectList<TXMLDataBindingItem>;
 
   begin
     { LowerCase because XML is case-sensitive, but Delphi isn't. }
     hashName  := LowerCase(AItem.Name);
     
-    if not itemNames.Exists(hashName) then
+    if not itemNames.ContainsKey(hashName) then
     begin
-      items               := TObjectList.Create(False);
-      itemNames[hashName] := items;
+      items := TObjectList<TXMLDataBindingItem>.Create(False);
+      itemNames.Add(hashName, items);
     end else
-      items               := TObjectList(itemNames[hashName]);
+      items := itemNames[hashName];
 
     items.Add(AItem);
   end;
@@ -1397,14 +1398,14 @@ var
   schemaIndex:    Integer;
   schema:         TXMLDataBindingSchema;
   itemIndex:      Integer;
-  items:          TObjectList;
+  items:          TObjectList<TXMLDataBindingItem>;
   item:           TXMLDataBindingItem;
   depth:          Integer;
   newName:        String;
   resolved:       Boolean;
 
 begin
-  itemNames := TX2SOHash.Create(True);
+  itemNames := TItemNamesDictionary.Create([doOwnsValues]);
   try
     { Gather names }
     for schemaIndex := 0 to Pred(SchemaCount) do
@@ -1413,7 +1414,7 @@ begin
 
       for itemIndex := 0 to Pred(schema.ItemCount) do
       begin
-        item      := schema.Items[itemIndex];
+        item  := schema.Items[itemIndex];
 
         if item.ItemType in [itInterface, itEnumeration] then
           AddItem(item);
@@ -1422,25 +1423,21 @@ begin
 
 
     { Find conflicts }
-    itemNames.First;
-
-    while itemNames.Next do
+    for items in itemNames.Values do
     begin
-      items := TObjectList(itemNames.CurrentValue);
-
       if items.Count > 1 then
       begin
         { Attempt to rename items }
         for itemIndex := Pred(items.Count) downto 0 do
         begin
-          item      := TXMLDataBindingItem(items[itemIndex]);
+          item      := items[itemIndex];
           newName   := item.Name;
           resolved  := False;
           depth     := 1;
 
           while ResolveItemNameConflict(item, depth, newName) do
           begin
-            if not itemNames.Exists(newName) then
+            if not itemNames.ContainsKey(newName) then
             begin
               resolved  := True;
               break;
@@ -1490,7 +1487,7 @@ var
   memberIndex:          Integer;
   propertyIndex:        Integer;
   propertyItem:         TXMLDataBindingProperty;
-  repeatingItems:       TObjectList;
+  repeatingItems:       TObjectList<TXMLDataBindingProperty>;
   typedSchemaItem:      IXMLTypedSchemaItem;
 
 begin
@@ -1537,7 +1534,7 @@ begin
     interfaceItem                 := TXMLDataBindingInterface(AItem);
     interfaceItem.CollectionItem  := nil;
 
-    repeatingItems  := TObjectList.Create(False);
+    repeatingItems  := TObjectList<TXMLDataBindingProperty>.Create(False);
     try
       for propertyIndex := 0 to Pred(interfaceItem.PropertyCount) do
         if interfaceItem.Properties[propertyIndex].IsRepeating then
@@ -1549,7 +1546,7 @@ begin
            (not Assigned(interfaceItem.BaseItem)) then
         begin
           { Single repeating child, the item itself is a collection parent }
-          interfaceItem.CollectionItem  := TXMLDataBindingProperty(repeatingItems[0]);
+          interfaceItem.CollectionItem  := repeatingItems[0];
         end else
         begin
           { Multiple repeating children or this interface is a descendant,
@@ -1601,7 +1598,7 @@ end;
 
 function TXMLDataBindingGenerator.GetSchemas(Index: Integer): TXMLDataBindingSchema;
 begin
-  Result  := TXMLDataBindingSchema(FSchemas[Index]);
+  Result  := FSchemas[Index];
 end;
 
 
@@ -1624,8 +1621,8 @@ constructor TXMLDataBindingSchema.Create(AOwner: TXMLDataBindingGenerator);
 begin
   inherited Create(AOwner);
 
-  FIncludes := TObjectList.Create(False);
-  FItems := TObjectList.Create(True);
+  FIncludes := TObjectList<TXMLDataBindingSchema>.Create(False);
+  FItems := TObjectList<TXMLDataBindingItem>.Create(True);
 end;
 
 
@@ -1696,7 +1693,7 @@ end;
 
 function TXMLDataBindingSchema.GetIncludes(Index: Integer): TXMLDataBindingSchema;
 begin
-  Result  := TXMLDataBindingSchema(FIncludes[Index]);
+  Result  := FIncludes[Index];
 end;
 
 
@@ -1708,7 +1705,7 @@ end;
 
 function TXMLDataBindingSchema.GetItems(Index: Integer): TXMLDataBindingItem;
 begin
-  Result  := TXMLDataBindingItem(FItems[Index]);
+  Result  := FItems[Index];
 end;
 
 
@@ -1775,7 +1772,7 @@ var
 begin
   inherited Create(AOwner, ASchemaItem, AName);
 
-  FProperties := TObjectList.Create(True);
+  FProperties := TObjectList<TXMLDataBindingProperty>.Create(True);
   FInterfaceType := GetInterfaceType(SchemaItem);
   FIsSequence := False;
 
@@ -1821,7 +1818,7 @@ begin
     propertyItem  := Properties[propertyIndex];
 
     if propertyItem = AOldItem then
-      FProperties.Extract(AOldItem)
+      FProperties.Extract(propertyItem)
     else
     begin
       if (AOldItem.ItemType = itSimpleTypeAlias) and
@@ -1907,7 +1904,7 @@ end;
 
 function TXMLDataBindingInterface.GetProperties(Index: Integer): TXMLDataBindingProperty;
 begin
-  Result := TXMLDataBindingProperty(FProperties[Index]);
+  Result := FProperties[Index];
 end;
 
 
@@ -1934,7 +1931,7 @@ var
 begin
   inherited Create(AOwner, ASchemaItem, AName);
 
-  FMembers      := TObjectList.Create;
+  FMembers      := TObjectList<TXMLDataBindingEnumerationMember>.Create;
   FIsAttribute  := AIsAttribute;
 
   for memberIndex := 0 to Pred(AEnumerations.Count) do
@@ -1964,7 +1961,7 @@ end;
 
 function TXMLDataBindingEnumeration.GetMembers(Index: Integer): TXMLDataBindingEnumerationMember;
 begin
-  Result  := TXMLDataBindingEnumerationMember(FMembers[Index]);
+  Result  := FMembers[Index];
 end;
 
 

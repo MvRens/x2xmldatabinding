@@ -2,11 +2,9 @@ unit DelphiXMLDataBindingGenerator;
 
 interface
 uses
-  Classes,
-  Contnrs,
-  XMLSchema,
-
-  X2UtHashes,
+  System.Classes,
+  System.Generics.Collections,
+  Xml.XMLSchema,
 
   DelphiXMLDataBindingResources,
   XMLDataBindingGenerator,
@@ -16,22 +14,12 @@ uses
 type
   TGetFileNameEvent = procedure(Sender: TObject; const SchemaName: String; var Path, FileName: String) of object;
 
-
-  TXMLSchemaList  = class(TObjectList)
-  private
-    function GetItem(Index: Integer): TXMLDataBindingSchema;
-    procedure SetItem(Index: Integer; const Value: TXMLDataBindingSchema);
-  public
-    constructor Create;
-
-    property Items[Index: Integer]: TXMLDataBindingSchema read GetItem  write SetItem; default;
-  end;
-
+  TXMLSchemaList = TList<TXMLDataBindingSchema>;
 
   TDelphiXMLDataBindingGenerator = class(TXMLDataBindingGenerator)
   private
-    FProcessedItems:  TX2OIHash;
-    FUnitNames:       TX2OSHash;
+    FProcessedItems:  TList<TXMLDataBindingInterface>;
+    FUnitNames:       TDictionary<TXMLDataBindingSchema, String>;
 
     FOnGetFileName:   TGetFileNameEvent;
   protected
@@ -73,13 +61,13 @@ type
     procedure WriteEnumerator(AWriter: TNamedFormatWriter; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
 
     function GetDelphiNodeType(AProperty: TXMLDataBindingProperty): TDelphiNodeType;
-    function GetDelphiElementType(AProperty: TXMLDataBindingProperty): TDelphiElementType;
+    function GetDelphiElementType(ANodeType: TDelphiNodeType): TDelphiElementType;
     function DataTypeConversion(const ADestination, ASource: String; ADataType: IXMLTypeDef; AAccessor: TDelphiAccessor; ANodeType: TDelphiNodeType; const ATargetNamespace: string; const ALinesBefore: String = ''): String;
     function XMLToNativeDataType(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ATargetNamespace: string; const ALinesBefore: String = ''): String;
     function NativeDataTypeToXML(const ADestination, ASource: String; ADataType: IXMLTypeDef; ANodeType: TDelphiNodeType; const ATargetNamespace: string; const ALinesBefore: String = ''): String;
 
-    property ProcessedItems:  TX2OIHash read FProcessedItems;
-    property UnitNames:       TX2OSHash read FUnitNames;
+    property ProcessedItems:  TList<TXMLDataBindingInterface> read FProcessedItems;
+    property UnitNames:       TDictionary<TXMLDataBindingSchema, String> read FUnitNames;
   public
     property OnGetFileName:   TGetFileNameEvent read FOnGetFileName write FOnGetFileName;
   end;
@@ -116,12 +104,12 @@ begin
 
       otMultiple:
         begin
-          FUnitNames  := TX2OSHash.Create;
+          FUnitNames  := TDictionary<TXMLDataBindingSchema, String>.Create;
           try
             for schemaIndex := 0 to Pred(SchemaCount) do
             begin
-              schema              := Schemas[schemaIndex];
-              FUnitNames[schema]  := DoGetFileName(schema.SchemaName);
+              schema  := Schemas[schemaIndex];
+              FUnitNames.Add(schema, DoGetFileName(schema.SchemaName));
             end;
 
             for schemaIndex := 0 to Pred(SchemaCount) do
@@ -164,7 +152,7 @@ begin
                              ['UsesClause', usesClause]);
     WriteSection(unitWriter, dxsForward, ASchemaList);
 
-    FProcessedItems := TX2OIHash.Create;
+    FProcessedItems := TList<TXMLDataBindingInterface>.Create;
     try
       FProcessedItems.Clear;
       WriteSection(unitWriter, dxsInterface, ASchemaList);
@@ -194,13 +182,13 @@ end;
 
 function TDelphiXMLDataBindingGenerator.GenerateUsesClause(ASchemaList: TXMLSchemaList): String;
 var
-  includedSchemas:    TObjectList;
+  includedSchemas:    TList<TXMLDataBindingSchema>;
 
   procedure AddSchema(ASchema: TXMLDataBindingSchema);
   begin
     if Assigned(ASchema) and
-       (includedSchemas.IndexOf(ASchema) = -1) and
-       (ASchemaList.IndexOf(ASchema) = -1) then
+       (not includedSchemas.Contains(ASchema)) and
+       (not ASchemaList.Contains(ASchema)) then
       includedSchemas.Add(ASchema);
   end;
   
@@ -212,12 +200,11 @@ var
   interfaceItem:      TXMLDataBindingInterface;
   propertyIndex:      Integer;
   propertyItem:       TXMLDataBindingProperty;
-  includeIndex:       Integer;
 
 begin
   Result := '';
 
-  includedSchemas := TObjectList.Create(False);
+  includedSchemas := TList<TXMLDataBindingSchema>.Create;
   try
     { Determine which items are used }
     for schemaIndex := 0 to Pred(ASchemaList.Count) do
@@ -247,11 +234,8 @@ begin
     { Build uses clause }
     if includedSchemas.Count > 0 then
     begin
-      for includeIndex := 0 to Pred(includedSchemas.Count) do
-      begin
-        schema  := TXMLDataBindingSchema(includedSchemas[includeIndex]);
+      for schema in includedSchemas do
         Result  := Result + '  ' + ChangeFileExt(ExtractFileName(FUnitNames[schema]), '') + ',' + CrLf;
-      end;
 
       Result  := Result + CrLf;
     end;
@@ -525,7 +509,7 @@ end;
 
 procedure TDelphiXMLDataBindingGenerator.WriteEnumerationConversions(AWriter: TNamedFormatWriter; ASection: TDelphiXMLSection; ASchemaList: TXMLSchemaList);
 var
-  enumerations:     TObjectList;
+  enumerations:     TList<TXMLDataBindingItem>;
   schemaIndex:      Integer;
   schema:           TXMLDataBindingSchema;
   itemIndex:        Integer;
@@ -539,7 +523,7 @@ begin
     Exit;
 
 
-  enumerations  := TObjectList.Create(False);
+  enumerations  := TList<TXMLDataBindingItem>.Create;
   try
     for schemaIndex := 0 to Pred(ASchemaList.Count) do
     begin
@@ -623,7 +607,8 @@ begin
   { In ye olde days this is where we checked if XMLDataBindingUtils was required. With the
     introduction of the IXSDValidate, this is practically always the case. }
   AWriter.WriteLine('uses');
-  AWriter.WriteLine('  SysUtils;');
+  AWriter.WriteLine('  SysUtils,');
+  AWriter.WriteLine('  Variants;');
   AWriter.WriteLine;
 end;
 
@@ -677,13 +662,13 @@ begin
   begin
     { Ensure the base item is completely defined first, Delphi doesn't allow
       inheritance with just a forward declaration. }
-    if ProcessedItems.Exists(AItem) then
+    if ProcessedItems.Contains(AItem) then
       exit;
 
     if Assigned(AItem.BaseItem) then
       WriteSchemaInterface(AWriter, AItem.BaseItem, ASection);
 
-    ProcessedItems[AItem] := 1;
+    ProcessedItems.Add(AItem);
   end;
 
 
@@ -1140,7 +1125,7 @@ var
   fieldName:        String;
   writeStream:      Boolean;
   typeMapping:      TTypeMapping;
-  elementType:      TDelphiElementType;
+  nodeType:         TDelphiNodeType;
 
 begin
   Result  := False;
@@ -1290,23 +1275,23 @@ begin
           case AMember of
             dxmPropertyGet:
               begin
-                elementType := GetDelphiElementType(AProperty);
+                nodeType := GetDelphiNodeType(AProperty);
                 WriteNewLine;
 
                 if writeOptional then
                   if AProperty.IsAttribute then
                     sourceCode.Add(PropertyImplMethodGetOptionalAttr)
                   else
-                    sourceCode.Add(PropertyImplMethodGetOptional[elementType]);
+                    sourceCode.Add(PropertyImplMethodGetOptional[GetDelphiElementType(nodeType)]);
 
                 if writeNil then
-                  sourceCode.Add(PropertyImplMethodGetNil[elementType]);
+                  sourceCode.Add(PropertyImplMethodGetNil[GetDelphiElementType(nodeType)]);
 
                 if writeTextProp then
                   if AProperty.IsAttribute then
                     sourceCode.Add(PropertyImplMethodGetTextAttr)
                   else
-                    sourceCode.Add(PropertyImplMethodGetText[elementType]);
+                    sourceCode.Add(PropertyImplMethodGetText[GetDelphiElementType(nodeType)]);
 
                 sourceCode.Add('function TXML%<Name>:s.Get%<PropertyName>:s: %<DataType>:s;');
 
@@ -1321,7 +1306,7 @@ begin
                       sourceCode.Add(XMLToNativeDataType('Result',
                                                          '%<PropertySourceName>:s',
                                                          TXMLDataBindingSimpleProperty(AProperty).DataType,
-                                                         elementType,
+                                                         nodeType,
                                                          AProperty.TargetNamespace));
 
                   ptItem:
@@ -1366,17 +1351,17 @@ begin
             dxmPropertySet:
               if not IsReadOnly(AProperty) then
               begin
-                elementType := GetDelphiElementType(AProperty);
+                nodeType := GetDelphiNodeType(AProperty);
                 WriteNewLine;
 
                 if writeNil then
-                  sourceCode.Add(PropertyImplMethodSetNil[elementType]);
+                  sourceCode.Add(PropertyImplMethodSetNil[GetDelphiElementType(nodeType)]);
 
                 if writeTextProp then
                   if AProperty.IsAttribute then
                     sourceCode.Add(PropertyImplMethodSetTextAttr)
                   else
-                    sourceCode.Add(PropertyImplMethodSetText[elementType]);
+                    sourceCode.Add(PropertyImplMethodSetText[GetDelphiElementType(nodeType)]);
 
                 sourceCode.Add('procedure TXML%<Name>:s.Set%<PropertyName>:s(const Value: %<DataType>:s);');
                 value := '%<PropertySourceName>:s';
@@ -1384,7 +1369,7 @@ begin
                 if Assigned(propertyItem) and (propertyItem.ItemType = itEnumeration) then
                 begin
                   sourceCode.Add(NativeDataTypeToXML(value, '%<PropertyItemName>:sValues[Value]', nil,
-                                                     elementType,
+                                                     nodeType,
                                                      AProperty.TargetNamespace)); 
                 end else
                 begin
@@ -1393,7 +1378,7 @@ begin
 
                   sourceCode.Add(NativeDataTypeToXML(value, 'Value',
                                                      TXMLDataBindingSimpleProperty(AProperty).DataType,
-                                                     elementType,
+                                                     nodeType,
                                                      AProperty.TargetNamespace));
                 end;
 
@@ -1403,11 +1388,11 @@ begin
             dxmPropertyMethods:
               if writeStream then
               begin
-                elementType := GetDelphiElementType(AProperty);
-                sourceCode.Add(PropertyImplMethodLoadFromStream[elementType]);
-                sourceCode.Add(PropertyImplMethodLoadFromFile[elementType]);
-                sourceCode.Add(PropertyImplMethodSaveToStream[elementType]);
-                sourceCode.Add(PropertyImplMethodSaveToFile[elementType]);
+                nodeType := GetDelphiElementType(GetDelphiNodeType(AProperty));
+                sourceCode.Add(PropertyImplMethodLoadFromStream[nodeType]);
+                sourceCode.Add(PropertyImplMethodLoadFromFile[nodeType]);
+                sourceCode.Add(PropertyImplMethodSaveToStream[nodeType]);
+                sourceCode.Add(PropertyImplMethodSaveToFile[nodeType]);
               end;
           end;
         end;
@@ -1691,10 +1676,11 @@ begin
 end;
 
 
-function TDelphiXMLDataBindingGenerator.GetDelphiElementType(AProperty: TXMLDataBindingProperty): TDelphiElementType;
+function TDelphiXMLDataBindingGenerator.GetDelphiElementType(ANodeType: TDelphiNodeType): TDelphiElementType;
 begin
-  Result := GetDelphiNodeType(AProperty);
-  if Result <> dntElementNS then
+  if ANodeType = dntElementNS then
+    Result := dntElementNS
+  else
     Result := dntElement;
 end;
 
@@ -1781,25 +1767,6 @@ begin
 
     Result  := IncludeTrailingPathDelimiter(path) + fileName;
   end;
-end;
-
-
-{ TXMLSchemaList }
-constructor TXMLSchemaList.Create;
-begin
-  inherited Create(False);
-end;
-
-
-function TXMLSchemaList.GetItem(Index: Integer): TXMLDataBindingSchema;
-begin
-  Result := TXMLDataBindingSchema(inherited GetItem(Index));
-end;
-
-
-procedure TXMLSchemaList.SetItem(Index: Integer; const Value: TXMLDataBindingSchema);
-begin
-  inherited SetItem(Index, Value);
 end;
 
 end.
