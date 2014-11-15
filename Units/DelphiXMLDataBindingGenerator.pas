@@ -77,7 +77,9 @@ implementation
 uses
   SysUtils,
 
-  X2UtNamedFormat;
+  X2UtNamedFormat,
+
+  X2Log.Global;
 
 
 
@@ -919,6 +921,8 @@ var
   member:           TDelphiXMLMember;
 
 begin
+  TX2GlobalLog.Verbose('WriteSchemaInterfaceProperties: ' + AItem.Name);
+
   if ASection = dxsForward then
     Exit;
 
