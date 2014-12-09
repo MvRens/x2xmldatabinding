@@ -609,7 +609,6 @@ begin
   { In ye olde days this is where we checked if XMLDataBindingUtils was required. With the
     introduction of the IXSDValidate, this is practically always the case. }
   AWriter.WriteLine('uses');
-  AWriter.WriteLine('  SysUtils,');
   AWriter.WriteLine('  Variants;');
   AWriter.WriteLine;
 end;

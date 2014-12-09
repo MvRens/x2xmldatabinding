@@ -27,6 +27,7 @@ const
                         'uses'                                                  + CrLf +
                         '%<UsesClause>:s'                                       +
                         '  Classes,'                                            + CrLf +
+                        '  SysUtils,'                                           + CrLf +
                         '  XMLDoc,'                                             + CrLf +
                         '  XMLIntf,'                                            + CrLf +
                         '  XMLDataBindingUtils;'                                + CrLf +
@@ -45,7 +46,7 @@ const
   DocumentFunctionsInterface      = '  function Get%<Name>:s(ADocument: XMLIntf.IXMLDocument): IXML%<Name>:s;'  + CrLf +
                                     '  function Load%<Name>:s(const AFileName: String): IXML%<Name>:s;'         + CrLf +
                                     '  function Load%<Name>:sFromStream(AStream: TStream): IXML%<Name>:s;'      + CrLf +
-                                    '  function Load%<Name>:sFromString(const AString: String): IXML%<Name>:s;' + CrLf +
+                                    '  function Load%<Name>:sFromString(const AString: String{$IF CompilerVersion >= 20}; AEncoding: TEncoding = nil; AOwnsEncoding: Boolean = True{$IFEND}): IXML%<Name>:s;' + CrLf +
                                     '  function New%<Name>:s: IXML%<Name>:s;'                                   + CrLf;
 
   DocumentFunctionsImplementation = 'function Get%<Name>:s(ADocument: XMLIntf.IXMLDocument): IXML%<Name>:s;'  + CrLf +
@@ -68,12 +69,12 @@ const
                                     '  Result  := Get%<Name>:s(doc);'                                         + CrLf +
                                     'end;'                                                                    + CrLf +
                                     ''                                                                        + CrLf +
-                                    'function Load%<Name>:sFromString(const AString: String): IXML%<Name>:s;' + CrLf +
+                                    'function Load%<Name>:sFromString(const AString: String{$IF CompilerVersion >= 20}; AEncoding: TEncoding; AOwnsEncoding: Boolean{$IFEND}): IXML%<Name>:s;' + CrLf +
                                     'var'                                                                     + CrLf +
                                     '  stream: TStringStream;'                                                + CrLf +
                                     ''                                                                        + CrLf +
                                     'begin'                                                                   + CrLf +
-                                    '  stream := TStringStream.Create(AString);'                              + CrLf +
+                                    '  stream := TStringStream.Create(AString{$IF CompilerVersion >= 20}, AEncoding, AOwnsEncoding{$IFEND});' + CrLf +
                                     '  try'                                                                   + CrLf +
                                     '    Result  := Load%<Name>:sFromStream(stream);'                         + CrLf +
                                     '  finally'                                                               + CrLf +

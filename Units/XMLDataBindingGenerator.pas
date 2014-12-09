@@ -704,7 +704,6 @@ var
   schemaDef:            IXMLSchemaDef;
   attributeIndex:       Integer;
   attribute:            IXMLAttributeDef;
-  item:                 TXMLDataBindingItem;
 
 begin
   schemaDef := ASchema.SchemaDef;
