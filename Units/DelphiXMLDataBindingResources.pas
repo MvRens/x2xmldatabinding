@@ -74,7 +74,12 @@ const
                                     '  stream: TStringStream;'                                                + CrLf +
                                     ''                                                                        + CrLf +
                                     'begin'                                                                   + CrLf +
-                                    '  stream := TStringStream.Create(AString{$IF CompilerVersion >= 20}, AEncoding, AOwnsEncoding{$IFEND});' + CrLf +
+                                    '  {$IF CompilerVersion >= 20}'                                           + CrLf +
+                                    '  if Assigned(AEncoding) then'                                           + CrLf +
+                                    '    stream := TStringStream.Create(AString, AEncoding, AOwnsEncoding)'   + CrLf +
+                                    '  else'                                                                  + CrLf +
+                                    '  {$IFEND}'                                                              + CrLf +
+                                    '    stream := TStringStream.Create(AString);'                            + CrLf +
                                     '  try'                                                                   + CrLf +
                                     '    Result  := Load%<Name>:sFromStream(stream);'                         + CrLf +
                                     '  finally'                                                               + CrLf +
