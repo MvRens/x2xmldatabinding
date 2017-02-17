@@ -51,7 +51,7 @@ type
     function GetSchemaCount: Integer;
     function GetSchemas(Index: Integer): TXMLDataBindingSchema;
   protected
-    function LoadSchema(const AStream: TStream; const ASchemaName: String): TXMLDataBindingSchema;
+    function LoadSchema(const AStream: TStream; const ASchemaName, ASourceFileName: String): TXMLDataBindingSchema;
     function GetSchemaData(const ALocation: String; out ASourceFileName: String): TStream;
     function FindSchema(const ALocation: String): TXMLDataBindingSchema;
 
@@ -407,14 +407,11 @@ end;
 
 procedure TXMLDataBindingGenerator.Execute(const AStream: TStream; const ASchemaName: String);
 var
-  schemaIndex:    Integer;
-  schema:         TXMLDataBindingSchema;
+  schemaIndex: Integer;
 
 begin
   FSchemas.Clear;
-  schema  := LoadSchema(AStream, ASchemaName);
-  if Assigned(schema) then
-    schema.SourceFileName := SourceFileName;    
+  LoadSchema(AStream, ASchemaName, SourceFileName);
 
   if SchemaCount > 0 then
   begin
@@ -474,7 +471,7 @@ end;
 
 
 
-function TXMLDataBindingGenerator.LoadSchema(const AStream: TStream; const ASchemaName: String): TXMLDataBindingSchema;
+function TXMLDataBindingGenerator.LoadSchema(const AStream: TStream; const ASchemaName, ASourceFileName: String): TXMLDataBindingSchema;
 
   procedure HandleDocRefs(const ADocRefs: IXMLSchemaDocRefs; ASchema: TXMLDataBindingSchema);
   var
@@ -488,48 +485,59 @@ function TXMLDataBindingGenerator.LoadSchema(const AStream: TStream; const ASche
   begin
     for refIndex := 0 to Pred(ADocRefs.Count) do
     begin
-      location      := ADocRefs[refIndex].SchemaLocation;
-      schemaName    := ChangeFileExt(ExtractFileName(location), '');
-      refSchema     := FindSchema(schemaName);
+      location := ADocRefs[refIndex].SchemaLocation;
+      schemaName := ChangeFileExt(ExtractFileName(location), '');
+      refSchema := FindSchema(schemaName);
 
       if not Assigned(refSchema) then
       begin
-        refStream     := GetSchemaData(location, sourceFileName);
+        refStream := GetSchemaData(location, sourceFileName);
 
         if Assigned(refStream) then
         try
-          refSchema   := LoadSchema(refStream, schemaName);
-
-          if Assigned(refSchema) then
-            refSchema.SourceFileName  := sourceFileName;
+          refSchema := LoadSchema(refStream, schemaName, sourceFileName);
         finally
           FreeAndNil(refStream);
         end;
       end;
 
       if Assigned(refSchema) then
+      begin
+        // Update the schema location to an absolute path,
+        // the Delphi XMLSchema unit has trouble resolving relative references
+        // in a relatively referenced file.
+        ADocRefs[refIndex].SchemaLocation := refSchema.SourceFileName;
         ASchema.AddInclude(refSchema);
+      end;
     end;
   end;
 
 
 var
-  schemaDoc:      IXMLSchemaDoc;
-  schemaDef:      IXMLSchemaDef;
+  currentDir: string;
+  schemaDoc: IXMLSchemaDoc;
+  schemaDef: IXMLSchemaDef;
 
 begin
   schemaDoc := TXMLSchemaDoc.Create(nil);
   schemaDoc.LoadFromStream(AStream);
   schemaDef := schemaDoc.SchemaDef;
 
-  Result            := TXMLDataBindingSchema.Create(Self);
-  Result.SchemaDef  := schemaDef;
+  Result := TXMLDataBindingSchema.Create(Self);
+  Result.SchemaDef := schemaDef;
   Result.SchemaName := ASchemaName;
+  Result.SourceFileName := ExpandFileName(ASourceFileName);
   FSchemas.Add(Result);
 
-  { Handle imports / includes }
-  HandleDocRefs(schemaDef.SchemaImports, Result);
-  HandleDocRefs(schemaDef.SchemaIncludes, Result);
+  currentDir := GetCurrentDir;
+  SetCurrentDir(ExtractFilePath(Result.SourceFileName));
+  try
+    { Handle imports / includes }
+    HandleDocRefs(schemaDef.SchemaImports, Result);
+    HandleDocRefs(schemaDef.SchemaIncludes, Result);
+  finally
+    SetCurrentDir(currentDir);
+  end;
 end;
 
 
@@ -549,7 +557,7 @@ begin
 
     if FileExists(includePath + ALocation) then
     begin
-      ASourceFileName := includePath + ALocation;
+      ASourceFileName := ExpandFileName(includePath + ALocation);
       Result := TFileStream.Create(ASourceFileName, fmOpenRead or fmShareDenyNone);
       break;
     end;
@@ -581,17 +589,23 @@ begin
   if ASchema.ItemsGenerated then
     exit;
 
+  OutputDebugString(PChar('> ' + ASchema.SchemaName));
   ASchema.ItemsGenerated  := True;
 
+  OutputDebugString('Includes...');
   { First generate the objects for all includes and imports, so we can get
     proper references. }
   for includeIndex := 0 to Pred(ASchema.IncludeCount) do
     GenerateSchemaObjects(ASchema.Includes[includeIndex], False);
 
+  OutputDebugString(PChar(ASchema.SchemaName + ': Generate objects'));
+
   GenerateElementObjects(ASchema, ARootDocument);
   GenerateComplexTypeObjects(ASchema);
   GenerateSimpleTypeObjects(ASchema);
   GenerateAttributeObjects(ASchema);
+
+  OutputDebugString(PChar('< ' + ASchema.SchemaName));
 end;
 
 
@@ -676,22 +690,27 @@ begin
       end else if simpleType.DerivationMethod = sdmRestriction then
       begin
         baseType := simpleType.BaseType;
-
-        while Assigned(baseType.BaseType) do
-          baseType := baseType.BaseType;
-
-        if not baseType.IsComplex then
+        if Assigned(baseType) then
         begin
-          if not VarIsNull(simpleType.SchemaDef.TargetNamespace) then
-          begin
-            namespace := simpleType.SchemaDef.TargetNamespace;
-            if namespace = Schemas[0].TargetNamespace then
-              namespace := '';
-          end;
+          while Assigned(baseType.BaseType) do
+            baseType := baseType.BaseType;
 
-          simpleTypeAlias := TXMLDataBindingSimpleTypeAliasItem.Create(Self, baseType, simpleType.Name);
-          simpleTypeAlias.TargetNamespace := namespace;
-          ASchema.AddItem(simpleTypeAlias);
+          if not baseType.IsComplex then
+          begin
+            if not VarIsNull(simpleType.SchemaDef.TargetNamespace) then
+            begin
+              namespace := simpleType.SchemaDef.TargetNamespace;
+              if namespace = Schemas[0].TargetNamespace then
+                namespace := '';
+            end;
+
+            simpleTypeAlias := TXMLDataBindingSimpleTypeAliasItem.Create(Self, baseType, simpleType.Name);
+            simpleTypeAlias.TargetNamespace := namespace;
+            ASchema.AddItem(simpleTypeAlias);
+          end;
+        end else
+        begin
+          // ...I literally can't even.
         end;
       end;
     end;
@@ -1126,6 +1145,7 @@ begin
               // #ToDo1 -oMvR: set type "union"
 
               ASchema.AddItem(simpleAliasItem);
+              break;
             end
         else
           typeDef := nil;

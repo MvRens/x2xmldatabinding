@@ -876,6 +876,13 @@ begin
   if hasPrototype and (ASection = dxsImplementation) then
   begin
     AWriter.WriteLine('  inherited;');
+
+    if AItem.IsCollection and (AItem.TargetNamespace <> AItem.CollectionItem.TargetNamespace) then
+    begin
+      AWriter.WriteLine;
+      AWriter.WriteLine('  ItemNS := ''%s'';', [AItem.CollectionItem.TargetNamespace]);
+    end;
+
     AWriter.WriteLine('end;');
     AWriter.WriteLine;
   end;
