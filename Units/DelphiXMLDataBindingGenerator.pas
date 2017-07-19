@@ -57,6 +57,7 @@ type
     procedure WriteSchemaEnumerationArray(AWriter: TNamedFormatWriter; AItem: TXMLDataBindingEnumeration);
 
     procedure WriteValidate(AWriter: TNamedFormatWriter; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
+    procedure WriteValidateImplementation(AWriter: TNamedFormatWriter; AItem: TXMLDataBindingInterface; AStrict: Boolean);
     procedure WriteEnumeratorMethod(AWriter: TNamedFormatWriter; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
     procedure WriteEnumerator(AWriter: TNamedFormatWriter; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
 
@@ -75,6 +76,7 @@ type
 
 implementation
 uses
+  StrUtils,
   SysUtils,
 
   X2UtNamedFormat,
@@ -1113,6 +1115,9 @@ function TDelphiXMLDataBindingGenerator.WriteSchemaInterfaceProperty(AWriter: TN
     typeMapping: TTypeMapping;
 
   begin
+    if Assigned(AProperty.Collection) then
+      exit(True);
+
     Result := AProperty.IsReadOnly;
 
     if (not Result) and (AProperty.PropertyType = ptSimple) then
@@ -1493,16 +1498,6 @@ end;
 
 
 procedure TDelphiXMLDataBindingGenerator.WriteValidate(AWriter: TNamedFormatWriter; AItem: TXMLDataBindingInterface; ASection: TDelphiXMLSection);
-var
-  propertyIndex: Integer;
-  propertyItem: TXMLDataBindingProperty;
-  elementSortOrder: string;
-  elementSortCount: Integer;
-  elementRequired: string;
-  elementRequiredCount: Integer;
-  attributeRequired: string;
-  attributeRequiredCount: Integer;
-
 begin
   if AItem.DocumentElement then
   begin
@@ -1529,88 +1524,103 @@ begin
 
       dxsImplementation:
         begin
-          AWriter.WriteLineNamedFmt(XSDValidateMethodImplementationBegin,
-                                    ['Name', AItem.TranslatedName]);
-
-          elementSortOrder := '';
-          elementSortCount := 0;
-
-          elementRequired := '';
-          elementRequiredCount := 0;
-
-          attributeRequired := '';
-          attributeRequiredCount := 0;
-
-
-          for propertyIndex := 0 to Pred(AItem.PropertyCount) do
-          begin
-            propertyItem := AItem.Properties[propertyIndex];
-
-            if propertyItem.IsAttribute then
-            begin
-              if not propertyItem.IsOptional then
-              begin
-                attributeRequired := attributeRequired + ', ' + QuotedStr(propertyItem.Name);
-                Inc(attributeRequiredCount);
-              end;
-            end else if not propertyItem.IsNodeValue then
-            begin
-              elementSortOrder := elementSortOrder + ', ';
-
-              { Prevent "Line too long" on large elements }
-              if (elementSortCount > 0) and (elementSortCount mod 5 = 0) then
-                elementSortOrder := elementSortOrder + XSDValidateMethodImplementationSortNewLine;
-
-              elementSortOrder := elementSortOrder + QuotedStr(propertyItem.Name);
-              Inc(elementSortCount);
-
-              if (not propertyItem.IsOptional) and (not propertyItem.IsRepeating) then
-              begin
-                case propertyItem.PropertyType of
-                  ptSimple:
-                    begin
-                      elementRequired := elementRequired + ', ' + QuotedStr(propertyItem.Name);
-                      Inc(elementRequiredCount);
-                    end;
-
-                  ptItem:
-                    { For Item properties, we call our getter property. This ensures the child element exists,
-                      but also that it is created using our binding implementation. Otherwise there will be no
-                      IXSDValidate interface to call on the newly created node. }
-                    AWriter.WriteLineNamedFmt(XSDValidateMethodImplementationComplex,
-                                              ['Name', propertyItem.TranslatedName]);
-                end;
-              end;
-            end;
-          end;
-
-
-          if elementRequiredCount > 0 then
-          begin
-            Delete(elementRequired, 1, 2);
-            AWriter.WriteLineNamedFmt(XSDValidateMethodImplementationRequired,
-                                      ['RequiredElements', elementRequired]);
-          end;
-
-
-          if attributeRequiredCount > 0 then
-          begin
-            Delete(attributeRequired, 1, 2);
-            AWriter.WriteLineNamedFmt(XSDValidateMethodImplementationAttrib,
-                                      ['RequiredAttributes', attributeRequired]);
-          end;
-
-          if elementSortCount > 1 then
-          begin
-            Delete(elementSortOrder, 1, 2);
-            AWriter.WriteLineNamedFmt(XSDValidateMethodImplementationSort,
-                                      ['SortOrder', elementSortOrder]);
-          end;
-
-          AWriter.WriteLine(XSDValidateMethodImplementationEnd);
+          WriteValidateImplementation(AWriter, AItem, False);
+          WriteValidateImplementation(AWriter, AItem, True);
         end;
     end;
   end;
+end;
+
+
+procedure TDelphiXMLDataBindingGenerator.WriteValidateImplementation(AWriter: TNamedFormatWriter; AItem: TXMLDataBindingInterface; AStrict: Boolean);
+
+  procedure AddArrayElement(var AOutput: string; var ACount: Integer; const AValue: string);
+  begin
+    AOutput := AOutput + ', ';
+
+    { Prevent "Line too long" on large elements }
+    if (ACount > 0) and (ACount mod 5 = 0) then
+      AOutput := AOutput + XSDValidateMethodImplementationArrayBreak;
+
+    AOutput := AOutput + AValue;
+    Inc(ACount);
+  end;
+
+
+var
+  propertyIndex: Integer;
+  propertyItem: TXMLDataBindingProperty;
+  elementSortCount: Integer;
+  elementSortOrder: string;
+  elementRequired: string;
+  elementRequiredCount: Integer;
+  attributeRequired: string;
+  attributeRequiredCount: Integer;
+
+begin
+  AWriter.WriteLineNamedFmt(IfThen(AStrict, XSDValidateStrictMethodImplementationBegin, XSDValidateMethodImplementationBegin),
+                            ['Name', AItem.TranslatedName]);
+
+  elementSortCount := 0;
+  elementSortOrder := '';
+  elementRequiredCount := 0;
+  elementRequired := '';
+  attributeRequiredCount := 0;
+  attributeRequired := '';
+
+  for propertyIndex := 0 to Pred(AItem.PropertyCount) do
+  begin
+    propertyItem := AItem.Properties[propertyIndex];
+
+    if propertyItem.IsAttribute then
+    begin
+      if not propertyItem.IsOptional then
+        AddArrayElement(attributeRequired, attributeRequiredCount, QuotedStr(propertyItem.Name));
+    end else if not propertyItem.IsNodeValue then
+    begin
+      AddArrayElement(elementSortOrder, elementSortCount, QuotedStr(propertyItem.Name));
+
+      if (not propertyItem.IsOptional) and (not propertyItem.IsRepeating) then
+      begin
+        case propertyItem.PropertyType of
+          ptSimple:
+            AddArrayElement(elementRequired, elementRequiredCount, QuotedStr(propertyItem.Name));
+
+          ptItem:
+            { For Item properties, we call our getter property. This ensures the child element exists,
+              but also that it is created using our binding implementation. Otherwise there will be no
+              IXSDValidate interface to call on the newly created node. }
+            AWriter.WriteLineNamedFmt(XSDValidateMethodImplementationComplex,
+                                      ['Name', propertyItem.TranslatedName]);
+        end;
+      end;
+    end;
+  end;
+
+
+  if elementRequiredCount > 0 then
+  begin
+    Delete(elementRequired, 1, 2);
+    AWriter.WriteLineNamedFmt(IfThen(AStrict, XSDValidateStrictMethodImplementationRequired, XSDValidateMethodImplementationRequired),
+                              ['RequiredElements', elementRequired]);
+  end;
+
+
+  if attributeRequiredCount > 0 then
+  begin
+    Delete(attributeRequired, 1, 2);
+    AWriter.WriteLineNamedFmt(IfThen(AStrict, XSDValidateStrictMethodImplementationAttrib, XSDValidateMethodImplementationAttrib),
+                              ['RequiredAttributes', attributeRequired]);
+  end;
+
+  if elementSortCount > 1 then
+  begin
+    Delete(elementSortOrder, 1, 2);
+    AWriter.WriteLineNamedFmt(XSDValidateMethodImplementationSort,
+                              ['SortOrder', elementSortOrder]);
+  end;
+
+  AWriter.WriteLine(IfThen(AStrict, XSDValidateStrictMethodImplementationEnd, XSDValidateMethodImplementationEnd));
 end;
 
 

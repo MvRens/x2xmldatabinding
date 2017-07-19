@@ -3,3 +3,4 @@ Units/__history/
 *.identcache
 bin/
 lib/
+__history/

@@ -95,28 +95,39 @@ const
 
 
 
-  XSDValidateInterface                    = 'IXSDValidate';
+  XSDValidateInterface                    = 'IXSDValidate, IXSDValidateStrict';
 
-  XSDValidateDocumentMethodInterface      = '    procedure XSDValidateDocument;';
+  XSDValidateDocumentMethodInterface      = '    procedure XSDValidateDocument(AStrict: Boolean = False);';
 
-  XSDValidateDocumentMethodImplementation = 'procedure TXML%<Name>:s.XSDValidateDocument;'                  + CrLf +
-                                            'begin'                                                         + CrLf +
-                                            '  XMLDataBindingUtils.XSDValidate(Self);'                      + CrLf +
-                                            'end;'                                                          + CrLf;
+  XSDValidateDocumentMethodImplementation = 'procedure TXML%<Name>:s.XSDValidateDocument(AStrict: Boolean);'  + CrLf +
+                                            'begin'                                                           + CrLf +
+                                            '  if AStrict then'                                               + CrLf +
+                                            '    XMLDataBindingUtils.XSDValidateStrict(Self)'                 + CrLf +
+                                            '  else'                                                          + CrLf +
+                                            '    XMLDataBindingUtils.XSDValidate(Self);'                      + CrLf +
+                                            'end;'                                                            + CrLf;
 
 
-  XSDValidateMethodInterface              = '    procedure XSDValidate;';
+  XSDValidateMethodInterface              = '    procedure XSDValidate;' + CrLf +
+                                            '    procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);';
 
-  XSDValidateMethodImplementationBegin    = 'procedure TXML%<Name>:s.XSDValidate;'                          + CrLf +
-                                            'begin';
+  XSDValidateMethodImplementationBegin          = 'procedure TXML%<Name>:s.XSDValidate;' + CrLf +
+                                                  'begin';
 
-  XSDValidateMethodImplementationRequired     = '  CreateRequiredElements(Self, [%<RequiredElements>:s]);';
-  XSDValidateMethodImplementationComplex      = '  Get%<Name>:s;';
-  XSDValidateMethodImplementationAttrib       = '  CreateRequiredAttributes(Self, [%<RequiredAttributes>:s]);';
-  XSDValidateMethodImplementationSort         = '  SortChildNodes(Self, [%<SortOrder>:s]);';
-  XSDValidateMethodImplementationSortNewLine  = #13#10 + '    ';
+  XSDValidateMethodImplementationRequired       = '  CreateRequiredElements(Self, [%<RequiredElements>:s]);';
+  XSDValidateMethodImplementationComplex        = '  Get%<Name>:s;';
+  XSDValidateMethodImplementationAttrib         = '  CreateRequiredAttributes(Self, [%<RequiredAttributes>:s]);';
+  XSDValidateMethodImplementationSort           = '  SortChildNodes(Self, [%<SortOrder>:s]);';
+  XSDValidateMethodImplementationArrayBreak     = #13#10 + '    ';
 
-  XSDValidateMethodImplementationEnd      = 'end;' + CrLf;
+  XSDValidateMethodImplementationEnd            = 'end;' + CrLf;
+
+
+  XSDValidateStrictMethodImplementationBegin    = 'procedure TXML%<Name>:s.XSDValidateStrict(AResult: IXSDValidateStrictResult);' + CrLf +
+                                                  'begin';
+  XSDValidateStrictMethodImplementationRequired = '  ValidateRequiredElements(AResult, Self, [%<RequiredElements>:s]);';
+  XSDValidateStrictMethodImplementationAttrib   = '  ValidateRequiredAttributes(AResult, Self, [%<RequiredAttributes>:s]);';
+  XSDValidateStrictMethodImplementationEnd      = 'end;' + CrLf;
 
 
   EnumeratorMethodInterface       = '    function GetEnumerator: IXML%<Name>:sEnumerator;';
