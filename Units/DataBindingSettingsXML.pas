@@ -1,32 +1,35 @@
 {
   X2Software XML Data Binding
 
-    Generated on:   24-4-2008 11:37:27
-    Generated from: P:\test\XMLDataBinding\XSD\DataBindingSettings.xsd
+    Generated on:   21-7-2017 9:19:46
+    Generated from: P:\x2xmldatabinding\XSD\DataBindingSettings.xsd
 }
 unit DataBindingSettingsXML;
 
 interface
 uses
   Classes,
+  SysUtils,
   XMLDoc,
-  XMLIntf;
+  XMLIntf,
+  XMLDataBindingUtils;
 
 type
   { Forward declarations for DataBindingSettings }
   IXMLDataBindingSettings = interface;
   IXMLDataBindingOutput = interface;
-  TXMLOutputType = (OutputType_Single,
-                    OutputType_Multiple);
   IXMLOutputSingle = interface;
   IXMLOutputMultiple = interface;
+  TXMLDataBindingOutputType = (DataBindingOutputType_Single,
+                               DataBindingOutputType_Multiple);
 
   { Interfaces for DataBindingSettings }
   {
     Contains the settings and hints for the Delphi XML Data Binding.
   }
   IXMLDataBindingSettings = interface(IXMLNode)
-    ['{C78D63A5-77C2-4547-AC37-5311160D543B}']
+    ['{0407CBCB-B49B-4ED3-A2F6-CCDDFE46F334}']
+    procedure XSDValidateDocument(AStrict: Boolean = False);
     function GetHasOutput: Boolean;
     function GetOutput: IXMLDataBindingOutput;
 
@@ -38,27 +41,38 @@ type
     Contains the user-defined output settings last used
   }
   IXMLDataBindingOutput = interface(IXMLNode)
-    ['{81374819-83EF-42A8-A7B8-2F59A470D77B}']
+    ['{21821EFA-C7D8-4299-BF44-8122FBF2BC2E}']
+    procedure XSDValidate;
+    procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
+
     function GetOutputTypeText: WideString;
-    function GetOutputType: TXMLOutputType;
+    function GetOutputType: TXMLDataBindingOutputType;
     function GetHasOutputSingle: Boolean;
     function GetOutputSingle: IXMLOutputSingle;
     function GetHasOutputMultiple: Boolean;
     function GetOutputMultiple: IXMLOutputMultiple;
+    function GetHasHasChecksEmpty: Boolean;
+    function GetHasChecksEmpty: Boolean;
 
     procedure SetOutputTypeText(const Value: WideString);
-    procedure SetOutputType(const Value: TXMLOutputType);
+    procedure SetOutputType(const Value: TXMLDataBindingOutputType);
+    procedure SetHasChecksEmpty(const Value: Boolean);
 
     property OutputTypeText: WideString read GetOutputTypeText write SetOutputTypeText;
-    property OutputType: TXMLOutputType read GetOutputType write SetOutputType;
+    property OutputType: TXMLDataBindingOutputType read GetOutputType write SetOutputType;
     property HasOutputSingle: Boolean read GetHasOutputSingle;
     property OutputSingle: IXMLOutputSingle read GetOutputSingle;
     property HasOutputMultiple: Boolean read GetHasOutputMultiple;
     property OutputMultiple: IXMLOutputMultiple read GetOutputMultiple;
+    property HasHasChecksEmpty: Boolean read GetHasHasChecksEmpty;
+    property HasChecksEmpty: Boolean read GetHasChecksEmpty write SetHasChecksEmpty;
   end;
 
   IXMLOutputSingle = interface(IXMLNode)
-    ['{9BB52722-C7C0-45F8-81A1-59BE074BF62E}']
+    ['{ABB2D62A-0B4D-4E4B-8835-ED8AFE7564EA}']
+    procedure XSDValidate;
+    procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
+
     function GetFileName: WideString;
 
     procedure SetFileName(const Value: WideString);
@@ -67,7 +81,10 @@ type
   end;
 
   IXMLOutputMultiple = interface(IXMLNode)
-    ['{4B5AC82E-572A-4C21-B779-4626BF79E0E6}']
+    ['{2F4918D6-EE9C-4986-9052-285A8B4D58C5}']
+    procedure XSDValidate;
+    procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
+
     function GetPath: WideString;
     function GetPrefix: WideString;
     function GetPostfix: WideString;
@@ -83,38 +100,51 @@ type
 
 
   { Classes for DataBindingSettings }
-  TXMLDataBindingSettings = class(TXMLNode, IXMLDataBindingSettings)
+  TXMLDataBindingSettings = class(TX2XMLNode, IXMLDataBindingSettings)
   public
     procedure AfterConstruction; override;
   protected
+    procedure XSDValidateDocument(AStrict: Boolean = False);
     function GetHasOutput: Boolean;
     function GetOutput: IXMLDataBindingOutput;
   end;
 
-  TXMLDataBindingOutput = class(TXMLNode, IXMLDataBindingOutput)
+  TXMLDataBindingOutput = class(TX2XMLNode, IXSDValidate, IXSDValidateStrict, IXMLDataBindingOutput)
   public
     procedure AfterConstruction; override;
   protected
+    procedure XSDValidate;
+    procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
+
     function GetOutputTypeText: WideString;
-    function GetOutputType: TXMLOutputType;
+    function GetOutputType: TXMLDataBindingOutputType;
     function GetHasOutputSingle: Boolean;
     function GetOutputSingle: IXMLOutputSingle;
     function GetHasOutputMultiple: Boolean;
     function GetOutputMultiple: IXMLOutputMultiple;
+    function GetHasHasChecksEmpty: Boolean;
+    function GetHasChecksEmpty: Boolean;
 
     procedure SetOutputTypeText(const Value: WideString);
-    procedure SetOutputType(const Value: TXMLOutputType);
+    procedure SetOutputType(const Value: TXMLDataBindingOutputType);
+    procedure SetHasChecksEmpty(const Value: Boolean);
   end;
 
-  TXMLOutputSingle = class(TXMLNode, IXMLOutputSingle)
+  TXMLOutputSingle = class(TX2XMLNode, IXSDValidate, IXSDValidateStrict, IXMLOutputSingle)
   protected
+    procedure XSDValidate;
+    procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
+
     function GetFileName: WideString;
 
     procedure SetFileName(const Value: WideString);
   end;
 
-  TXMLOutputMultiple = class(TXMLNode, IXMLOutputMultiple)
+  TXMLOutputMultiple = class(TX2XMLNode, IXSDValidate, IXSDValidateStrict, IXMLOutputMultiple)
   protected
+    procedure XSDValidate;
+    procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
+
     function GetPath: WideString;
     function GetPrefix: WideString;
     function GetPostfix: WideString;
@@ -126,9 +156,10 @@ type
 
 
   { Document functions }
-  function GetDataBindingSettings(ADocument: IXMLDocument): IXMLDataBindingSettings;
+  function GetDataBindingSettings(ADocument: XMLIntf.IXMLDocument): IXMLDataBindingSettings;
   function LoadDataBindingSettings(const AFileName: String): IXMLDataBindingSettings;
   function LoadDataBindingSettingsFromStream(AStream: TStream): IXMLDataBindingSettings;
+  function LoadDataBindingSettingsFromString(const AString: String{$IF CompilerVersion >= 20}; AEncoding: TEncoding = nil; AOwnsEncoding: Boolean = True{$IFEND}): IXMLDataBindingSettings;
   function NewDataBindingSettings: IXMLDataBindingSettings;
 
 
@@ -137,21 +168,21 @@ const
 
 
 const
-  OutputTypeValues: array[TXMLOutputType] of WideString =
-                    (
-                      'Single',
-                      'Multiple'
-                    );
+  DataBindingOutputTypeValues: array[TXMLDataBindingOutputType] of WideString =
+                               (
+                                 'Single',
+                                 'Multiple'
+                               );
 
   { Enumeration conversion helpers }
-  function StringToOutputType(const AValue: WideString): TXMLOutputType;
+  function StringToDataBindingOutputType(const AValue: WideString): TXMLDataBindingOutputType;
 
 implementation
 uses
-  SysUtils;
+  Variants;
 
 { Document functions }
-function GetDataBindingSettings(ADocument: IXMLDocument): IXMLDataBindingSettings;
+function GetDataBindingSettings(ADocument: XMLIntf.IXMLDocument): IXMLDataBindingSettings;
 begin
   Result := ADocument.GetDocBinding('DataBindingSettings', TXMLDataBindingSettings, TargetNamespace) as IXMLDataBindingSettings
 end;
@@ -163,12 +194,30 @@ end;
 
 function LoadDataBindingSettingsFromStream(AStream: TStream): IXMLDataBindingSettings;
 var
-  doc: IXMLDocument;
+  doc: XMLIntf.IXMLDocument;
 
 begin
   doc := NewXMLDocument;
   doc.LoadFromStream(AStream);
   Result  := GetDataBindingSettings(doc);
+end;
+
+function LoadDataBindingSettingsFromString(const AString: String{$IF CompilerVersion >= 20}; AEncoding: TEncoding; AOwnsEncoding: Boolean{$IFEND}): IXMLDataBindingSettings;
+var
+  stream: TStringStream;
+
+begin
+  {$IF CompilerVersion >= 20}
+  if Assigned(AEncoding) then
+    stream := TStringStream.Create(AString, AEncoding, AOwnsEncoding)
+  else
+  {$IFEND}
+    stream := TStringStream.Create(AString);
+  try
+    Result  := LoadDataBindingSettingsFromStream(stream);
+  finally
+    FreeAndNil(stream);
+  end;
 end;
 
 function NewDataBindingSettings: IXMLDataBindingSettings;
@@ -179,14 +228,14 @@ end;
 
 
 { Enumeration conversion helpers }
-function StringToOutputType(const AValue: WideString): TXMLOutputType;
+function StringToDataBindingOutputType(const AValue: WideString): TXMLDataBindingOutputType;
 var
-  enumValue: TXMLOutputType;
+  enumValue: TXMLDataBindingOutputType;
 
 begin
-  Result := TXMLOutputType(-1);
-  for enumValue := Low(TXMLOutputType) to High(TXMLOutputType) do
-    if OutputTypeValues[enumValue] = AValue then
+  Result := TXMLDataBindingOutputType(-1);
+  for enumValue := Low(TXMLDataBindingOutputType) to High(TXMLDataBindingOutputType) do
+    if DataBindingOutputTypeValues[enumValue] = AValue then
     begin
       Result := enumValue;
       break;
@@ -199,6 +248,14 @@ procedure TXMLDataBindingSettings.AfterConstruction;
 begin
   RegisterChildNode('Output', TXMLDataBindingOutput);
   inherited;
+end;
+
+procedure TXMLDataBindingSettings.XSDValidateDocument(AStrict: Boolean);
+begin
+  if AStrict then
+    XMLDataBindingUtils.XSDValidateStrict(Self)
+  else
+    XMLDataBindingUtils.XSDValidate(Self);
 end;
 
 function TXMLDataBindingSettings.GetHasOutput: Boolean;
@@ -219,15 +276,27 @@ begin
   inherited;
 end;
 
+procedure TXMLDataBindingOutput.XSDValidate;
+begin
+  GetOutputType;
+  SortChildNodes(Self, ['OutputType', 'OutputSingle', 'OutputMultiple', 'HasChecksEmpty']);
+end;
+
+procedure TXMLDataBindingOutput.XSDValidateStrict(AResult: IXSDValidateStrictResult);
+begin
+  GetOutputType;
+  SortChildNodes(Self, ['OutputType', 'OutputSingle', 'OutputMultiple', 'HasChecksEmpty']);
+end;
+
 function TXMLDataBindingOutput.GetOutputTypeText: WideString;
 begin
   Result := ChildNodes['OutputType'].Text;
 end;
 
 
-function TXMLDataBindingOutput.GetOutputType: TXMLOutputType;
+function TXMLDataBindingOutput.GetOutputType: TXMLDataBindingOutputType;
 begin
-  Result := StringToOutputType(GetOutputTypeText);
+  Result := StringToDataBindingOutputType(GetOutputTypeText);
 end;
 
 function TXMLDataBindingOutput.GetHasOutputSingle: Boolean;
@@ -252,15 +321,41 @@ begin
   Result := (ChildNodes['OutputMultiple'] as IXMLOutputMultiple);
 end;
 
+function TXMLDataBindingOutput.GetHasHasChecksEmpty: Boolean;
+begin
+  Result := Assigned(ChildNodes.FindNode('HasChecksEmpty'));
+end;
+
+
+function TXMLDataBindingOutput.GetHasChecksEmpty: Boolean;
+begin
+  Result := ChildNodes['HasChecksEmpty'].NodeValue;
+end;
+
 procedure TXMLDataBindingOutput.SetOutputTypeText(const Value: WideString);
 begin
   ChildNodes['OutputType'].NodeValue := Value;
 end;
 
 
-procedure TXMLDataBindingOutput.SetOutputType(const Value: TXMLOutputType);
+procedure TXMLDataBindingOutput.SetOutputType(const Value: TXMLDataBindingOutputType);
 begin
-  ChildNodes['OutputType'].NodeValue := OutputTypeValues[Value];
+  ChildNodes['OutputType'].NodeValue := DataBindingOutputTypeValues[Value];
+end;
+
+procedure TXMLDataBindingOutput.SetHasChecksEmpty(const Value: Boolean);
+begin
+  ChildNodes['HasChecksEmpty'].NodeValue := BoolToXML(Value);
+end;
+
+procedure TXMLOutputSingle.XSDValidate;
+begin
+  CreateRequiredElements(Self, ['FileName']);
+end;
+
+procedure TXMLOutputSingle.XSDValidateStrict(AResult: IXSDValidateStrictResult);
+begin
+  ValidateRequiredElements(AResult, Self, ['FileName']);
 end;
 
 function TXMLOutputSingle.GetFileName: WideString;
@@ -270,7 +365,19 @@ end;
 
 procedure TXMLOutputSingle.SetFileName(const Value: WideString);
 begin
-  ChildNodes['FileName'].NodeValue := Value;
+  ChildNodes['FileName'].NodeValue := GetValidXMLText(Value);
+end;
+
+procedure TXMLOutputMultiple.XSDValidate;
+begin
+  CreateRequiredElements(Self, ['Path', 'Prefix', 'Postfix']);
+  SortChildNodes(Self, ['Path', 'Prefix', 'Postfix']);
+end;
+
+procedure TXMLOutputMultiple.XSDValidateStrict(AResult: IXSDValidateStrictResult);
+begin
+  ValidateRequiredElements(AResult, Self, ['Path', 'Prefix', 'Postfix']);
+  SortChildNodes(Self, ['Path', 'Prefix', 'Postfix']);
 end;
 
 function TXMLOutputMultiple.GetPath: WideString;
@@ -290,17 +397,17 @@ end;
 
 procedure TXMLOutputMultiple.SetPath(const Value: WideString);
 begin
-  ChildNodes['Path'].NodeValue := Value;
+  ChildNodes['Path'].NodeValue := GetValidXMLText(Value);
 end;
 
 procedure TXMLOutputMultiple.SetPrefix(const Value: WideString);
 begin
-  ChildNodes['Prefix'].NodeValue := Value;
+  ChildNodes['Prefix'].NodeValue := GetValidXMLText(Value);
 end;
 
 procedure TXMLOutputMultiple.SetPostfix(const Value: WideString);
 begin
-  ChildNodes['Postfix'].NodeValue := Value;
+  ChildNodes['Postfix'].NodeValue := GetValidXMLText(Value);
 end;
 
 

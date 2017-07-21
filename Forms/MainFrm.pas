@@ -51,6 +51,7 @@ type
     rbFolder:                                   TRadioButton;
     spFile:                                     TTabSheet;
     spFolder:                                   TTabSheet;
+    cbHasChecksEmpty: TCheckBox;
 
     procedure btnCloseClick(Sender: TObject);
     procedure btnGenerateClick(Sender: TObject);
@@ -181,6 +182,7 @@ begin
         generator.OutputPath  := deFolder.Text;
       end;
 
+      generator.HasChecksEmpty := cbHasChecksEmpty.Checked;
       generator.OnGetFileName := GetFileName;
       generator.Execute(feSchema.Text);
 
@@ -263,14 +265,14 @@ begin
     if settings.HasOutput then
     begin
       case settings.Output.OutputType of
-        OutputType_Single:
+        DataBindingOutputType_Single:
           begin
             outputSingle    := settings.Output.OutputSingle;
             rbFile.Checked  := True;
             feFile.Text     := outputSingle.FileName;
           end;
 
-        OutputType_Multiple:
+        DataBindingOutputType_Multiple:
           begin
             outputMultiple        := settings.Output.OutputMultiple;
             rbFolder.Checked      := True;
@@ -279,6 +281,8 @@ begin
             edtFolderPostfix.Text := outputMultiple.Postfix;
           end;
       end;
+
+      cbHasChecksEmpty.Checked := settings.Output.HasHasChecksEmpty and settings.Output.HasChecksEmpty;
     end;
   end;
 end;
@@ -302,18 +306,19 @@ begin
 
   if rbFile.Checked then
   begin
-    settings.Output.OutputType  := OutputType_Single;
+    settings.Output.OutputType  := DataBindingOutputType_Single;
     outputSingle                := settings.Output.OutputSingle;
     outputSingle.FileName       := feFile.Text;
   end else
   begin
-    settings.Output.OutputType  := OutputType_Multiple;
+    settings.Output.OutputType  := DataBindingOutputType_Multiple;
     outputMultiple              := settings.Output.OutputMultiple;
     outputMultiple.Path         := deFolder.Text;
     outputMultiple.Prefix       := edtFolderPrefix.Text;
     outputMultiple.Postfix      := edtFolderPostfix.Text;
   end;
 
+  settings.Output.HasChecksEmpty := cbHasChecksEmpty.Checked;
   settings.OwnerDocument.SaveToFile(fileName);
 end;
 

@@ -18,10 +18,11 @@ type
 
   TDelphiXMLDataBindingGenerator = class(TXMLDataBindingGenerator)
   private
-    FProcessedItems:  TList<TXMLDataBindingInterface>;
-    FUnitNames:       TDictionary<TXMLDataBindingSchema, String>;
+    FProcessedItems: TList<TXMLDataBindingInterface>;
+    FUnitNames: TDictionary<TXMLDataBindingSchema, String>;
 
-    FOnGetFileName:   TGetFileNameEvent;
+    FHasChecksEmpty: Boolean;
+    FOnGetFileName:  TGetFileNameEvent;
   protected
     procedure GenerateDataBinding; override;
     procedure GenerateOutputFile(ASchemaList: TXMLSchemaList; const ASourceFileName, AUnitName: String);
@@ -70,7 +71,9 @@ type
     property ProcessedItems:  TList<TXMLDataBindingInterface> read FProcessedItems;
     property UnitNames:       TDictionary<TXMLDataBindingSchema, String> read FUnitNames;
   public
-    property OnGetFileName:   TGetFileNameEvent read FOnGetFileName write FOnGetFileName;
+    property HasChecksEmpty: Boolean read FHasChecksEmpty write FHasChecksEmpty;
+
+    property OnGetFileName: TGetFileNameEvent read FOnGetFileName write FOnGetFileName;
   end;
 
 
@@ -1141,6 +1144,7 @@ var
   writeStream:      Boolean;
   typeMapping:      TTypeMapping;
   nodeType:         TDelphiNodeType;
+  elementType:      TDelphiElementType;
 
 begin
   Result  := False;
@@ -1295,9 +1299,12 @@ begin
 
                 if writeOptional then
                   if AProperty.IsAttribute then
-                    sourceCode.Add(PropertyImplMethodGetOptionalAttr)
+                    sourceCode.Add(IfThen(HasChecksEmpty, PropertyImplMethodGetOptionalAttrEmpty, PropertyImplMethodGetOptionalAttr))
                   else
-                    sourceCode.Add(PropertyImplMethodGetOptional[GetDelphiElementType(nodeType)]);
+                  begin
+                    elementType := GetDelphiElementType(nodeType);
+                    sourceCode.Add(IfThen(HasChecksEmpty, PropertyImplMethodGetOptionalEmpty[elementType], PropertyImplMethodGetOptional[elementType]));
+                  end;
 
                 if writeNil then
                   sourceCode.Add(PropertyImplMethodGetNil[GetDelphiElementType(nodeType)]);

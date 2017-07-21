@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema targetNamespace="http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd" xmlns:tns="http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:schema xmlns:tns="http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:element name="DataBindingSettings">
 		<xs:annotation>
 			<xs:documentation>Contains the settings and hints for the Delphi XML Data Binding.</xs:documentation>
@@ -34,6 +34,7 @@
 					</xs:complexType>
 				</xs:element>
 			</xs:choice>
+			<xs:element name="HasChecksEmpty" type="xs:boolean" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="DataBindingOutputType">

@@ -198,6 +198,31 @@ const
                                       'end;'                                                                    + CrLf +
                                       ''                                                                        + CrLf;
 
+  PropertyImplMethodGetOptionalEmpty: array[TDelphiElementType] of string =
+                                      (
+                                        { dntElement }
+                                        'function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;'                + CrLf +
+                                        'begin'                                                                   + CrLf +
+                                        '  Result := Assigned(ChildNodes.FindNode(''%<PropertySourceName>:s'')) and (Length(ChildNodes[''%<PropertySourceName>:s''].Text) > 0);' + CrLf +
+                                        'end;'                                                                    + CrLf +
+                                        ''                                                                        + CrLf,
+
+                                        { dntElementNS }
+                                        'function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;'                                     + CrLf +
+                                        'begin'                                                                                        + CrLf +
+                                        '  Result := Assigned(ChildNodes.FindNode(''%<PropertySourceName>:s'', ''%<Namespace>:s'')) and (Length(ChildNodesNS[''%<PropertySourceName>:s'', ''%<Namespace>:s''].Text) > 0);'  + CrLf +
+                                        'end;'                                                                                         + CrLf +
+                                        ''                                                                                             + CrLf
+                                      );
+
+
+  PropertyImplMethodGetOptionalAttrEmpty = 'function TXML%<Name>:s.GetHas%<PropertyName>:s: Boolean;'                + CrLf +
+                                           'begin'                                                                   + CrLf +
+                                           '  Result := Assigned(AttributeNodes.FindNode(''%<PropertySourceName>:s'')) and (Length(AttributeNodes[''%<PropertySourceName>:s''].Text) > 0);' + CrLf +
+                                           'end;'                                                                    + CrLf +
+                                           ''                                                                        + CrLf;
+
+
   PropertyImplMethodGetNil: array[TDelphiElementType] of string =
                             (
                               { dntElement }
