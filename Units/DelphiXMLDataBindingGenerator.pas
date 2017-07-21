@@ -1144,7 +1144,6 @@ var
   writeStream:      Boolean;
   typeMapping:      TTypeMapping;
   nodeType:         TDelphiNodeType;
-  elementType:      TDelphiElementType;
 
 begin
   Result  := False;
@@ -1298,13 +1297,21 @@ begin
                 WriteNewLine;
 
                 if writeOptional then
-                  if AProperty.IsAttribute then
-                    sourceCode.Add(IfThen(HasChecksEmpty, PropertyImplMethodGetOptionalAttrEmpty, PropertyImplMethodGetOptionalAttr))
-                  else
+                begin
+                  if HasChecksEmpty and (AProperty.PropertyType = ptSimple) and (not Assigned(AProperty.Collection)) then
                   begin
-                    elementType := GetDelphiElementType(nodeType);
-                    sourceCode.Add(IfThen(HasChecksEmpty, PropertyImplMethodGetOptionalEmpty[elementType], PropertyImplMethodGetOptional[elementType]));
+                    if AProperty.IsAttribute then
+                      sourceCode.Add(PropertyImplMethodGetOptionalAttrEmpty)
+                    else
+                      sourceCode.Add(PropertyImplMethodGetOptionalEmpty[GetDelphiElementType(nodeType)]);
+                  end else
+                  begin
+                    if AProperty.IsAttribute then
+                      sourceCode.Add(PropertyImplMethodGetOptionalAttr)
+                    else
+                      sourceCode.Add(PropertyImplMethodGetOptional[GetDelphiElementType(nodeType)]);
                   end;
+                end;
 
                 if writeNil then
                   sourceCode.Add(PropertyImplMethodGetNil[GetDelphiElementType(nodeType)]);
