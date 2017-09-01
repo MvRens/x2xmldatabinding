@@ -1223,7 +1223,11 @@ begin
                 WriteNewLine;
 
                 if writeOptional then
+                begin
                   sourceCode.Add(PropertyIntfMethodGetOptional);
+                  if AProperty.PropertyType = ptSimple then
+                    sourceCode.Add(PropertyIntfMethodGetOptionalOrDefault);
+                end;
 
                 if writeNil then
                   sourceCode.Add(PropertyIntfMethodGetNil);
@@ -1311,6 +1315,9 @@ begin
                     else
                       sourceCode.Add(PropertyImplMethodGetOptional[GetDelphiElementType(nodeType)]);
                   end;
+
+                  if AProperty.PropertyType = ptSimple then
+                    sourceCode.Add(PropertyImplMethodGetOptionalOrDefault);
                 end;
 
                 if writeNil then

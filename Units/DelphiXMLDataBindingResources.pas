@@ -155,25 +155,36 @@ const
                              '  Result := (inherited GetCurrent as %<DataType>:s);' + CrLf +
                              'end;' + CrLf;
 
-  PropertyIntfMethodGetOptional     = '    function GetHas%<PropertyName>:s: Boolean;';
-  PropertyIntfMethodGetNil          = '    function Get%<PropertyName>:sIsNil: Boolean;';
-  PropertyIntfMethodGetText         = '    function Get%<PropertyName>:sText: WideString;';
-  PropertyIntfMethodGet             = '    function Get%<PropertyName>:s: %<DataType>:s;';
-  PropertyIntfMethodSetNil          = '    procedure Set%<PropertyName>:sIsNil(const Value: Boolean);';
-  PropertyIntfMethodSetText         = '    procedure Set%<PropertyName>:sText(const Value: WideString);';
-  PropertyIntfMethodSet             = '    procedure Set%<PropertyName>:s(const Value: %<DataType>:s);';
-  PropertyIntfMethodLoadFromStream  = '    procedure Load%<PropertyName>:sFromStream(AStream: TStream);';
-  PropertyIntfMethodLoadFromFile    = '    procedure Load%<PropertyName>:sFromFile(const AFileName: string);';
-  PropertyIntfMethodSaveToStream    = '    procedure Save%<PropertyName>:sToStream(AStream: TStream);';
-  PropertyIntfMethodSaveToFile      = '    procedure Save%<PropertyName>:sToFile(const AFileName: string);';
+  PropertyIntfMethodGetOptional           = '    function GetHas%<PropertyName>:s: Boolean;';
+  PropertyIntfMethodGetOptionalOrDefault  = '    function %<PropertyName>:sDef(const ADefaultValue: %<DataType>:s = Default(%<DataType>:s)): %<DataType>:s;';
+  PropertyIntfMethodGetNil                = '    function Get%<PropertyName>:sIsNil: Boolean;';
+  PropertyIntfMethodGetText               = '    function Get%<PropertyName>:sText: WideString;';
+  PropertyIntfMethodGet                   = '    function Get%<PropertyName>:s: %<DataType>:s;';
+  PropertyIntfMethodSetNil                = '    procedure Set%<PropertyName>:sIsNil(const Value: Boolean);';
+  PropertyIntfMethodSetText               = '    procedure Set%<PropertyName>:sText(const Value: WideString);';
+  PropertyIntfMethodSet                   = '    procedure Set%<PropertyName>:s(const Value: %<DataType>:s);';
+  PropertyIntfMethodLoadFromStream        = '    procedure Load%<PropertyName>:sFromStream(AStream: TStream);';
+  PropertyIntfMethodLoadFromFile          = '    procedure Load%<PropertyName>:sFromFile(const AFileName: string);';
+  PropertyIntfMethodSaveToStream          = '    procedure Save%<PropertyName>:sToStream(AStream: TStream);';
+  PropertyIntfMethodSaveToFile            = '    procedure Save%<PropertyName>:sToFile(const AFileName: string);';
 
-  PropertyInterfaceOptional         = '    property Has%<PropertyName>:s: Boolean read GetHas%<PropertyName>:s;';
-  PropertyInterfaceNilReadOnly      = '    property %<PropertyName>:sIsNil: Boolean read Get%<PropertyName>:sIsNil;';
-  PropertyInterfaceNil              = '    property %<PropertyName>:sIsNil: Boolean read Get%<PropertyName>:sIsNil write Set%<PropertyName>:sIsNil;';
-  PropertyInterfaceTextReadOnly     = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText;';
-  PropertyInterfaceReadOnly         = '    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s;';
-  PropertyInterfaceText             = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText write Set%<PropertyName>:sText;';
-  PropertyInterface                 = '    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s write Set%<PropertyName>:s;';
+  PropertyInterfaceOptional               = '    property Has%<PropertyName>:s: Boolean read GetHas%<PropertyName>:s;';
+  PropertyInterfaceNilReadOnly            = '    property %<PropertyName>:sIsNil: Boolean read Get%<PropertyName>:sIsNil;';
+  PropertyInterfaceNil                    = '    property %<PropertyName>:sIsNil: Boolean read Get%<PropertyName>:sIsNil write Set%<PropertyName>:sIsNil;';
+  PropertyInterfaceTextReadOnly           = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText;';
+  PropertyInterfaceReadOnly               = '    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s;';
+  PropertyInterfaceText                   = '    property %<PropertyName>:sText: WideString read Get%<PropertyName>:sText write Set%<PropertyName>:sText;';
+  PropertyInterface                       = '    property %<PropertyName>:s: %<DataType>:s read Get%<PropertyName>:s write Set%<PropertyName>:s;';
+
+
+  PropertyImplMethodGetOptionalOrDefault = 'function TXML%<Name>:s.%<PropertyName>:sDef(const ADefaultValue: %<DataType>:s): %<DataType>:s;' + CrLf +
+                                           'begin'                                                                                                    + CrLf +
+                                           '  if GetHas%<PropertySourceName>:s then'                                                                  + CrLf +
+                                           '    Result := Get%<PropertySourceName>:s'                                                                    + CrLf +
+                                           '  else'                                                                                                   + CrLf +
+                                           '    Result := ADefaultValue;'                                                                             + CrLf +
+                                           'end;'                                                                                                     + CrLf +
+                                           ''                                                                                                         + CrLf;
 
   PropertyImplMethodGetOptional: array[TDelphiElementType] of string =
                                  (
