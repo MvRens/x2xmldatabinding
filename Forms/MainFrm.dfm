@@ -4,7 +4,7 @@ object MainForm: TMainForm
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsDialog
   Caption = 'X'#178'Software XML Data Binding for Delphi'
-  ClientHeight = 291
+  ClientHeight = 312
   ClientWidth = 438
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -17,7 +17,7 @@ object MainForm: TMainForm
   OnCreate = FormCreate
   DesignSize = (
     438
-    291)
+    312)
   PixelsPerInch = 96
   TextHeight = 13
   object lblSchema: TLabel
@@ -44,14 +44,14 @@ object MainForm: TMainForm
     Left = 8
     Top = 43
     Width = 422
-    Height = 204
+    Height = 225
     Anchors = [akLeft, akTop, akBottom]
     Caption = ' Output '
     TabOrder = 1
-    ExplicitHeight = 167
+    ExplicitHeight = 204
     DesignSize = (
       422
-      204)
+      225)
     object rbFile: TRadioButton
       Left = 11
       Top = 21
@@ -83,7 +83,6 @@ object MainForm: TMainForm
       TabOrder = 2
       object spFile: TTabSheet
         TabVisible = False
-        ExplicitHeight = 85
         object lblFile: TLabel
           Left = 4
           Top = 7
@@ -105,8 +104,6 @@ object MainForm: TMainForm
       end
       object spFolder: TTabSheet
         TabVisible = False
-        ExplicitLeft = 8
-        ExplicitHeight = 195
         DesignSize = (
           408
           83)
@@ -171,10 +168,19 @@ object MainForm: TMainForm
         'perties'
       TabOrder = 3
     end
+    object cbGenerateGetOptionalOrDefault: TCheckBox
+      Left = 11
+      Top = 198
+      Width = 401
+      Height = 17
+      Hint = ' Generate a "Def" method for optional elements'
+      Caption = ' Generate a "Def" method for optional elements'
+      TabOrder = 4
+    end
   end
   object btnGenerate: TButton
     Left = 274
-    Top = 258
+    Top = 279
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
@@ -182,11 +188,11 @@ object MainForm: TMainForm
     Default = True
     TabOrder = 3
     OnClick = btnGenerateClick
-    ExplicitTop = 221
+    ExplicitTop = 258
   end
   object btnClose: TButton
     Left = 355
-    Top = 258
+    Top = 279
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
@@ -194,11 +200,11 @@ object MainForm: TMainForm
     Caption = '&Close'
     TabOrder = 4
     OnClick = btnCloseClick
-    ExplicitTop = 221
+    ExplicitTop = 258
   end
   object btnHints: TButton
     Left = 7
-    Top = 258
+    Top = 279
     Width = 142
     Height = 25
     Anchors = [akRight, akBottom]
@@ -206,7 +212,7 @@ object MainForm: TMainForm
     Caption = 'Generate blank &Hints file'
     TabOrder = 2
     OnClick = btnHintsClick
-    ExplicitTop = 221
+    ExplicitTop = 258
   end
   object DefaultEditStyle: TcxDefaultEditStyleController
     Style.HotTrack = False

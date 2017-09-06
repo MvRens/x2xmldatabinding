@@ -1,7 +1,7 @@
 {
   X2Software XML Data Binding
 
-    Generated on:   21-7-2017 9:19:46
+    Generated on:   6-9-2017 16:58:58
     Generated from: P:\x2xmldatabinding\XSD\DataBindingSettings.xsd
 }
 unit DataBindingSettingsXML;
@@ -28,7 +28,7 @@ type
     Contains the settings and hints for the Delphi XML Data Binding.
   }
   IXMLDataBindingSettings = interface(IXMLNode)
-    ['{0407CBCB-B49B-4ED3-A2F6-CCDDFE46F334}']
+    ['{90C0CA10-A7AD-4418-98B6-D03469DB8913}']
     procedure XSDValidateDocument(AStrict: Boolean = False);
     function GetHasOutput: Boolean;
     function GetOutput: IXMLDataBindingOutput;
@@ -41,7 +41,7 @@ type
     Contains the user-defined output settings last used
   }
   IXMLDataBindingOutput = interface(IXMLNode)
-    ['{21821EFA-C7D8-4299-BF44-8122FBF2BC2E}']
+    ['{166F0975-2D2F-4CDB-B911-005163A0761F}']
     procedure XSDValidate;
     procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
 
@@ -53,10 +53,13 @@ type
     function GetOutputMultiple: IXMLOutputMultiple;
     function GetHasHasChecksEmpty: Boolean;
     function GetHasChecksEmpty: Boolean;
+    function GetHasGenerateGetOptionalOrDefault: Boolean;
+    function GetGenerateGetOptionalOrDefault: Boolean;
 
     procedure SetOutputTypeText(const Value: WideString);
     procedure SetOutputType(const Value: TXMLDataBindingOutputType);
     procedure SetHasChecksEmpty(const Value: Boolean);
+    procedure SetGenerateGetOptionalOrDefault(const Value: Boolean);
 
     property OutputTypeText: WideString read GetOutputTypeText write SetOutputTypeText;
     property OutputType: TXMLDataBindingOutputType read GetOutputType write SetOutputType;
@@ -66,10 +69,12 @@ type
     property OutputMultiple: IXMLOutputMultiple read GetOutputMultiple;
     property HasHasChecksEmpty: Boolean read GetHasHasChecksEmpty;
     property HasChecksEmpty: Boolean read GetHasChecksEmpty write SetHasChecksEmpty;
+    property HasGenerateGetOptionalOrDefault: Boolean read GetHasGenerateGetOptionalOrDefault;
+    property GenerateGetOptionalOrDefault: Boolean read GetGenerateGetOptionalOrDefault write SetGenerateGetOptionalOrDefault;
   end;
 
   IXMLOutputSingle = interface(IXMLNode)
-    ['{ABB2D62A-0B4D-4E4B-8835-ED8AFE7564EA}']
+    ['{77AE2C19-333F-4335-872E-659AE17C4701}']
     procedure XSDValidate;
     procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
 
@@ -81,7 +86,7 @@ type
   end;
 
   IXMLOutputMultiple = interface(IXMLNode)
-    ['{2F4918D6-EE9C-4986-9052-285A8B4D58C5}']
+    ['{8C1E7817-DBF1-4125-B29A-F7279006C7FB}']
     procedure XSDValidate;
     procedure XSDValidateStrict(AResult: IXSDValidateStrictResult);
 
@@ -124,10 +129,13 @@ type
     function GetOutputMultiple: IXMLOutputMultiple;
     function GetHasHasChecksEmpty: Boolean;
     function GetHasChecksEmpty: Boolean;
+    function GetHasGenerateGetOptionalOrDefault: Boolean;
+    function GetGenerateGetOptionalOrDefault: Boolean;
 
     procedure SetOutputTypeText(const Value: WideString);
     procedure SetOutputType(const Value: TXMLDataBindingOutputType);
     procedure SetHasChecksEmpty(const Value: Boolean);
+    procedure SetGenerateGetOptionalOrDefault(const Value: Boolean);
   end;
 
   TXMLOutputSingle = class(TX2XMLNode, IXSDValidate, IXSDValidateStrict, IXMLOutputSingle)
@@ -279,13 +287,13 @@ end;
 procedure TXMLDataBindingOutput.XSDValidate;
 begin
   GetOutputType;
-  SortChildNodes(Self, ['OutputType', 'OutputSingle', 'OutputMultiple', 'HasChecksEmpty']);
+  SortChildNodes(Self, ['OutputType', 'OutputSingle', 'OutputMultiple', 'HasChecksEmpty', 'GenerateGetOptionalOrDefault']);
 end;
 
 procedure TXMLDataBindingOutput.XSDValidateStrict(AResult: IXSDValidateStrictResult);
 begin
   GetOutputType;
-  SortChildNodes(Self, ['OutputType', 'OutputSingle', 'OutputMultiple', 'HasChecksEmpty']);
+  SortChildNodes(Self, ['OutputType', 'OutputSingle', 'OutputMultiple', 'HasChecksEmpty', 'GenerateGetOptionalOrDefault']);
 end;
 
 function TXMLDataBindingOutput.GetOutputTypeText: WideString;
@@ -332,6 +340,17 @@ begin
   Result := ChildNodes['HasChecksEmpty'].NodeValue;
 end;
 
+function TXMLDataBindingOutput.GetHasGenerateGetOptionalOrDefault: Boolean;
+begin
+  Result := Assigned(ChildNodes.FindNode('GenerateGetOptionalOrDefault'));
+end;
+
+
+function TXMLDataBindingOutput.GetGenerateGetOptionalOrDefault: Boolean;
+begin
+  Result := ChildNodes['GenerateGetOptionalOrDefault'].NodeValue;
+end;
+
 procedure TXMLDataBindingOutput.SetOutputTypeText(const Value: WideString);
 begin
   ChildNodes['OutputType'].NodeValue := Value;
@@ -346,6 +365,11 @@ end;
 procedure TXMLDataBindingOutput.SetHasChecksEmpty(const Value: Boolean);
 begin
   ChildNodes['HasChecksEmpty'].NodeValue := BoolToXML(Value);
+end;
+
+procedure TXMLDataBindingOutput.SetGenerateGetOptionalOrDefault(const Value: Boolean);
+begin
+  ChildNodes['GenerateGetOptionalOrDefault'].NodeValue := BoolToXML(Value);
 end;
 
 procedure TXMLOutputSingle.XSDValidate;

@@ -1,2 +1,2 @@
 <?xml version="1.0"?>
-<DataBindingSettings xmlns="http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd"><Output><OutputType>Single</OutputType><OutputSingle><FileName>..\Units\DataBindingSettingsXML.pas</FileName></OutputSingle></Output></DataBindingSettings>
+<DataBindingSettings xmlns="http://www.x2software.net/xsd/databinding/DataBindingSettings.xsd"><Output><OutputType>Single</OutputType><OutputSingle><FileName>..\Units\DataBindingSettingsXML.pas</FileName></OutputSingle><HasChecksEmpty>false</HasChecksEmpty><GenerateGetOptionalOrDefault>false</GenerateGetOptionalOrDefault></Output></DataBindingSettings>

@@ -52,6 +52,7 @@ type
     spFile:                                     TTabSheet;
     spFolder:                                   TTabSheet;
     cbHasChecksEmpty: TCheckBox;
+    cbGenerateGetOptionalOrDefault: TCheckBox;
 
     procedure btnCloseClick(Sender: TObject);
     procedure btnGenerateClick(Sender: TObject);
@@ -183,6 +184,7 @@ begin
       end;
 
       generator.HasChecksEmpty := cbHasChecksEmpty.Checked;
+      generator.HasGenerateGetOptionalOrDefault := cbGenerateGetOptionalOrDefault.Checked;
       generator.OnGetFileName := GetFileName;
       generator.Execute(feSchema.Text);
 
@@ -283,6 +285,7 @@ begin
       end;
 
       cbHasChecksEmpty.Checked := settings.Output.HasHasChecksEmpty and settings.Output.HasChecksEmpty;
+      cbGenerateGetOptionalOrDefault.Checked := settings.Output.HasGenerateGetOptionalOrDefault and settings.Output.GenerateGetOptionalOrDefault;
     end;
   end;
 end;
@@ -319,6 +322,7 @@ begin
   end;
 
   settings.Output.HasChecksEmpty := cbHasChecksEmpty.Checked;
+  settings.Output.GetOptionalOrDefault := cbGenerateGetOptionalOrDefault.Checked;
   settings.OwnerDocument.SaveToFile(fileName);
 end;
 

@@ -23,6 +23,7 @@ type
 
     FHasChecksEmpty: Boolean;
     FOnGetFileName:  TGetFileNameEvent;
+    FHasGenerateGetOptionalOrDefault: Boolean;
   protected
     procedure GenerateDataBinding; override;
     procedure GenerateOutputFile(ASchemaList: TXMLSchemaList; const ASourceFileName, AUnitName: String);
@@ -72,6 +73,7 @@ type
     property UnitNames:       TDictionary<TXMLDataBindingSchema, String> read FUnitNames;
   public
     property HasChecksEmpty: Boolean read FHasChecksEmpty write FHasChecksEmpty;
+    property HasGenerateGetOptionalOrDefault: Boolean read FHasGenerateGetOptionalOrDefault write FHasGenerateGetOptionalOrDefault;
 
     property OnGetFileName: TGetFileNameEvent read FOnGetFileName write FOnGetFileName;
   end;
@@ -86,6 +88,8 @@ uses
 
   X2Log.Global;
 
+const
+  VariantText = 'Variant';
 
 
 { TDelphiXMLDataBindingGenerator }
@@ -314,7 +318,7 @@ var
   typeMapping:  TTypeMapping;
 
 begin
-  Result  := 'Variant';
+  Result := VariantText;
   if GetDataTypeMapping(ADataType, typeMapping) then
     Result := typeMapping.DelphiName;
 end;
@@ -1225,7 +1229,7 @@ begin
                 if writeOptional then
                 begin
                   sourceCode.Add(PropertyIntfMethodGetOptional);
-                  if AProperty.PropertyType = ptSimple then
+                  if HasGenerateGetOptionalOrDefault and (AProperty.PropertyType = ptSimple) and (dataTypeName <> VariantText) then
                     sourceCode.Add(PropertyIntfMethodGetOptionalOrDefault);
                 end;
 
@@ -1316,7 +1320,7 @@ begin
                       sourceCode.Add(PropertyImplMethodGetOptional[GetDelphiElementType(nodeType)]);
                   end;
 
-                  if AProperty.PropertyType = ptSimple then
+                  if HasGenerateGetOptionalOrDefault and (AProperty.PropertyType = ptSimple) and (dataTypeName <> VariantText) then
                     sourceCode.Add(PropertyImplMethodGetOptionalOrDefault);
                 end;
 
