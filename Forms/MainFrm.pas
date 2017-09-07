@@ -322,7 +322,7 @@ begin
   end;
 
   settings.Output.HasChecksEmpty := cbHasChecksEmpty.Checked;
-  settings.Output.GetOptionalOrDefault := cbGenerateGetOptionalOrDefault.Checked;
+  settings.Output.GenerateGetOptionalOrDefault := cbGenerateGetOptionalOrDefault.Checked;
   settings.OwnerDocument.SaveToFile(fileName);
 end;
 
