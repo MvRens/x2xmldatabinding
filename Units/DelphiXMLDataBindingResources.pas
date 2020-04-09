@@ -179,8 +179,8 @@ const
 
   PropertyImplMethodGetOptionalOrDefault = 'function TXML%<Name>:s.%<PropertyName>:sDef(const ADefaultValue: %<DataType>:s): %<DataType>:s;' + CrLf +
                                            'begin'                                                                                                    + CrLf +
-                                           '  if GetHas%<PropertySourceName>:s then'                                                                  + CrLf +
-                                           '    Result := Get%<PropertySourceName>:s'                                                                    + CrLf +
+                                           '  if GetHas%<PropertyName>:s then'                                                                  + CrLf +
+                                           '    Result := Get%<PropertyName>:s'                                                                    + CrLf +
                                            '  else'                                                                                                   + CrLf +
                                            '    Result := ADefaultValue;'                                                                             + CrLf +
                                            'end;'                                                                                                     + CrLf +
