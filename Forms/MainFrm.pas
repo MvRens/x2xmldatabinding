@@ -80,6 +80,7 @@ uses
   FileCtrl,
   SysUtils,
   Windows,
+  Generics.Collections,
 
   MSXMLDOM,
   MSXML2_TLB,
@@ -409,37 +410,98 @@ end;
 
 
 procedure THintsDelphiXMLDataBindingGenerator.ProcessEnumerations;
+
+  procedure ProcessEnumeration(ABindingEnumeration: TXMLDataBindingEnumeration; AHintEnumeration: IXMLEnumeration);
+  var
+    hintMemberIndex:  Integer;
+    memberName:       String;
+    memberIndex:      Integer;
+
+  begin
+    for hintMemberIndex := 0 to Pred(AHintEnumeration.Count) do
+    begin
+      memberName  := AHintEnumeration.Member[hintMemberIndex].Name;
+
+      for memberIndex := 0 to Pred(ABindingEnumeration.MemberCount) do
+      begin
+        if ABindingEnumeration.Members[memberIndex].Name = memberName then
+        begin
+          ABindingEnumeration.Members[memberIndex].TranslatedName := AHintEnumeration[hintMemberIndex].Text;
+          Break;
+        end;
+      end;
+    end;
+  end;
+
+
+  function GetNewMembers(ABindingEnumeration: TXMLDataBindingEnumeration; AHintEnumeration: IXMLEnumeration): TList<TXMLDataBindingEnumerationMember>;
+  var
+    hintMemberIndex:  Integer;
+    member:           TXMLDataBindingEnumerationMember;
+
+  begin
+    Result := TList<TXMLDataBindingEnumerationMember>.Create;
+
+    for hintMemberIndex := 0 to Pred(AHintEnumeration.Count) do
+    begin
+      member := TXMLDataBindingEnumerationMember.Create(Self, ABindingEnumeration, AHintEnumeration[hintMemberIndex].Name);
+      member.TranslatedName := AHintEnumeration[hintMemberIndex].Text;
+      Result.Add(member);
+    end;
+  end;
+
+
 var
   itemIndex:        Integer;
   enumeration:      IXMLEnumeration;
   schemaItem:       TXMLDataBindingItem;
   enumerationItem:  TXMLDataBindingEnumeration;
-  hintMemberIndex:  Integer;
-  memberName:       String;
-  memberIndex:      Integer;
+  propertyItem:     TXMLDataBindingSimpleProperty;
+  newMembers:       TList<TXMLDataBindingEnumerationMember>;
+  newPropertyItem:  TXMLDataBindingItemProperty;
 
 begin
   for itemIndex := 0 to Pred(Hints.Enumerations.Count) do
   begin
     enumeration := Hints.Enumerations[itemIndex];
 
-    if FindNode(enumeration.Schema, enumeration.XPath, schemaItem) and
-       (schemaItem.ItemType = itEnumeration) then
+    if FindNode(enumeration.Schema, enumeration.XPath, schemaItem) then
     begin
-      enumerationItem := TXMLDataBindingEnumeration(schemaItem);
-
-      for hintMemberIndex := 0 to Pred(enumeration.Count) do
-      begin
-        memberName  := enumeration.Member[hintMemberIndex].Name;
-
-        for memberIndex := 0 to Pred(enumerationItem.MemberCount) do
-        begin
-          if enumerationItem.Members[memberIndex].Name = memberName then
+      case schemaItem.ItemType of
+        itEnumeration:
           begin
-            enumerationItem.Members[memberIndex].TranslatedName := enumeration[hintMemberIndex].Text;
-            Break;
+            enumerationItem := TXMLDataBindingEnumeration(schemaItem);
+
+            if enumeration.HasReplaceMembers and enumeration.ReplaceMembers then
+            begin
+              newMembers := GetNewMembers(enumerationItem, enumeration);
+              try
+                enumerationItem.ReplaceMembers(newMembers);
+              finally
+                FreeAndNil(newMembers);
+              end;
+            end else
+              ProcessEnumeration(TXMLDataBindingEnumeration(schemaItem), enumeration);
           end;
-        end;
+
+        itProperty:
+          if TXMLDataBindingProperty(schemaItem).PropertyType = ptSimple then
+          begin
+            propertyItem := TXMLDataBindingSimpleProperty(schemaItem);
+            if propertyItem.DataType.Name = 'string' then
+            begin
+              enumerationItem := TXMLDataBindingEnumeration.Create(Self, schemaItem.SchemaItem, nil, schemaItem.Name);
+              newPropertyItem := TXMLDataBindingItemProperty.Create(Self, propertyItem.SchemaItem, propertyItem.Name, enumerationItem);
+
+              newMembers := GetNewMembers(enumerationItem, enumeration);
+              try
+                enumerationItem.ReplaceMembers(newMembers);
+                ReplaceItem(schemaItem, newPropertyItem, False);
+              finally
+                FreeAndNil(newMembers);
+              end;
+            end;
+          end;
       end;
     end;
   end;

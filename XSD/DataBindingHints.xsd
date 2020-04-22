@@ -25,6 +25,7 @@
 									</xs:sequence>
 									<xs:attribute name="Schema" type="xs:string" use="required"/>
 									<xs:attribute name="XPath" type="xs:string" use="required"/>
+									<xs:attribute name="ReplaceMembers" type="xs:boolean" use="optional"/>
 								</xs:complexType>
 							</xs:element>
 						</xs:sequence>

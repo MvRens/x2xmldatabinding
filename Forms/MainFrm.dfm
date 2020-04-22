@@ -48,7 +48,6 @@ object MainForm: TMainForm
     Anchors = [akLeft, akTop, akBottom]
     Caption = ' Output '
     TabOrder = 1
-    ExplicitHeight = 204
     DesignSize = (
       422
       225)
@@ -83,6 +82,10 @@ object MainForm: TMainForm
       TabOrder = 2
       object spFile: TTabSheet
         TabVisible = False
+        ExplicitLeft = 0
+        ExplicitTop = 0
+        ExplicitWidth = 0
+        ExplicitHeight = 0
         object lblFile: TLabel
           Left = 4
           Top = 7
@@ -188,7 +191,6 @@ object MainForm: TMainForm
     Default = True
     TabOrder = 3
     OnClick = btnGenerateClick
-    ExplicitTop = 258
   end
   object btnClose: TButton
     Left = 355
@@ -200,7 +202,6 @@ object MainForm: TMainForm
     Caption = '&Close'
     TabOrder = 4
     OnClick = btnCloseClick
-    ExplicitTop = 258
   end
   object btnHints: TButton
     Left = 7
@@ -212,7 +213,6 @@ object MainForm: TMainForm
     Caption = 'Generate blank &Hints file'
     TabOrder = 2
     OnClick = btnHintsClick
-    ExplicitTop = 258
   end
   object DefaultEditStyle: TcxDefaultEditStyleController
     Style.HotTrack = False

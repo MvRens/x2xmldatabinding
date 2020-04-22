@@ -77,7 +77,7 @@ type
     function FindInterface(ASchema: TXMLDataBindingSchema; const AName: String; AType: TXMLDataBindingInterfaceType): TXMLDataBindingInterface;
     function FindEnumeration(ASchema: TXMLDataBindingSchema; const AName: String): TXMLDataBindingEnumeration;
 
-    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean);
 
     procedure ResolveSchema(ASchema: TXMLDataBindingSchema);
     procedure ResolveAlias(ASchema: TXMLDataBindingSchema);
@@ -113,7 +113,7 @@ type
   private
     FOwner:   TXMLDataBindingGenerator;
   protected
-    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); virtual;
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean); virtual;
 
     property Owner: TXMLDataBindingGenerator  read FOwner;
   public
@@ -136,7 +136,7 @@ type
     function GetIncludes(Index: Integer): TXMLDataBindingSchema;
     function GetTargetNamespace: String;
   protected
-    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); override;
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean); override;
 
     procedure AddInclude(ASchema: TXMLDataBindingSchema);
     procedure AddItem(AItem: TXMLDataBindingItem);
@@ -177,12 +177,11 @@ type
   protected
     function GetItemType: TXMLDataBindingItemType; virtual; abstract;
     procedure SetName(const Value: String);
-
-    property SchemaItem:      IXMLSchemaItem            read FSchemaItem;
   public
     constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String);
 
     property Schema:              TXMLDataBindingSchema     read FSchema          write FSchema;
+    property SchemaItem:          IXMLSchemaItem            read FSchemaItem;
     property TargetNamespace:     String                    read FTargetNamespace write FTargetNamespace;
 
     property DocumentElement:     Boolean                   read FDocumentElement write FDocumentElement;
@@ -211,7 +210,7 @@ type
   protected
     function GetItemType: TXMLDataBindingItemType; override;
 
-    procedure ReplaceItem(const AOldItem: TXMLDataBindingItem; const ANewItem: TXMLDataBindingItem); override;
+    procedure ReplaceItem(const AOldItem: TXMLDataBindingItem; const ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean); override;
 
     procedure AddProperty(AProperty: TXMLDataBindingProperty);
   public
@@ -251,8 +250,10 @@ type
   protected
     function GetItemType: TXMLDataBindingItemType; override;
   public
-    constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; AEnumerations: IXMLEnumerationCollection; const AName: String);
+    constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; AEnumerations: IXMLEnumerationCollection; const AName: String); overload;
     destructor Destroy; override;
+
+    procedure ReplaceMembers(AMembers: TEnumerable<TXMLDataBindingEnumerationMember>);
 
     property MemberCount:             Integer                           read GetMemberCount;
     property Members[Index: Integer]: TXMLDataBindingEnumerationMember  read GetMembers;
@@ -309,7 +310,7 @@ type
     function GetIsReadOnly: Boolean; override;
     function GetPropertyType: TXMLDataBindingPropertyType; override;
 
-    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); override;
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean); override;
   public
     constructor Create(AOwner: TXMLDataBindingGenerator; ASchemaItem: IXMLSchemaItem; const AName: String; AItem: TXMLDataBindingItem);
 
@@ -335,7 +336,7 @@ type
   protected
     function GetItemType: TXMLDataBindingItemType; override;
 
-    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem); override;
+    procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean); override;
   public
     property Item:  TXMLDataBindingItem read FItem  write FItem;
   end;
@@ -1233,13 +1234,13 @@ begin
 end;
 
 
-procedure TXMLDataBindingGenerator.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+procedure TXMLDataBindingGenerator.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean);
 var
   schemaIndex:  Integer;
 
 begin
   for schemaIndex := Pred(SchemaCount) downto 0 do
-    Schemas[schemaIndex].ReplaceItem(AOldItem, ANewItem);
+    Schemas[schemaIndex].ReplaceItem(AOldItem, ANewItem, ARemoveOnly);
 end;
 
 
@@ -1304,7 +1305,7 @@ begin
             interfaceItem.BaseName  := complexAliasItem.Item.Name;
             ASchema.AddItem(interfaceItem);
 
-            ReplaceItem(complexAliasItem, interfaceItem);
+            ReplaceItem(complexAliasItem, interfaceItem, True);
             FreeAndNil(complexAliasItem);
           end;
         end;
@@ -1314,7 +1315,7 @@ begin
           { Remove the alias element - TXMLDataBindingInterfaceItem.ReplaceItem
             will take care of fixing it's properties. }
           simpleAliasItem := TXMLDataBindingSimpleTypeAliasItem(item);
-          ReplaceItem(simpleAliasItem, nil);
+          ReplaceItem(simpleAliasItem, nil, True);
           FreeAndNil(simpleAliasItem);
         end;
     end;
@@ -1353,7 +1354,7 @@ begin
   end;
 
   if Assigned(referenceItem) then
-    ReplaceItem(AItem, referenceItem)
+    ReplaceItem(AItem, referenceItem, True)
   else
     raise EXMLDataBindingUnresolvedItem.CreateFmt('Unresolved %s: %s',
             [GetEnumName(TypeInfo(TXMLDataBindingInterfaceType), Ord(AItem.InterfaceType)),
@@ -1639,7 +1640,7 @@ begin
 end;
 
 
-procedure TXMLDataBindingGeneratorItem.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+procedure TXMLDataBindingGeneratorItem.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean);
 begin
 end;
 
@@ -1663,7 +1664,7 @@ begin
 end;
 
 
-procedure TXMLDataBindingSchema.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+procedure TXMLDataBindingSchema.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean);
 var
   itemIndex:    Integer;
 
@@ -1672,9 +1673,13 @@ begin
 
   for itemIndex := Pred(ItemCount) downto 0 do
     if Items[itemIndex] = AOldItem then
-      FItems.Extract(AOldItem)
-    else
-      Items[itemIndex].ReplaceItem(AOldItem, ANewItem);
+    begin
+      if ARemoveOnly then
+        FItems.Extract(AOldItem)
+      else
+        FItems[itemIndex] := ANewItem;
+    end else
+      Items[itemIndex].ReplaceItem(AOldItem, ANewItem, ARemoveOnly);
 end;
 
 
@@ -1829,7 +1834,7 @@ begin
 end;
 
 
-procedure TXMLDataBindingInterface.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+procedure TXMLDataBindingInterface.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean);
 var
   propertyIndex:    Integer;
   propertyItem:     TXMLDataBindingProperty;
@@ -1846,8 +1851,12 @@ begin
     propertyItem  := Properties[propertyIndex];
 
     if propertyItem = AOldItem then
-      FProperties.Extract(propertyItem)
-    else
+    begin
+      if ARemoveOnly then
+        FProperties.Extract(propertyItem)
+      else
+        FProperties[propertyIndex] := ANewItem as TXMLDataBindingProperty;
+    end else
     begin
       if (AOldItem.ItemType = itSimpleTypeAlias) and
          (propertyItem.PropertyType = ptItem) then
@@ -1862,9 +1871,9 @@ begin
           { FProperties owns itemProperty and will free it }
           FProperties[propertyIndex]  := simpleProperty;
         end else
-          Properties[propertyIndex].ReplaceItem(AOldItem, ANewItem);
+          Properties[propertyIndex].ReplaceItem(AOldItem, ANewItem, ARemoveOnly);
       end else
-        Properties[propertyIndex].ReplaceItem(AOldItem, ANewItem);
+        Properties[propertyIndex].ReplaceItem(AOldItem, ANewItem, ARemoveOnly);
     end;
   end;
 end;
@@ -1961,8 +1970,11 @@ begin
 
   FMembers      := TObjectList<TXMLDataBindingEnumerationMember>.Create;
 
-  for memberIndex := 0 to Pred(AEnumerations.Count) do
-    FMembers.Add(TXMLDataBindingEnumerationMember.Create(Owner, Self, AEnumerations.Items[memberIndex].Value));
+  if Assigned(AEnumerations) then
+  begin
+    for memberIndex := 0 to Pred(AEnumerations.Count) do
+      FMembers.Add(TXMLDataBindingEnumerationMember.Create(Owner, Self, AEnumerations.Items[memberIndex].Value));
+  end;
 end;
 
 
@@ -1971,6 +1983,18 @@ begin
   FreeAndNil(FMembers);
 
   inherited;
+end;
+
+
+procedure TXMLDataBindingEnumeration.ReplaceMembers(AMembers: TEnumerable<TXMLDataBindingEnumerationMember>);
+var
+  member: TXMLDataBindingEnumerationMember;
+
+begin
+  FMembers.Clear;
+
+  for member in AMembers do
+    FMembers.Add(member);
 end;
 
 
@@ -2048,7 +2072,7 @@ begin
 end;
 
 
-procedure TXMLDataBindingItemProperty.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+procedure TXMLDataBindingItemProperty.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean);
 begin
   inherited;
 
@@ -2085,7 +2109,7 @@ end;
 
 
 { TXMLDataBindingComplexTypeAliasItem }
-procedure TXMLDataBindingComplexTypeAliasItem.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem);
+procedure TXMLDataBindingComplexTypeAliasItem.ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean);
 begin
   inherited;
 
