@@ -4,3 +4,5 @@ Units/__history/
 bin/
 lib/
 __history/
+
+*.stat

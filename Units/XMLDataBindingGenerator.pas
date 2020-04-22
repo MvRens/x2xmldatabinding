@@ -139,13 +139,14 @@ type
     procedure ReplaceItem(const AOldItem, ANewItem: TXMLDataBindingItem; ARemoveOnly: Boolean); override;
 
     procedure AddInclude(ASchema: TXMLDataBindingSchema);
-    procedure AddItem(AItem: TXMLDataBindingItem);
     procedure InsertItem(AItem, AAfter: TXMLDataBindingItem);
 
     property ItemsGenerated:  Boolean read FItemsGenerated  write FItemsGenerated;
   public
     constructor Create(AOwner: TXMLDataBindingGenerator);
     destructor Destroy; override;
+
+    procedure AddItem(AItem: TXMLDataBindingItem);
 
     property TargetNamespace:           String                read GetTargetNamespace;
 

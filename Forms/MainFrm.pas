@@ -459,6 +459,7 @@ var
   propertyItem:     TXMLDataBindingSimpleProperty;
   newMembers:       TList<TXMLDataBindingEnumerationMember>;
   newPropertyItem:  TXMLDataBindingItemProperty;
+  targetSchema:     TXMLDataBindingSchema;
 
 begin
   for itemIndex := 0 to Pred(Hints.Enumerations.Count) do
@@ -491,6 +492,10 @@ begin
             if propertyItem.DataType.Name = 'string' then
             begin
               enumerationItem := TXMLDataBindingEnumeration.Create(Self, schemaItem.SchemaItem, nil, schemaItem.Name);
+
+              if FindSchema(enumeration.Schema, targetSchema) then
+                targetSchema.AddItem(enumerationItem);
+
               newPropertyItem := TXMLDataBindingItemProperty.Create(Self, propertyItem.SchemaItem, propertyItem.Name, enumerationItem);
 
               newMembers := GetNewMembers(enumerationItem, enumeration);
