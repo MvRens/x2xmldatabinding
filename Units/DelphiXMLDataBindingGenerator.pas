@@ -814,12 +814,13 @@ begin
                                        'ItemClass',           GetDataTypeName(propertyItem, False)]);
         end;
 
-        AWriter.WriteLineNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'') as %<CollectionInterface>:s;',
+        AWriter.WriteLineNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'', ''%<Namespace>:s'') as %<CollectionInterface>:s;',
                                   ['FieldName',           PrefixField + propertyItem.TranslatedName,
                                    'CollectionClass',     PrefixClass + propertyItem.Collection.TranslatedName,
                                    'CollectionInterface', PrefixInterface + propertyItem.Collection.TranslatedName,
                                    'ItemInterface',       GetDataTypeName(propertyItem, True),
-                                   'ItemSourceName',      propertyItem.Name]);
+                                   'ItemSourceName',      propertyItem.Name,
+                                   'Namespace',           propertyItem.TargetNamespace]);
       end;
     end;
 
