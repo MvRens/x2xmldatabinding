@@ -27,19 +27,6 @@ object MainForm: TMainForm
     Height = 13
     Caption = 'Schema file:'
   end
-  object feSchema: TcxButtonEdit
-    Left = 99
-    Top = 8
-    Anchors = [akLeft, akTop, akRight]
-    Properties.Buttons = <
-      item
-        Kind = bkEllipsis
-      end>
-    Properties.OnButtonClick = feSchemaPropertiesButtonClick
-    Properties.OnChange = feSchemaPropertiesChange
-    TabOrder = 0
-    Width = 331
-  end
   object gbOutput: TGroupBox
     Left = 8
     Top = 43
@@ -47,7 +34,7 @@ object MainForm: TMainForm
     Height = 225
     Anchors = [akLeft, akTop, akBottom]
     Caption = ' Output '
-    TabOrder = 1
+    TabOrder = 0
     DesignSize = (
       422
       225)
@@ -82,10 +69,6 @@ object MainForm: TMainForm
       TabOrder = 2
       object spFile: TTabSheet
         TabVisible = False
-        ExplicitLeft = 0
-        ExplicitTop = 0
-        ExplicitWidth = 0
-        ExplicitHeight = 0
         object lblFile: TLabel
           Left = 4
           Top = 7
@@ -93,23 +76,17 @@ object MainForm: TMainForm
           Height = 13
           Caption = 'Output file:'
         end
-        object feFile: TcxButtonEdit
-          Left = 88
-          Top = 4
-          Properties.Buttons = <
-            item
-              Kind = bkEllipsis
-            end>
-          Properties.OnButtonClick = feFilePropertiesButtonClick
+        object feFile: TEdit
+          Left = 76
+          Top = 3
+          Width = 316
+          Height = 21
           TabOrder = 0
-          Width = 317
+          Text = 'D:\Temp\test.pas'
         end
       end
       object spFolder: TTabSheet
         TabVisible = False
-        DesignSize = (
-          408
-          83)
         object lblFolder: TLabel
           Left = 4
           Top = 7
@@ -131,30 +108,36 @@ object MainForm: TMainForm
           Height = 13
           Caption = 'File postfix:'
         end
-        object deFolder: TcxButtonEdit
-          Left = 88
-          Top = 4
-          Anchors = [akLeft, akTop, akRight]
-          Properties.Buttons = <
-            item
-              Kind = bkEllipsis
-            end>
-          Properties.OnButtonClick = deFolderPropertiesButtonClick
+        object edtFolderPrefix: TEdit
+          Left = 89
+          Top = 31
+          Width = 316
+          Height = 21
           TabOrder = 0
-          Width = 317
+          Text = 'Edit1'
         end
-        object edtFolderPrefix: TcxTextEdit
-          Left = 88
-          Top = 29
+        object edtFolderPostfix: TEdit
+          Left = 89
+          Top = 59
+          Width = 316
+          Height = 21
           TabOrder = 1
-          Text = 'xml_'
-          Width = 121
+          Text = 'Edit1'
         end
-        object edtFolderPostfix: TcxTextEdit
-          Left = 88
-          Top = 55
+        object deFolder: TEdit
+          Left = 89
+          Top = 4
+          Width = 256
+          Height = 21
           TabOrder = 2
-          Width = 121
+        end
+        object BrowseOutputFolderButton: TButton
+          Left = 351
+          Top = 4
+          Width = 64
+          Height = 22
+          Caption = 'BrowseOutputFolderButton'
+          TabOrder = 3
         end
       end
     end
@@ -200,7 +183,7 @@ object MainForm: TMainForm
     Anchors = [akRight, akBottom]
     Cancel = True
     Caption = '&Close'
-    TabOrder = 4
+    TabOrder = 2
     OnClick = btnCloseClick
   end
   object btnHints: TButton
@@ -211,19 +194,16 @@ object MainForm: TMainForm
     Anchors = [akRight, akBottom]
     Cancel = True
     Caption = 'Generate blank &Hints file'
-    TabOrder = 2
+    TabOrder = 1
     OnClick = btnHintsClick
   end
-  object DefaultEditStyle: TcxDefaultEditStyleController
-    Style.HotTrack = False
-    Left = 264
-    Top = 60
-    PixelsPerInch = 96
-  end
-  object LookAndFeel: TcxLookAndFeelController
-    Kind = lfFlat
-    Left = 368
-    Top = 60
+  object feSchema: TJvFilenameEdit
+    Left = 104
+    Top = 8
+    Width = 316
+    Height = 21
+    TabOrder = 4
+    Text = 'feSchema'
   end
   object dlgSchema: TOpenDialog
     Filter = 'W3C XML Schema files (*.xsd)|*.xsd|All files (*.*)|*.*'

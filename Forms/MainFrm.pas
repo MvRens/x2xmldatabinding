@@ -13,7 +13,9 @@ uses
   StdCtrls,
   XMLDOM,
   XMLIntf,
-
+  DataBindingHintsXML,
+  XMLDataBindingGenerator, JvExMask, JvToolEdit
+  {
   cxButtonEdit,
   cxContainer,
   cxControls,
@@ -22,8 +24,8 @@ uses
   cxMaskEdit,
   cxTextEdit,
 
-  DataBindingHintsXML,
-  XMLDataBindingGenerator, cxGraphics, cxLookAndFeelPainters, cxClasses;
+  cxGraphics, cxLookAndFeelPainters, cxClasses}
+  ;
 
 
 type
@@ -31,21 +33,14 @@ type
     btnClose:                                   TButton;
     btnGenerate:                                TButton;
     btnHints:                                   TButton;
-    DefaultEditStyle:                           TcxDefaultEditStyleController;
-    deFolder:                                   TcxButtonEdit;
     dlgOutputFile:                              TSaveDialog;
     dlgSchema:                                  TOpenDialog;
-    edtFolderPostfix:                           TcxTextEdit;
-    edtFolderPrefix:                            TcxTextEdit;
-    feFile:                                     TcxButtonEdit;
-    feSchema:                                   TcxButtonEdit;
     gbOutput:                                   TGroupBox;
     lblFile:                                    TLabel;
     lblFolder:                                  TLabel;
     lblFolderPostfix:                           TLabel;
     lblFolderPrefix:                            TLabel;
     lblSchema:                                  TLabel;
-    LookAndFeel:                                TcxLookAndFeelController;
     plOutput:                                   TPageControl;
     rbFile:                                     TRadioButton;
     rbFolder:                                   TRadioButton;
@@ -53,6 +48,12 @@ type
     spFolder:                                   TTabSheet;
     cbHasChecksEmpty: TCheckBox;
     cbGenerateGetOptionalOrDefault: TCheckBox;
+    edtFolderPrefix: TEdit;
+    edtFolderPostfix: TEdit;
+    feFile: TEdit;
+    deFolder: TEdit;
+    feSchema: TJvFilenameEdit;
+    BrowseOutputFolderButton: TButton;
 
     procedure btnCloseClick(Sender: TObject);
     procedure btnGenerateClick(Sender: TObject);
