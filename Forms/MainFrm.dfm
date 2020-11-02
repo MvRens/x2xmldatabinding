@@ -69,6 +69,9 @@ object MainForm: TMainForm
       TabOrder = 2
       object spFile: TTabSheet
         TabVisible = False
+        DesignSize = (
+          408
+          83)
         object lblFile: TLabel
           Left = 4
           Top = 7
@@ -76,13 +79,15 @@ object MainForm: TMainForm
           Height = 13
           Caption = 'Output file:'
         end
-        object feFile: TEdit
-          Left = 76
+        object feFile: TJvFilenameEdit
+          Left = 89
           Top = 3
           Width = 316
           Height = 21
+          DialogOptions = [ofHideReadOnly, ofCreatePrompt]
+          Anchors = [akLeft, akTop, akRight]
           TabOrder = 0
-          Text = 'D:\Temp\test.pas'
+          Text = ''
         end
       end
       object spFolder: TTabSheet
@@ -114,7 +119,6 @@ object MainForm: TMainForm
           Width = 316
           Height = 21
           TabOrder = 0
-          Text = 'Edit1'
         end
         object edtFolderPostfix: TEdit
           Left = 89
@@ -122,22 +126,22 @@ object MainForm: TMainForm
           Width = 316
           Height = 21
           TabOrder = 1
-          Text = 'Edit1'
         end
         object deFolder: TEdit
           Left = 89
           Top = 4
-          Width = 256
+          Width = 245
           Height = 21
           TabOrder = 2
         end
-        object BrowseOutputFolderButton: TButton
-          Left = 351
-          Top = 4
-          Width = 64
+        object deFolderPropertiesButton: TButton
+          Left = 340
+          Top = 3
+          Width = 65
           Height = 22
-          Caption = 'BrowseOutputFolderButton'
+          Caption = 'Properties'
           TabOrder = 3
+          OnClick = deFolderPropertiesButtonClick
         end
       end
     end
@@ -202,19 +206,21 @@ object MainForm: TMainForm
     Top = 8
     Width = 316
     Height = 21
+    OnAfterDialog = feSchemaAfterDialog
+    DialogOptions = [ofHideReadOnly, ofFileMustExist]
     TabOrder = 4
-    Text = 'feSchema'
+    Text = ''
   end
   object dlgSchema: TOpenDialog
     Filter = 'W3C XML Schema files (*.xsd)|*.xsd|All files (*.*)|*.*'
     Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
-    Left = 212
+    Left = 284
     Top = 40
   end
   object dlgOutputFile: TSaveDialog
     Filter = 'Delphi source files (*.pas)|*.pas|All files (*.*)|*.*'
     Options = [ofHideReadOnly, ofPathMustExist, ofEnableSizing]
-    Left = 323
-    Top = 45
+    Left = 387
+    Top = 37
   end
 end
