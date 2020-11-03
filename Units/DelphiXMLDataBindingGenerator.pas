@@ -1579,7 +1579,9 @@ var
   elementSortCount: Integer;
   elementSortOrder: string;
   elementRequired: string;
+  elementNamespaceRequired: string;
   elementRequiredCount: Integer;
+  elementNamespaceRequiredCount: Integer;
   attributeRequired: string;
   attributeRequiredCount: Integer;
 
@@ -1610,8 +1612,10 @@ begin
       begin
         case propertyItem.PropertyType of
           ptSimple:
-            AddArrayElement(elementRequired, elementRequiredCount, QuotedStr(propertyItem.Name));
-
+            begin
+              AddArrayElement(elementRequired, elementRequiredCount, QuotedStr(propertyItem.Name));
+              AddArrayElement(elementNamespaceRequired, elementNamespaceRequiredCount, QuotedStr(propertyItem.TargetNamespace));
+            end;
           ptItem:
             { For Item properties, we call our getter property. This ensures the child element exists,
               but also that it is created using our binding implementation. Otherwise there will be no
@@ -1627,8 +1631,10 @@ begin
   if elementRequiredCount > 0 then
   begin
     Delete(elementRequired, 1, 2);
+    Delete(elementNamespaceRequired, 1, 2);
     AWriter.WriteLineNamedFmt(IfThen(AStrict, XSDValidateStrictMethodImplementationRequired, XSDValidateMethodImplementationRequired),
-                              ['RequiredElements', elementRequired]);
+                              ['RequiredElements', elementRequired,
+                               'RequiredElementNamespaces', elementNamespaceRequired]);
   end;
 
 
