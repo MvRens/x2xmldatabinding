@@ -643,11 +643,11 @@ begin
 
     lines.Text    := WrapText(documentation, 76);
 
-    AWriter.WriteLine('  {');
+    AWriter.WriteLine('  /// <summary>');
     for lineIndex := 0 to Pred(lines.Count) do
-      AWriter.WriteLine('    ' + lines[lineIndex]);
+      AWriter.WriteLine('  ///    ' + lines[lineIndex]);
 
-    AWriter.WriteLine('  }');
+    AWriter.WriteLine('  /// </summary>');
   finally
     FreeAndNil(lines);
   end;
