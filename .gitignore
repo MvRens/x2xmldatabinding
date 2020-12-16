@@ -6,3 +6,6 @@ lib/
 __history/
 
 *.stat
+
+Docs/_build
+Docs/*.sublime-workspace
