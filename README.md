@@ -14,4 +14,10 @@
  - Basic validation for outputting XML documents which applies element order for sequences and checks for the presence of required elements
  - Influence the generator by using a Hints file
 
+ ## Dependencies
+ - JEDI Component Library (jcl /jvcl)
+ - x2utils (https://github.com/MvRens/x2utils.git) (git submodule)
+ - x2log (https://github.com/MvRens/x2log.git) (git submodule)
+
+
 Documentation is available on [ReadTheDocs](https://x2xmldatabinding.readthedocs.io/).
