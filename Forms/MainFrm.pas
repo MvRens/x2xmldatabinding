@@ -13,7 +13,9 @@ uses
   StdCtrls,
   XMLDOM,
   XMLIntf,
-
+  DataBindingHintsXML,
+  XMLDataBindingGenerator, JvExMask, JvToolEdit
+  {
   cxButtonEdit,
   cxContainer,
   cxControls,
@@ -22,8 +24,8 @@ uses
   cxMaskEdit,
   cxTextEdit,
 
-  DataBindingHintsXML,
-  XMLDataBindingGenerator, cxGraphics, cxLookAndFeelPainters, cxClasses;
+  cxGraphics, cxLookAndFeelPainters, cxClasses}
+  ;
 
 
 type
@@ -31,21 +33,14 @@ type
     btnClose:                                   TButton;
     btnGenerate:                                TButton;
     btnHints:                                   TButton;
-    DefaultEditStyle:                           TcxDefaultEditStyleController;
-    deFolder:                                   TcxButtonEdit;
     dlgOutputFile:                              TSaveDialog;
     dlgSchema:                                  TOpenDialog;
-    edtFolderPostfix:                           TcxTextEdit;
-    edtFolderPrefix:                            TcxTextEdit;
-    feFile:                                     TcxButtonEdit;
-    feSchema:                                   TcxButtonEdit;
     gbOutput:                                   TGroupBox;
     lblFile:                                    TLabel;
     lblFolder:                                  TLabel;
     lblFolderPostfix:                           TLabel;
     lblFolderPrefix:                            TLabel;
     lblSchema:                                  TLabel;
-    LookAndFeel:                                TcxLookAndFeelController;
     plOutput:                                   TPageControl;
     rbFile:                                     TRadioButton;
     rbFolder:                                   TRadioButton;
@@ -53,16 +48,24 @@ type
     spFolder:                                   TTabSheet;
     cbHasChecksEmpty: TCheckBox;
     cbGenerateGetOptionalOrDefault: TCheckBox;
+    edtFolderPrefix: TEdit;
+    edtFolderPostfix: TEdit;
+    deFolder: TEdit;
+    feSchema: TJvFilenameEdit;
+    deFolderPropertiesButton: TButton;
+    feFile: TJvFilenameEdit;
 
     procedure btnCloseClick(Sender: TObject);
     procedure btnGenerateClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure OutputTypeClick(Sender: TObject);
     procedure feFilePropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
-    procedure deFolderPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
+    procedure deFolderPropertiesButtonClick(Sender: TObject);
     procedure feSchemaPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
     procedure feSchemaPropertiesChange(Sender: TObject);
     procedure btnHintsClick(Sender: TObject);
+    procedure feSchemaAfterDialog(Sender: TObject; var AName: string;
+      var AAction: Boolean);
   private
     function CheckValidSchemaFile: Boolean;
     function CheckReadOnly(const AFileName: String): Boolean;
@@ -173,11 +176,11 @@ begin
 
       if rbFile.Checked then
       begin
-        if not CheckReadOnly(feFile.Text) then
+        if not CheckReadOnly(feFile.FileName) then
           Exit;
 
         generator.OutputType  := otSingle;
-        generator.OutputPath  := feFile.Text;
+        generator.OutputPath  := feFile.FileName;
       end else if rbFolder.Checked then
       begin
         generator.OutputType  := otMultiple;
@@ -187,9 +190,9 @@ begin
       generator.HasChecksEmpty := cbHasChecksEmpty.Checked;
       generator.HasGenerateGetOptionalOrDefault := cbGenerateGetOptionalOrDefault.Checked;
       generator.OnGetFileName := GetFileName;
-      generator.Execute(feSchema.Text);
+      generator.Execute(feSchema.Filename);
 
-      SaveSettings(feSchema.Text);
+      SaveSettings(feSchema.FileName);
 
       ShowMessage('The data binding has been generated.');
     finally
@@ -222,7 +225,7 @@ begin
 end;
 
 
-procedure TMainForm.deFolderPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
+procedure TMainForm.deFolderPropertiesButtonClick(Sender: TObject);
 var
   directory:  String;
 
@@ -231,6 +234,12 @@ begin
     deFolder.Text := directory;
 end;
 
+
+procedure TMainForm.feSchemaAfterDialog(Sender: TObject; var AName: string;
+  var AAction: Boolean);
+begin
+  feFile.FileName := ChangeFileExt(AName, '.pas');
+end;
 
 procedure TMainForm.feSchemaPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
 begin
@@ -330,7 +339,7 @@ end;
 
 function TMainForm.CheckValidSchemaFile: Boolean;
 begin
-  Result := FileExists(feSchema.Text);
+  Result := FileExists(feSchema.FileName);
 
   if not Result then
   begin

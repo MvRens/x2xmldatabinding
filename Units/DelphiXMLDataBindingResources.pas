@@ -114,7 +114,7 @@ const
   XSDValidateMethodImplementationBegin          = 'procedure TXML%<Name>:s.XSDValidate;' + CrLf +
                                                   'begin';
 
-  XSDValidateMethodImplementationRequired       = '  CreateRequiredElements(Self, [%<RequiredElements>:s]);';
+  XSDValidateMethodImplementationRequired       = '  CreateRequiredElements(Self, [%<RequiredElements>:s], [%<RequiredElementNamespaces>:s]);';
   XSDValidateMethodImplementationComplex        = '  Get%<Name>:s;';
   XSDValidateMethodImplementationAttrib         = '  CreateRequiredAttributes(Self, [%<RequiredAttributes>:s]);';
   XSDValidateMethodImplementationSort           = '  SortChildNodes(Self, [%<SortOrder>:s]);';
