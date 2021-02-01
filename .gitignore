@@ -5,6 +5,9 @@ bin/
 lib/
 __history/
 
+*.cfg
+*.dof
+*.res
 *.stat
 
 Docs/_build
