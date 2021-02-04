@@ -643,11 +643,11 @@ begin
 
     lines.Text    := WrapText(documentation, 76);
 
-    AWriter.WriteLine('  {');
+    AWriter.WriteLine('  /// <summary>');
     for lineIndex := 0 to Pred(lines.Count) do
-      AWriter.WriteLine('    ' + lines[lineIndex]);
+      AWriter.WriteLine('  ///    ' + lines[lineIndex]);
 
-    AWriter.WriteLine('  }');
+    AWriter.WriteLine('  /// </summary>');
   finally
     FreeAndNil(lines);
   end;
@@ -814,12 +814,13 @@ begin
                                        'ItemClass',           GetDataTypeName(propertyItem, False)]);
         end;
 
-        AWriter.WriteLineNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'') as %<CollectionInterface>:s;',
+        AWriter.WriteLineNamedFmt('  %<FieldName>:s := CreateCollection(%<CollectionClass>:s, %<ItemInterface>:s, ''%<ItemSourceName>:s'', ''%<Namespace>:s'') as %<CollectionInterface>:s;',
                                   ['FieldName',           PrefixField + propertyItem.TranslatedName,
                                    'CollectionClass',     PrefixClass + propertyItem.Collection.TranslatedName,
                                    'CollectionInterface', PrefixInterface + propertyItem.Collection.TranslatedName,
                                    'ItemInterface',       GetDataTypeName(propertyItem, True),
-                                   'ItemSourceName',      propertyItem.Name]);
+                                   'ItemSourceName',      propertyItem.Name,
+                                   'Namespace',           propertyItem.TargetNamespace]);
       end;
     end;
 
@@ -1578,7 +1579,9 @@ var
   elementSortCount: Integer;
   elementSortOrder: string;
   elementRequired: string;
+  elementNamespaceRequired: string;
   elementRequiredCount: Integer;
+  elementNamespaceRequiredCount: Integer;
   attributeRequired: string;
   attributeRequiredCount: Integer;
 
@@ -1609,8 +1612,10 @@ begin
       begin
         case propertyItem.PropertyType of
           ptSimple:
-            AddArrayElement(elementRequired, elementRequiredCount, QuotedStr(propertyItem.Name));
-
+            begin
+              AddArrayElement(elementRequired, elementRequiredCount, QuotedStr(propertyItem.Name));
+              AddArrayElement(elementNamespaceRequired, elementNamespaceRequiredCount, QuotedStr(propertyItem.TargetNamespace));
+            end;
           ptItem:
             { For Item properties, we call our getter property. This ensures the child element exists,
               but also that it is created using our binding implementation. Otherwise there will be no
@@ -1626,8 +1631,10 @@ begin
   if elementRequiredCount > 0 then
   begin
     Delete(elementRequired, 1, 2);
+    Delete(elementNamespaceRequired, 1, 2);
     AWriter.WriteLineNamedFmt(IfThen(AStrict, XSDValidateStrictMethodImplementationRequired, XSDValidateMethodImplementationRequired),
-                              ['RequiredElements', elementRequired]);
+                              ['RequiredElements', elementRequired,
+                               'RequiredElementNamespaces', elementNamespaceRequired]);
   end;
 
 
