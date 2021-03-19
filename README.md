@@ -15,8 +15,6 @@
  - Influence the generator by using a Hints file
 
  ## Dependencies
- - x2utils (https://github.com/MvRens/x2utils.git) (git submodule)
- - x2log (https://github.com/MvRens/x2log.git) (git submodule)
-
+* Works up from Delphi XE2
 
 Documentation is available on [ReadTheDocs](https://x2xmldatabinding.readthedocs.io/).
