@@ -84,9 +84,7 @@ uses
   StrUtils,
   SysUtils,
 
-  X2UtNamedFormat,
-
-  X2Log.Global;
+  X2UtNamedFormat;
 
 const
   VariantText = 'Variant';
@@ -937,8 +935,6 @@ var
   member:           TDelphiXMLMember;
 
 begin
-  TX2GlobalLog.Verbose('WriteSchemaInterfaceProperties: ' + AItem.Name);
-
   if ASection = dxsForward then
     Exit;
 
@@ -1812,7 +1808,8 @@ begin
   if OutputType = otMultiple then
   begin
     path      := IncludeTrailingPathDelimiter(Result);
-    fileName  := ASchemaName + '.pas';
+    fileName := ASchemaName.Replace('-', '_');
+    fileName  := fileName + '.pas';
 
     if Assigned(FOnGetFileName) then
       FOnGetFileName(Self, ASchemaName, path, fileName);

@@ -11,7 +11,10 @@ uses
   DelphiXMLDataBindingResources in 'Units\DelphiXMLDataBindingResources.pas',
   DataBindingSettingsXML in 'Units\DataBindingSettingsXML.pas',
   DataBindingHintsXML in 'Units\DataBindingHintsXML.pas',
-  MSXML2_TLB in 'Units\MSXML2_TLB.pas';
+  MSXML2_TLB in 'Units\MSXML2_TLB.pas',
+  XMLDataBindingUtils in 'Units\XMLDataBindingUtils.pas',
+  X2UtNamedFormat in 'Units\X2UtNamedFormat.pas',
+  X2UtTempFile in 'Units\X2UtTempFile.pas';
 
 {$R *.res}
 

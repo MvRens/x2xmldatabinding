@@ -63,15 +63,12 @@ object MainForm: TMainForm
       Top = 68
       Width = 416
       Height = 93
-      ActivePage = spFolder
+      ActivePage = spFile
       Anchors = [akLeft, akTop, akRight]
       Style = tsButtons
       TabOrder = 2
       object spFile: TTabSheet
         TabVisible = False
-        DesignSize = (
-          408
-          83)
         object lblFile: TLabel
           Left = 4
           Top = 7
@@ -79,15 +76,21 @@ object MainForm: TMainForm
           Height = 13
           Caption = 'Output file:'
         end
-        object feFile: TJvFilenameEdit
-          Left = 89
-          Top = 3
-          Width = 316
+        object feFile: TEdit
+          Left = 65
+          Top = 4
+          Width = 269
           Height = 21
-          DialogOptions = [ofHideReadOnly, ofCreatePrompt]
-          Anchors = [akLeft, akTop, akRight]
           TabOrder = 0
-          Text = ''
+        end
+        object ButtonOutputFileBrowseButton: TButton
+          Left = 340
+          Top = 4
+          Width = 65
+          Height = 21
+          Caption = 'Browse'
+          TabOrder = 1
+          OnClick = ButtonOutputFileBrowseButtonClick
         end
       end
       object spFolder: TTabSheet
@@ -201,15 +204,21 @@ object MainForm: TMainForm
     TabOrder = 1
     OnClick = btnHintsClick
   end
-  object feSchema: TJvFilenameEdit
-    Left = 104
+  object feSchema: TEdit
+    Left = 72
     Top = 8
-    Width = 316
+    Width = 289
     Height = 21
-    OnAfterDialog = feSchemaAfterDialog
-    DialogOptions = [ofHideReadOnly, ofFileMustExist]
     TabOrder = 4
-    Text = ''
+  end
+  object SchmeFileBrowseButton: TButton
+    Left = 367
+    Top = 8
+    Width = 65
+    Height = 21
+    Caption = 'Browse'
+    TabOrder = 5
+    OnClick = SchmeFileBrowseButtonClick
   end
   object dlgSchema: TOpenDialog
     Filter = 'W3C XML Schema files (*.xsd)|*.xsd|All files (*.*)|*.*'

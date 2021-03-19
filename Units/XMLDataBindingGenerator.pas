@@ -489,6 +489,7 @@ function TXMLDataBindingGenerator.LoadSchema(const AStream: TStream; const ASche
     begin
       location := ADocRefs[refIndex].SchemaLocation;
       schemaName := ChangeFileExt(ExtractFileName(location), '');
+      schemaName := schemaName.Replace('./', ''); // fix explizit current dir
       refSchema := FindSchema(schemaName);
 
       if not Assigned(refSchema) then
