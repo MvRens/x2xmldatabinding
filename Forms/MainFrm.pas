@@ -51,9 +51,11 @@ type
     edtFolderPrefix: TEdit;
     edtFolderPostfix: TEdit;
     deFolder: TEdit;
-    feSchema: TJvFilenameEdit;
     deFolderPropertiesButton: TButton;
-    feFile: TJvFilenameEdit;
+    feSchema: TEdit;
+    SchmeFileBrowseButton: TButton;
+    feFile: TEdit;
+    ButtonOutputFileBrowseButton: TButton;
 
     procedure btnCloseClick(Sender: TObject);
     procedure btnGenerateClick(Sender: TObject);
@@ -64,8 +66,8 @@ type
     procedure feSchemaPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
     procedure feSchemaPropertiesChange(Sender: TObject);
     procedure btnHintsClick(Sender: TObject);
-    procedure feSchemaAfterDialog(Sender: TObject; var AName: string;
-      var AAction: Boolean);
+    procedure SchmeFileBrowseButtonClick(Sender: TObject);
+    procedure ButtonOutputFileBrowseButtonClick(Sender: TObject);
   private
     function CheckValidSchemaFile: Boolean;
     function CheckReadOnly(const AFileName: String): Boolean;
@@ -176,11 +178,11 @@ begin
 
       if rbFile.Checked then
       begin
-        if not CheckReadOnly(feFile.FileName) then
+        if not CheckReadOnly(feFile.Text) then
           Exit;
 
         generator.OutputType  := otSingle;
-        generator.OutputPath  := feFile.FileName;
+        generator.OutputPath  := feFile.Text;
       end else if rbFolder.Checked then
       begin
         generator.OutputType  := otMultiple;
@@ -190,9 +192,9 @@ begin
       generator.HasChecksEmpty := cbHasChecksEmpty.Checked;
       generator.HasGenerateGetOptionalOrDefault := cbGenerateGetOptionalOrDefault.Checked;
       generator.OnGetFileName := GetFileName;
-      generator.Execute(feSchema.Filename);
+      generator.Execute(feSchema.Text);
 
-      SaveSettings(feSchema.FileName);
+      SaveSettings(feSchema.Text);
 
       ShowMessage('The data binding has been generated.');
     finally
@@ -234,12 +236,6 @@ begin
     deFolder.Text := directory;
 end;
 
-
-procedure TMainForm.feSchemaAfterDialog(Sender: TObject; var AName: string;
-  var AAction: Boolean);
-begin
-  feFile.FileName := ChangeFileExt(AName, '.pas');
-end;
 
 procedure TMainForm.feSchemaPropertiesButtonClick(Sender: TObject; AButtonIndex: Integer);
 begin
@@ -337,9 +333,17 @@ begin
 end;
 
 
+procedure TMainForm.SchmeFileBrowseButtonClick(Sender: TObject);
+begin
+  if dlgSchema.Execute then
+  begin
+    feSchema.Text := dlgSchema.FileName;
+  end;
+end;
+
 function TMainForm.CheckValidSchemaFile: Boolean;
 begin
-  Result := FileExists(feSchema.FileName);
+  Result := FileExists(feSchema.Text);
 
   if not Result then
   begin
@@ -391,6 +395,14 @@ begin
   end;
 end;
 
+
+procedure TMainForm.ButtonOutputFileBrowseButtonClick(Sender: TObject);
+begin
+  if dlgOutputFile.Execute then
+  begin
+    feFile.Text := dlgOutputFile.FileName;
+  end;
+end;
 
 { THintsDelphiXMLDataBindingGenerator }
 procedure THintsDelphiXMLDataBindingGenerator.GenerateDataBinding;
