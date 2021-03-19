@@ -1813,7 +1813,6 @@ begin
   begin
     path      := IncludeTrailingPathDelimiter(Result);
     fileName := ASchemaName.Replace('-', '_');
-    fileName := fileName.Replace('./', '');
     fileName  := fileName + '.pas';
 
     if Assigned(FOnGetFileName) then

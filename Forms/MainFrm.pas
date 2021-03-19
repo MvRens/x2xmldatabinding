@@ -14,7 +14,7 @@ uses
   XMLDOM,
   XMLIntf,
   DataBindingHintsXML,
-  XMLDataBindingGenerator, JvExMask, JvToolEdit
+  XMLDataBindingGenerator
   {
   cxButtonEdit,
   cxContainer,
