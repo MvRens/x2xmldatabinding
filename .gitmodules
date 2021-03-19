@@ -1,3 +1,0 @@
-[submodule "vendor/x2log"]
-	path = vendor/x2log
-	url = https://github.com/MvRens/x2log.git
