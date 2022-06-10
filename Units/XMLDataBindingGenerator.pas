@@ -790,13 +790,23 @@ end;
 function TXMLDataBindingGenerator.IsChoice(AElement: IXMLElementDef): Boolean;
 var
   compositor:   IXMLElementCompositor;
-
+  parent: IXMLNode;
 begin
   Result := False;
 
-  if Supports(AElement.ParentNode, IXMLElementCompositor, compositor) then
-    Result := (compositor.CompositorType = ctChoice) and
-              (compositor.ElementDefs.Count > 1);
+  parent := AElement.ParentNode;
+  while Supports(parent, IXMLElementCompositor, compositor) do
+  begin
+    if compositor.CompositorType = ctSequence then
+    begin
+      parent := compositor.ParentNode;
+    end else
+    begin
+      Result := (compositor.CompositorType = ctChoice) and
+                (compositor.ElementDefs.Count + compositor.Compositors.Count > 1);
+      Exit;
+    end;
+  end;
 end;
 
 
