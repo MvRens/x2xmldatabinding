@@ -1782,7 +1782,8 @@ end;
 function TXMLDataBindingItem.GetHasDocumentation: Boolean;
 begin
   Result  := Assigned(SchemaItem) and
-             (SchemaItem.Documentation.Count > 0);
+             (SchemaItem.Documentation.Count > 0) and
+             SchemaItem.Documentation.IsTextElement;
 end;
 
 
