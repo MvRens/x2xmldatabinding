@@ -461,22 +461,55 @@ type
 
 
 const
-  SimpleTypeMapping:  array[0..13] of TTypeMapping =
+  SimpleTypeMapping:  array[0..41] of TTypeMapping =
                       (
-                        (SchemaName:  'int';          DelphiName:  'Integer';     Conversion:    tcNone),
-                        (SchemaName:  'integer';      DelphiName:  'Integer';     Conversion:    tcNone),
-                        (SchemaName:  'short';        DelphiName:  'Smallint';    Conversion:    tcNone),
-                        (SchemaName:  'date';         DelphiName:  'TDateTime';   Conversion:    tcDate),
-                        (SchemaName:  'time';         DelphiName:  'TDateTime';   Conversion:    tcTime),
-                        (SchemaName:  'dateTime';     DelphiName:  'TDateTime';   Conversion:    tcDateTime),
-                        (SchemaName:  'decimal';      DelphiName:  'Double';      Conversion:    tcFloat),
-                        (SchemaName:  'float';        DelphiName:  'Double';      Conversion:    tcFloat),
-                        (SchemaName:  'double';       DelphiName:  'Double';      Conversion:    tcFloat),
-                        (SchemaName:  'boolean';      DelphiName:  'Boolean';     Conversion:    tcBoolean),
-                        (SchemaName:  'string';       DelphiName:  'WideString';  Conversion:    tcString),
-                        (SchemaName:  'anyURI';       DelphiName:  'WideString';  Conversion:    tcString),
-                        (SchemaName:  'base64Binary'; DelphiName:  'WideString';  Conversion:    tcBase64),
-                        (SchemaName:  'anyType';      DelphiName:  'IXMLNode';    Conversion:    tcNode)
+                        { built-in primitive datatypes }
+                        (SchemaName: 'string';             DelphiName: 'WideString'; Conversion: tcString),   //
+                        (SchemaName: 'boolean';            DelphiName: 'Boolean';    Conversion: tcBoolean),  //
+                        (SchemaName: 'decimal';            DelphiName: 'Double';     Conversion: tcFloat),    //
+                        (SchemaName: 'float';              DelphiName: 'Double';     Conversion: tcFloat),    //
+                        (SchemaName: 'double';             DelphiName: 'Double';     Conversion: tcFloat),    //
+                        (SchemaName: 'duration';           DelphiName: 'WideString'; Conversion: tcString),   // TODO: convert duration to ??
+                        (SchemaName: 'dateTime';           DelphiName: 'TDateTime';  Conversion: tcDateTime), //
+                        (SchemaName: 'time';               DelphiName: 'TDateTime';  Conversion: tcTime),     //
+                        (SchemaName: 'date';               DelphiName: 'TDateTime';  Conversion: tcDate),     //
+                        (SchemaName: 'gYearMonth';         DelphiName: 'WideString'; Conversion: tcString),   // TODO: convert gYearMonth
+                        (SchemaName: 'gYear';              DelphiName: 'WideString'; Conversion: tcString),   // TODO: convert gYear
+                        (SchemaName: 'gMonthDay';          DelphiName: 'WideString'; Conversion: tcString),   // TODO: convert gMonthDay
+                        (SchemaName: 'gDay';               DelphiName: 'WideString'; Conversion: tcString),   // TODO: convert gDay
+                        (SchemaName: 'gMonth';             DelphiName: 'WideString'; Conversion: tcString),   // TODO: convert gMonth
+                        (SchemaName: 'hexBinary';          DelphiName: 'WideString'; Conversion: tcString),   //
+                        (SchemaName: 'base64Binary';       DelphiName: 'WideString'; Conversion: tcBase64),   //
+                        (SchemaName: 'anyURI';             DelphiName: 'WideString'; Conversion: tcString),   //
+                        (SchemaName: 'QName';              DelphiName: 'WideString'; Conversion: tcString),   //
+                        (SchemaName: 'NOTATION';           DelphiName: 'WideString'; Conversion: tcString),   //
+
+                        { built-in derivative datatypes }
+                        (SchemaName: 'normalizedString';   DelphiName: 'WideString'; Conversion: tcString),   // string
+                        (SchemaName: 'token';              DelphiName: 'WideString'; Conversion: tcString),   // normalizedString
+                        (SchemaName: 'language';           DelphiName: 'WideString'; Conversion: tcString),   // token
+                        (SchemaName: 'NMTOKEN';            DelphiName: 'WideString'; Conversion: tcString),   // token
+                        (SchemaName: 'Name';               DelphiName: 'WideString'; Conversion: tcString),   // token
+                        (SchemaName: 'NCName';             DelphiName: 'WideString'; Conversion: tcString),   // Name
+                        (SchemaName: 'ID';                 DelphiName: 'WideString'; Conversion: tcString),   // NCName
+                        (SchemaName: 'IDREF';              DelphiName: 'WideString'; Conversion: tcString),   // NCName
+                        (SchemaName: 'ENTITY';             DelphiName: 'WideString'; Conversion: tcString),   // NCName
+                        (SchemaName: 'integer';            DelphiName: 'Int64';      Conversion: tcNone),     // decimal
+                        (SchemaName: 'nonPositiveInteger'; DelphiName: 'Int64';      Conversion: tcNone),     // integer
+                        (SchemaName: 'negativeInteger';    DelphiName: 'Int64';      Conversion: tcNone),     // nonPositiveInteger
+                        (SchemaName: 'long';               DelphiName: 'Int64';      Conversion: tcNone),     // integer
+                        (SchemaName: 'int';                DelphiName: 'Integer';    Conversion: tcNone),     // long
+                        (SchemaName: 'short';              DelphiName: 'SmallInt';   Conversion: tcNone),     // int
+                        (SchemaName: 'byte';               DelphiName: 'ShortInt';   Conversion: tcNone),     // short
+                        (SchemaName: 'nonNegativeInteger'; DelphiName: 'UInt64';     Conversion: tcNone),     // integer
+                        (SchemaName: 'unsignedLong';       DelphiName: 'UInt64';     Conversion: tcNone),     // nonNegativeInteger
+                        (SchemaName: 'unsignedInt';        DelphiName: 'Cardinal';   Conversion: tcNone),     // unsignedLong
+                        (SchemaName: 'unsignedShort';      DelphiName: 'Word';       Conversion: tcNone),     // unsignedInt
+                        (SchemaName: 'unsignedByte';       DelphiName: 'Byte';       Conversion: tcNone),     // unsignedShort
+                        (SchemaName: 'positiveInteger';    DelphiName: 'UInt64';     Conversion: tcNone),     // nonNegativeInteger
+
+                        { any other type }
+                        (SchemaName: 'anyType';            DelphiName: 'IXMLNode';   Conversion: tcNode)
                       );
 
 
