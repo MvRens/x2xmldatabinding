@@ -1782,7 +1782,18 @@ begin
   if HasDocumentation then
   begin
     for documentationIndex := 0 to Pred(SchemaItem.Documentation.Count) do
-      Result  := Result + SchemaItem.Documentation[documentationIndex].Text + #13#10;
+    begin
+      if SchemaItem.Documentation[documentationIndex].IsTextElement then
+      begin
+        if SchemaItem.Documentation[documentationIndex].HasAttribute('xml:lang') then
+          Result  := Result + '[' + SchemaItem.Documentation[documentationIndex].Attributes['xml:lang'] + '] ';
+
+        if SchemaItem.Documentation[documentationIndex].HasAttribute('source') then
+          Result  := Result + '(' + SchemaItem.Documentation[documentationIndex].Attributes['source'] + ') ';
+
+        Result  := Result + SchemaItem.Documentation[documentationIndex].Text + #13#10;
+      end;
+    end;
 
     Result  := Trim(Result);
   end;
@@ -1790,10 +1801,16 @@ end;
 
 
 function TXMLDataBindingItem.GetHasDocumentation: Boolean;
+var
+  documentationIndex: Integer;
+
 begin
-  Result  := Assigned(SchemaItem) and
-             (SchemaItem.Documentation.Count > 0) and
-             SchemaItem.Documentation.IsTextElement;
+  Result  := False;
+  if Assigned(SchemaItem) then
+  begin
+    for documentationIndex := 0 to Pred(SchemaItem.Documentation.Count) do
+      Result  := Result or SchemaItem.Documentation[documentationIndex].IsTextElement;
+  end;
 end;
 
 
