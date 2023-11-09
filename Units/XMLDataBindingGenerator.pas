@@ -1784,7 +1784,15 @@ begin
     for documentationIndex := 0 to Pred(SchemaItem.Documentation.Count) do
     begin
       if SchemaItem.Documentation[documentationIndex].IsTextElement then
+      begin
+        if SchemaItem.Documentation[documentationIndex].HasAttribute('xml:lang') then
+          Result  := Result + '[' + SchemaItem.Documentation[documentationIndex].Attributes['xml:lang'] + '] ';
+
+        if SchemaItem.Documentation[documentationIndex].HasAttribute('source') then
+          Result  := Result + '(' + SchemaItem.Documentation[documentationIndex].Attributes['source'] + ') ';
+
         Result  := Result + SchemaItem.Documentation[documentationIndex].Text + #13#10;
+      end;
     end;
 
     Result  := Trim(Result);
