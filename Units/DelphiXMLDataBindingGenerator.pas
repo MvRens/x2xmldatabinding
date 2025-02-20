@@ -1808,7 +1808,7 @@ begin
   if OutputType = otMultiple then
   begin
     path      := IncludeTrailingPathDelimiter(Result);
-    fileName := ASchemaName.Replace('-', '_');
+    fileName := ASchemaName.Replace('-', '_').Replace('.', '_');
     fileName  := fileName + '.pas';
 
     if Assigned(FOnGetFileName) then
