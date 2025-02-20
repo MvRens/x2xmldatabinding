@@ -875,6 +875,15 @@ begin
             Result  := TXMLDataBindingUnresolvedItem.Create(Self, AElement, dataTypeName, ifEnumeration, False);
             ASchema.AddItem(Result);
           end;
+
+          if AElement.IsGlobal then
+          begin
+            { The element is global, but only references a complex type. Keep track
+              to properly resolve references to the element. }
+            complexAliasItem      := TXMLDataBindingComplexTypeAliasItem.Create(Self, AElement, AElement.Name);
+            complexAliasItem.Item := Result;
+            ASchema.AddItem(complexAliasItem);
+          end;
         end else if simpleTypeDef.IsBuiltInType and AElement.IsGlobal then
         begin
           { The element is global, but only references a simple type. }
@@ -1313,7 +1322,10 @@ begin
             // ReplaceItem(complexAliasItem, complexAliasItem.Item);
 
             interfaceItem           := TXMLDataBindingInterface.Create(Self, complexAliasItem.SchemaItem, complexAliasItem.Name);
-            interfaceItem.BaseItem  := (complexAliasItem.Item as TXMLDataBindingInterface);
+            if complexAliasItem.Item is TXMLDataBindingInterface then
+            begin
+              interfaceItem.BaseItem  := (complexAliasItem.Item as TXMLDataBindingInterface);
+            end;
             interfaceItem.BaseName  := complexAliasItem.Item.Name;
             ASchema.AddItem(interfaceItem);
 
