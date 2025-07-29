@@ -1459,7 +1459,9 @@ var
   memberIndex: Integer;
   enumStart: String;
   lineIndent: String;
-
+  UsedNames: TStrings;
+  OrigName, NewName: String;
+  UnderscoreCount: Integer;
 begin
   if (ASection <> dxsForward) or (AItem.MemberCount = 0) then
     exit;
@@ -1469,17 +1471,32 @@ begin
   AWriter.Write(enumStart);
   lineIndent := StringOfChar(' ', Length(enumStart));
 
-  for memberIndex := 0 to Pred(AItem.MemberCount) do
-  begin
-    if memberIndex > 0 then
-      AWriter.Write(lineIndent);
+  UsedNames := TStringList.Create;
+  try
+    for memberIndex := 0 to Pred(AItem.MemberCount) do
+    begin
+      if memberIndex > 0 then
+        AWriter.Write(lineIndent);
 
-    AWriter.Write(AItem.Members[memberIndex].TranslatedName);
+      OrigName := AItem.Members[memberIndex].TranslatedName;
+      NewName := OrigName;
+      UnderscoreCount := 0;
+      while UsedNames.IndexOf(NewName) <> -1 do
+      begin
+        Inc(UnderscoreCount);
+        NewName := OrigName + StringOfChar('_', UnderscoreCount);
+      end;
+      UsedNames.Add(NewName);
 
-    if memberIndex < Pred(AItem.MemberCount) then
-      AWriter.WriteLine(',')
-    else
-      AWriter.WriteLine(');');
+      AWriter.Write(NewName);
+
+      if memberIndex < Pred(AItem.MemberCount) then
+        AWriter.WriteLine(',')
+      else
+        AWriter.WriteLine(');');
+    end;
+  finally
+    UsedNames.Free;
   end;
 end;
 
@@ -1506,7 +1523,8 @@ begin
   begin
     AWriter.Write(NamedFormat('%<Indent>:s  ''%<Name>:s''',
                              ['Indent', lineIndent,
-                              'Name',   AItem.Members[memberIndex].Name]));
+                              'Name',   AItem.Members[memberIndex].Name.Replace('''', '''''')]
+                              ));
 
     if memberIndex < Pred(AItem.MemberCount) then
       AWriter.WriteLine(',')
