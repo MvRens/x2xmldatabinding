@@ -260,6 +260,8 @@ var
   dataTypeName: String;
 
 begin
+  while Assigned(ADataType.BaseType) do
+    ADataType := ADataType.BaseType;
   Assert(not ADataType.IsComplex, 'Complex DataTypes not supported');
   Assert(ADataType.Enumerations.Count = 0, 'Enumerations not supported');
   Result  := False;
@@ -280,7 +282,6 @@ begin
   end;
 end;
 
-
 function TDelphiXMLDataBindingGenerator.GetDataTypeName(AProperty: TXMLDataBindingProperty; AInterfaceName: Boolean): String;
 var
   item:   TXMLDataBindingItem;
@@ -299,7 +300,6 @@ begin
     ptItem:
       begin
         item  := TXMLDataBindingItemProperty(AProperty).Item;
-
         if (item.ItemType = itEnumeration) or (not AInterfaceName) then
           Result := PrefixClass
         else
@@ -309,7 +309,6 @@ begin
       end;
   end;
 end;
-
 
 function TDelphiXMLDataBindingGenerator.TranslateDataType(ADataType: IXMLTypeDef): String;
 var
@@ -1465,19 +1464,16 @@ var
 begin
   if (ASection <> dxsForward) or (AItem.MemberCount = 0) then
     exit;
-
   enumStart := NamedFormat('  TXML%<Name>:s = (',
                            ['Name', AItem.TranslatedName]);
   AWriter.Write(enumStart);
   lineIndent := StringOfChar(' ', Length(enumStart));
-
   UsedNames := TStringList.Create;
   try
     for memberIndex := 0 to Pred(AItem.MemberCount) do
     begin
       if memberIndex > 0 then
         AWriter.Write(lineIndent);
-
       OrigName := AItem.Members[memberIndex].TranslatedName;
       NewName := OrigName;
       UnderscoreCount := 0;
@@ -1487,9 +1483,7 @@ begin
         NewName := OrigName + StringOfChar('_', UnderscoreCount);
       end;
       UsedNames.Add(NewName);
-
       AWriter.Write(NewName);
-
       if memberIndex < Pred(AItem.MemberCount) then
         AWriter.WriteLine(',')
       else
